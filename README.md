@@ -66,12 +66,16 @@ ITP2/
 │           ├── github_advisory.py
 │           ├── mobile_sources.py
 │           └── github_poc.py
+│   └── storage/
+│       ├── vector_db.py                       # Qdrant client helper
+│       └── init_qdrant.py                     # Creates the Qdrant collections (Task 2.1)
 ├── Frontend/
 │   ├── index.html                             # Cyber-themed interactive dashboard
 │   ├── data.js                                # Auto-synced envelopes data for instant loading
 │   └── run_dashboard.py                       # 1-command local dashboard server
-└── Testing/
-    └── test_ingestion.py                      # Automated test suite (10 unit & integration tests)
+├── Testing/
+│   └── test_ingestion.py                      # Automated test suite (10 unit & integration tests)
+└── docker-compose.yml                         # Qdrant (vector DB) + Ollama (local embeddings)
 ```
 
 ---
@@ -83,10 +87,36 @@ Clone repository and install dependencies:
 ```bash
 git clone https://github.com/P1nkd0nut/ITP-2-Newsletter.git
 cd ITP-2-Newsletter
-pip install -r requirements.txt  # (pydantic, feedparser, rich)
+pip install -r requirements.txt  # (pydantic, feedparser, rich, qdrant-client)
 ```
 
-### 2. Run Data Ingestion
+### 2. Start the Vector Database Infrastructure (Task 2.1)
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
+
+Start the self-hosted Qdrant vector database and local Ollama embedding server:
+```bash
+docker compose up -d
+```
+This provisions:
+- **Qdrant** (`localhost:6333`) — persisted to `./qdrant_storage`
+- **Ollama** (`localhost:11434`) — persisted to `./ollama_data`, used to serve `nomic-embed-text` for local embeddings
+
+Then initialise the two Qdrant collections (`groundedcve_items`, `groundedcve_published`):
+```bash
+python Backend/storage/init_qdrant.py
+```
+
+Pull the embedding model into Ollama (one-time, ~274MB):
+```bash
+docker exec groundedcve-ollama ollama pull nomic-embed-text
+```
+
+Check everything is healthy:
+```bash
+docker compose ps
+```
+
+### 3. Run Data Ingestion
 Execute the multi-source collection pipeline:
 ```bash
 # Ingest 3 items per source across all feeds
@@ -99,14 +129,14 @@ python Backend/run_ingestion.py --sources cisa_kev,portswigger --limit 2
 python Backend/run_ingestion.py --sources cisa_kev --poc --limit 2
 ```
 
-### 3. Launch Frontend Dashboard
+### 4. Launch Frontend Dashboard
 Start the visual threat intelligence viewer:
 ```bash
 python Frontend/run_dashboard.py
 ```
 *(Automatically opens `http://localhost:8080/index.html` in your browser).*
 
-### 4. Run Test Suite
+### 5. Run Test Suite
 Verify all collector parsers, schema constraints, and hash calculations:
 ```bash
 python -m unittest discover -s Testing -p "test_*.py" -v

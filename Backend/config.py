@@ -35,3 +35,14 @@ WEB_ECOSYSTEMS = ["npm", "pip", "go", "maven"]
 # Default Collection Limits (can be overridden via CLI)
 DEFAULT_ITEM_LIMIT = 5
 DEFAULT_DAYS_BACK = 7
+
+# Qdrant Vector Database (Task 2.1 - self-hosted via docker-compose.yml)
+QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
+QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
+QDRANT_COLLECTION_ITEMS = "groundedcve_items"        # all ingested items/chunks + ranking metadata
+QDRANT_COLLECTION_PUBLISHED = "groundedcve_published"  # validated, published cards (novelty check source)
+
+# Ollama (Task 2.1 - local embedding generation)
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+EMBED_MODEL = "nomic-embed-text"
+EMBED_DIM = 768
