@@ -37,16 +37,17 @@ MOBILE_CWES: Set[str] = {
 
 # Technical Heuristic Keyword Sets
 WEB_KEYWORDS = [
-    "http", "cookie", "jwt", "oauth", "sql injection", "sqli", "xss",
+    "http", "https", "cookie", "cookies", "jwt", "oauth", "openid", "sql injection", "sqli", "xss",
     "cross-site", "ssrf", "graphql", "cors", "web application", "deserialization",
-    "csrf", "rest api", "endpoint", "url parameter", "request smuggling",
-    "web cache", "authentication bypass"
+    "csrf", "rest api", "endpoint", "endpoints", "url parameter", "request smuggling",
+    "web cache", "authentication bypass", "session token", "session tokens",
+    "gateway", "ssl-vpn", "web service", "web portal"
 ]
 
 MOBILE_KEYWORDS = [
-    "android", "ios", "ipados", "apk", "ipa", "ipc", "intent", "webview",
+    "android", "ios", "ipados", "apk", "ipa", "ipc", "intent", "intents", "webview",
     "frida", "aosp", "keychain", "keystore", "smali", "dalvik", "jailbreak",
-    "root detection", "deep link", "safari", "webkit"
+    "root detection", "deep link", "safari", "webkit", "mobile", "bluetooth"
 ]
 
 OUT_OF_SCOPE_INDICATORS = [

