@@ -52,7 +52,8 @@ MOBILE_KEYWORDS = [
 
 OUT_OF_SCOPE_INDICATORS = [
     "printer", "print spooler", "scada", "modbus", "plc", "programmable logic controller",
-    "bios", "uefi", "automotive", "ecu", "can bus", "firmware update", "industrial control"
+    "bios", "uefi", "automotive", "ecu", "can bus", "firmware update", "industrial control",
+    "iot", "router firmware", "smart home", "industrial router"
 ]
 
 

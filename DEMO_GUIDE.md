@@ -35,6 +35,23 @@ python Backend/run_benchmark.py
 
 ---
 
+### Part 1B: Run the 'Day in the Life' Case Study Simulation (October 10, 2023)
+Run the single-day case study runner:
+
+```powershell
+python Backend/run_case_study.py
+```
+
+#### 🗣️ What to Say (The Real-World Story):
+> *"To show how GroundedCVE performs under real-world pressure, we created a single-day case study from **October 10, 2023** ([`Backend/data/case_study_day.json`](Backend/data/case_study_day.json)). On this day, security teams were inundated with 10 mixed advisories: critical zero-days, mobile hooking tools, IoT routers, and SCADA firmware.*
+>
+> *Watch how GroundedCVE handles the flood:*
+> 1. ***Noise Reduction***: *The Scope Pre-Filter automatically drops the Siemens SCADA PLC and HP Print Spooler (0.0 pts), preventing newsletter pollution.*
+> 2. ***Zero-Day Elevation***: *Active in-the-wild zero-days (**Citrix Bleed**, **Atlassian Confluence**, and Apple **BLASTPASS**) immediately rise to the #1, #2, and #3 spots with 88–96 points due to CISA KEV weaponization + public PoC availability.*
+> 3. ***CVSS Anomaly Intercept***: *It catches `CVE-2026-94138`, where vendor CVSS was rated 2.0 but practical AI severity is 9.0/10 for unauthenticated remote code execution, triggering an automated discrepancy warning."*
+
+---
+
 ### Part 2: Demonstrate the 100-Point AI Scoring & CVSS Anomaly Gate
 Point out the leaderboard table printed by `run_benchmark.py`:
 
