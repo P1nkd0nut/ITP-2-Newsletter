@@ -9,7 +9,12 @@ import logging
 import re
 from typing import Dict, Any, Optional
 import requests
-from Backend.config import OLLAMA_HOST
+from Backend.config import (
+    OLLAMA_HOST,
+    OPENROUTER_API_KEY,
+    OPENROUTER_BASE_URL,
+    OPENROUTER_MODEL,
+)
 from Backend.ingestion.models import StagingEnvelope
 from Backend.triage.models import AISeverityAssessment
 
@@ -34,15 +39,39 @@ You MUST respond ONLY with a valid JSON object matching this schema:
 
 
 class AISeverityEvaluator:
-    """Evaluates practical severity via local Ollama LLM with heuristic resilience."""
+    """Evaluates practical severity via OpenRouter (Qwen 2.5 72B) or local Ollama with heuristic fallback."""
 
-    def __init__(self, ollama_host: str = OLLAMA_HOST, model_name: str = DEFAULT_AI_MODEL):
+    def __init__(
+        self,
+        ollama_host: str = OLLAMA_HOST,
+        model_name: str = DEFAULT_AI_MODEL,
+        openrouter_api_key: Optional[str] = None,
+        openrouter_model: str = OPENROUTER_MODEL,
+    ):
         self.ollama_host = ollama_host.rstrip("/")
         self.model_name = model_name
+        self.openrouter_api_key = (
+            openrouter_api_key if openrouter_api_key is not None else OPENROUTER_API_KEY
+        )
+        self.openrouter_model = openrouter_model
 
     def evaluate(self, envelope: StagingEnvelope) -> AISeverityAssessment:
-        """Evaluates practical severity of the given envelope."""
-        # 1. Attempt LLM evaluation via Ollama
+        """
+        Evaluates practical severity:
+        1. OpenRouter gateway (Qwen 2.5 72B) if API key configured
+        2. Local Ollama instance (Qwen 2.5)
+        3. Offensive heuristic fallback engine
+        """
+        # 1. Attempt OpenRouter if API key is present
+        if self.openrouter_api_key:
+            try:
+                assessment = self._evaluate_with_openrouter(envelope)
+                if assessment:
+                    return assessment
+            except Exception as e:
+                logger.warning(f"OpenRouter evaluation failed ({e}). Falling back to local Ollama.")
+
+        # 2. Attempt local Ollama
         try:
             assessment = self._evaluate_with_ollama(envelope)
             if assessment:
@@ -50,8 +79,56 @@ class AISeverityEvaluator:
         except Exception as e:
             logger.warning(f"Ollama AI evaluation failed ({e}). Falling back to offensive heuristic engine.")
 
-        # 2. Resilient fallback to offensive heuristic evaluation
+        # 3. Resilient fallback to offensive heuristic evaluation
         return self._evaluate_heuristic(envelope)
+
+    def _evaluate_with_openrouter(self, envelope: StagingEnvelope) -> Optional[AISeverityAssessment]:
+        endpoint = f"{OPENROUTER_BASE_URL.rstrip('/')}/chat/completions"
+        snippet = envelope.Raw_Content[:1500].strip()
+
+        user_content = (
+            f"Title: {envelope.Title}\n"
+            f"Target: {envelope.Vendor_Product or 'Unspecified'}\n"
+            f"CVE ID: {envelope.CVE_ID or 'N/A'}\n"
+            f"Source Type: {envelope.Source_Type.value}\n\n"
+            f"Technical Description / Advisory Context:\n{snippet}\n"
+        )
+
+        headers = {
+            "Authorization": f"Bearer {self.openrouter_api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://github.com/P1nkd0nut/ITP-2-Newsletter",
+            "X-Title": "GroundedCVE",
+        }
+
+        payload = {
+            "model": self.openrouter_model,
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_content},
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0.1,
+        }
+
+        resp = requests.post(endpoint, json=payload, headers=headers, timeout=20)
+        if resp.status_code == 200:
+            data = resp.json()
+            content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            parsed = json.loads(content)
+            score = float(parsed.get("severity_score", 5.0))
+            score = max(0.0, min(10.0, round(score, 1)))
+
+            return AISeverityAssessment(
+                severity_score=score,
+                offensive_impact=str(parsed.get("offensive_impact", "Exploit Primitive")),
+                exploitability=str(parsed.get("exploitability", "MEDIUM")).upper(),
+                reasoning=str(parsed.get("reasoning", "Assessed by OpenRouter Qwen 2.5 72B.")),
+                evaluated_by=f"openrouter/{self.openrouter_model}",
+            )
+        else:
+            logger.warning(f"OpenRouter returned status {resp.status_code}: {resp.text}")
+        return None
 
     def _evaluate_with_ollama(self, envelope: StagingEnvelope) -> Optional[AISeverityAssessment]:
         endpoint = f"{self.ollama_host}/api/generate"

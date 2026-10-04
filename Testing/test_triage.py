@@ -174,5 +174,43 @@ class TestPriorityScorerAndAnomaly(unittest.TestCase):
         self.assertIn("significantly higher than AI severity", candidate.discrepancy.troubleshoot_note)
 
 
+
+class TestAISeverityEvaluator(unittest.TestCase):
+    """Tests the AI Practical Severity Evaluator (OpenRouter, Ollama, Heuristic)."""
+
+    from unittest.mock import patch, MagicMock
+
+    @patch("requests.post")
+    def test_openrouter_evaluation_mock(self, mock_post):
+        from unittest.mock import MagicMock
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "choices": [{
+                "message": {
+                    "content": '{"severity_score": 9.5, "offensive_impact": "Remote Code Execution", "exploitability": "HIGH", "reasoning": "Unauthenticated RCE in exposed web endpoint"}'
+                }
+            }]
+        }
+        mock_post.return_value = mock_response
+
+        evaluator = AISeverityEvaluator(openrouter_api_key="sk-or-test-mock-key")
+        env = StagingEnvelope(
+            Item_ID="test-openrouter-01",
+            Source_Type=SourceType.GITHUB_ADVISORY,
+            Title="Critical Unauth RCE",
+            Source_URL="https://example.com/rce",
+            Published_Date="2026-09-28T00:00:00Z",
+            Ingested_At="2026-09-28T00:00:00Z",
+            Content_Hash="abc",
+            Raw_Content="Critical unauthenticated RCE in admin controller.",
+        )
+        res = evaluator.evaluate(env)
+        self.assertEqual(res.severity_score, 9.5)
+        self.assertEqual(res.offensive_impact, "Remote Code Execution")
+        self.assertEqual(res.exploitability, "HIGH")
+        self.assertTrue(res.evaluated_by.startswith("openrouter/"))
+
+
 if __name__ == "__main__":
     unittest.main()

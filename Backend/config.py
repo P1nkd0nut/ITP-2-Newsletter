@@ -15,9 +15,22 @@ STAGING_DIR.mkdir(parents=True, exist_ok=True)
 # User-Agent string for polite threat intelligence scraping
 DEFAULT_USER_AGENT = "GroundedCVE-Bot/1.0 (Penetration Testing Threat Intelligence; SIT Team 4)"
 
-# API Keys (optional from environment)
+# Auto-load .env file if present in project root
+ENV_FILE = BASE_DIR.parent / ".env"
+if ENV_FILE.exists():
+    with open(ENV_FILE, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip().strip("'\""))
+
+# API Keys (optional from environment or .env)
 NVD_API_KEY = os.getenv("NVD_API_KEY", "")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "qwen/qwen-2.5-72b-instruct")
 
 # Ingestion Source Endpoints
 CISA_KEV_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
