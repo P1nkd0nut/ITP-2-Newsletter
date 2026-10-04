@@ -62,13 +62,14 @@ def print_rich_triage_dashboard(candidates, console: "Console", output_file: Pat
         show_header=True,
         header_style="bold magenta",
     )
-    table.add_column("Rank", justify="center", style="dim", width=6)
-    table.add_column("Scope", justify="center", width=12)
-    table.add_column("Title / CVE", style="cyan", width=38)
-    table.add_column("AI Severity", justify="center", width=12)
-    table.add_column("CVSS", justify="center", width=8)
+    table.add_column("Rank", justify="center", style="dim", width=5)
+    table.add_column("Scope", justify="center", width=8)
+    table.add_column("Title / CVE", style="cyan", width=34)
+    table.add_column("KEV (40)", justify="right", width=9)
+    table.add_column("AI Sev (40)", justify="right", width=12)
+    table.add_column("PoC (20)", justify="right", width=9)
     table.add_column("Score (100)", justify="right", style="bold green", width=12)
-    table.add_column("Anomaly Check", justify="center", width=16)
+    table.add_column("CVSS (Ref)", justify="center", width=12)
 
     in_scope_count = 0
     discrepancies = []
@@ -84,29 +85,36 @@ def print_rich_triage_dashboard(candidates, console: "Console", output_file: Pat
         else:
             cat_styled = "[dim][OUT OF SCOPE][/dim]"
 
-        title_display = f"{c.envelope.CVE_ID}: {c.envelope.Title[:30]}..." if c.envelope.CVE_ID else c.envelope.Title[:34]
+        title_display = f"{c.envelope.CVE_ID}: {c.envelope.Title[:26]}..." if c.envelope.CVE_ID else c.envelope.Title[:30]
 
-        ai_display = f"{c.ai_assessment.severity_score}/10" if c.ai_assessment else "[dim]-[/dim]"
-        cvss_display = str(c.envelope.CVSS) if c.envelope.CVSS is not None else "[dim]N/A[/dim]"
-
-        if c.discrepancy and c.discrepancy.is_discrepancy:
-            anomaly_display = "[bold red][!] DISCREPANCY[/bold red]"
-            discrepancies.append(c)
-        elif not c.pre_filter.is_in_scope:
-            anomaly_display = "[dim]BYPASS[/dim]"
+        bk = c.score_breakdown or {}
+        if c.pre_filter.is_in_scope:
+            kev_display = f"{bk.get('cisa_kev_points', 0.0):.1f}"
+            ai_display = f"{bk.get('ai_severity_points', 0.0):.1f}"
+            poc_display = f"{bk.get('poc_points', 0.0):.1f}"
+            score_display = f"{c.priority_score:.1f}"
         else:
-            anomaly_display = "[green]ALIGNED[/green]"
+            kev_display = "[dim]0.0[/dim]"
+            ai_display = "[dim]0.0[/dim]"
+            poc_display = "[dim]0.0[/dim]"
+            score_display = "[dim]0.0[/dim]"
 
-        score_display = f"{c.priority_score:.1f}" if c.pre_filter.is_in_scope else "[dim]0.0[/dim]"
+        cvss_raw = str(c.envelope.CVSS) if c.envelope.CVSS is not None else "N/A"
+        if c.discrepancy and c.discrepancy.is_discrepancy:
+            cvss_display = f"[bold red]{cvss_raw} [!][/bold red]"
+            discrepancies.append(c)
+        else:
+            cvss_display = f"[dim]{cvss_raw}[/dim]"
 
         table.add_row(
             str(idx),
             cat_styled,
             title_display,
+            kev_display,
             ai_display,
-            cvss_display,
+            poc_display,
             score_display,
-            anomaly_display,
+            cvss_display,
         )
 
     console.print(table)

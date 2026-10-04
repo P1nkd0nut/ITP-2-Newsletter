@@ -86,19 +86,20 @@ def run_case_study():
         # Table of Results
         table = Table(title="[bold green]Case Study Triage Leaderboard: Ranked for Weekly Pentesting Digest[/bold green]", show_header=True)
         table.add_column("Rank", justify="center", width=5)
-        table.add_column("Scope", justify="center", width=12)
-        table.add_column("Vulnerability / Advisory", width=36)
-        table.add_column("Type", justify="center", width=10)
-        table.add_column("AI Sev", justify="center", width=8)
-        table.add_column("CVSS", justify="center", width=6)
+        table.add_column("Scope", justify="center", width=8)
+        table.add_column("Vulnerability / Advisory", width=34)
+        table.add_column("KEV (40)", justify="right", width=9)
+        table.add_column("AI Sev (40)", justify="right", width=12)
+        table.add_column("PoC (20)", justify="right", width=9)
         table.add_column("Score (100)", justify="right", style="bold green", width=12)
-        table.add_column("Anomaly Check", justify="center", width=15)
+        table.add_column("CVSS (Ref)", justify="center", width=12)
 
         for rank, r in enumerate(triaged_records, start=1):
             env = r.envelope
             pf = r.pre_filter
             disc = r.discrepancy
             ai = r.ai_assessment
+            bk = r.score_breakdown or {}
 
             if pf.category == ScopeCategory.WEB:
                 scope_str = "[cyan][WEB][/cyan]"
@@ -107,29 +108,32 @@ def run_case_study():
             else:
                 scope_str = "[dim][OUT OF SCOPE][/dim]"
 
-            is_zero_day = env.KEV_Status
-            type_str = "[bold red]ZERO-DAY[/bold red]" if is_zero_day else "[dim]Standard[/dim]"
-
-            ai_sev_str = f"{ai.severity_score:.1f}/10" if ai else "-"
-            cvss_str = str(env.CVSS) if env.CVSS is not None else "N/A"
-            score_str = f"{r.priority_score:.1f}" if pf.is_in_scope else "[dim]0.0[/dim]"
-
-            if disc and disc.is_discrepancy:
-                anomaly_str = "[bold red][!] DISCREPANCY[/bold red]"
-            elif not pf.is_in_scope:
-                anomaly_str = "[dim]BYPASS (Noise)[/dim]"
+            if pf.is_in_scope:
+                kev_str = f"{bk.get('cisa_kev_points', 0.0):.1f}"
+                ai_str = f"{bk.get('ai_severity_points', 0.0):.1f}"
+                poc_str = f"{bk.get('poc_points', 0.0):.1f}"
+                score_str = f"{r.priority_score:.1f}"
             else:
-                anomaly_str = "[green]ALIGNED[/green]"
+                kev_str = "[dim]0.0[/dim]"
+                ai_str = "[dim]0.0[/dim]"
+                poc_str = "[dim]0.0[/dim]"
+                score_str = "[dim]0.0[/dim]"
+
+            cvss_raw = str(env.CVSS) if env.CVSS is not None else "N/A"
+            if disc and disc.is_discrepancy:
+                cvss_str = f"[bold red]{cvss_raw} [!][/bold red]"
+            else:
+                cvss_str = f"[dim]{cvss_raw}[/dim]"
 
             table.add_row(
                 str(rank),
                 scope_str,
                 f"{env.CVE_ID or env.Item_ID}: {env.Title[:26]}...",
-                type_str,
-                ai_sev_str,
-                cvss_str,
+                kev_str,
+                ai_str,
+                poc_str,
                 score_str,
-                anomaly_str,
+                cvss_str,
             )
 
         console.print(table)
