@@ -66,6 +66,12 @@ ITP2/
 │           ├── github_advisory.py
 │           ├── mobile_sources.py
 │           └── github_poc.py
+│   ├── run_triage.py                          # CLI runner for Scope Pre-Filter, AI Scoring, & Anomaly Gate
+│   ├── triage/
+│   │   ├── models.py                          # Pydantic models for PreFilterDecision, AISeverityAssessment, CVSSDiscrepancy
+│   │   ├── pre_filter.py                      # Dedicated Pentest Pre-Filter (Web vs Mobile isolation)
+│   │   ├── ai_evaluator.py                    # Practical Severity Assessor (via local Ollama Qwen 2.5)
+│   │   └── priority_scorer.py                 # 100-pt AI Priority Scoring + CVSS Discrepancy Gate
 │   └── storage/
 │       ├── vector_db.py                       # Qdrant client helper
 │       └── init_qdrant.py                     # Creates the Qdrant collections (Task 2.1)
@@ -74,7 +80,8 @@ ITP2/
 │   ├── data.js                                # Auto-synced envelopes data for instant loading
 │   └── run_dashboard.py                       # 1-command local dashboard server
 ├── Testing/
-│   └── test_ingestion.py                      # Automated test suite (10 unit & integration tests)
+│   ├── test_ingestion.py                      # Phase 1 test suite (10 unit & integration tests)
+│   └── test_triage.py                         # Phase 2 test suite (8 pre-filter, scoring, & anomaly tests)
 └── docker-compose.yml                         # Qdrant (vector DB) + Ollama (local embeddings)
 ```
 
@@ -129,15 +136,29 @@ python Backend/run_ingestion.py --sources cisa_kev,portswigger --limit 2
 python Backend/run_ingestion.py --sources cisa_kev --poc --limit 2
 ```
 
-### 4. Launch Frontend Dashboard
+### 4. Run Pentest Scope Pre-Filter & AI Priority Scoring (Phase 2, Task 1.2 & 2.4)
+Execute the Pre-Filter Gate and 100-point AI practical severity ranking:
+```bash
+python Backend/run_triage.py
+```
+This runs:
+1. **Scope Pre-Filter Gate**: Isolates `[WEB]` and `[MOBILE]` threats via feed origin, Task 1.2 CWE taxonomy, and technical keywords. Non-web/mobile items (print spoolers, firmwares) bypass the weekly scoring queue.
+2. **AI Practical Severity Assessment (Qwen 2.5)**: Evaluates real-world offensive impact (RCE vs DoS) using local Ollama.
+3. **100-Point Scoring Engine**:
+   - Active Weaponization (CISA KEV): **40 pts**
+   - AI Practical Severity: **40 pts**
+   - Public PoC Availability: **20 pts**
+4. **CVSS Anomaly Discrepancy Gate**: Flags any item where `|AI_Severity - CVSS| >= 4.0` for automated diagnosis of inflated Day-0 ratings or underestimated flaws.
+
+### 5. Launch Frontend Dashboard
 Start the visual threat intelligence viewer:
 ```bash
 python Frontend/run_dashboard.py
 ```
 *(Automatically opens `http://localhost:8080/index.html` in your browser).*
 
-### 5. Run Test Suite
-Verify all collector parsers, schema constraints, and hash calculations:
+### 6. Run Test Suite
+Verify all collector parsers, pre-filters, AI scoring, and anomaly detection gates (18 tests):
 ```bash
 python -m unittest discover -s Testing -p "test_*.py" -v
 ```
