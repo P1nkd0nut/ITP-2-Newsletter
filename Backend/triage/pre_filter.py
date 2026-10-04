@@ -70,12 +70,7 @@ class PentestPreFilter:
         if origin_decision:
             return origin_decision
 
-        # 2. Evaluate by Task 1.2 CWE Taxonomy Mapping (for NVD / CISA KEV)
-        cwe_decision = self._check_cwe_taxonomy(envelope)
-        if cwe_decision:
-            return cwe_decision
-
-        # 3. Check for Out-of-Scope Negative Indicators
+        # 2. Check for Out-of-Scope Negative Indicators (Printers, SCADA, PLCs, IoT)
         content_lower = (
             f"{envelope.Title} {envelope.Vendor_Product or ''} {envelope.Raw_Content}"
         ).lower()
@@ -88,6 +83,11 @@ class PentestPreFilter:
                     reason=f"Matched out-of-scope non-web/mobile indicator: '{neg}'",
                     is_in_scope=False,
                 )
+
+        # 3. Evaluate by Task 1.2 CWE Taxonomy Mapping (for NVD / CISA KEV)
+        cwe_decision = self._check_cwe_taxonomy(envelope)
+        if cwe_decision:
+            return cwe_decision
 
         # 4. Evaluate by Contextual Technical Keywords
         keyword_decision = self._check_keywords(content_lower)
