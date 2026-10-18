@@ -1,37 +1,61 @@
 """
-Launcher for GroundedCVE Ingestion Web Dashboard.
-Starts a lightweight local HTTP server and automatically opens your browser.
+Launcher for GroundedCVE Threat Intelligence & Newsletter Web Dashboard.
+Starts the Flask server hosting the Executive Newsletter Dashboard on port 8080.
 """
-import http.server
-import socketserver
+import sys
 import webbrowser
+import threading
+import time
 from pathlib import Path
 
+# Add project root to sys.path
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+try:
+    from Backend.api.app import create_app
+    HAS_FLASK = True
+except ImportError:
+    HAS_FLASK = False
+
 PORT = 8080
-FRONTEND_DIR = Path(__file__).resolve().parent
+HOST = "0.0.0.0"
 
 
-class CustomHandler(http.server.SimpleHTTPRequestHandler):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=str(FRONTEND_DIR), **kwargs)
+def open_browser():
+    time.sleep(1.0)
+    dashboard_url = f"http://localhost:{PORT}"
+    print(f"[*] Opening browser to Executive Newsletter Dashboard: {dashboard_url}\n")
+    try:
+        webbrowser.open(dashboard_url)
+    except Exception as e:
+        print(f"[!] Could not auto-launch browser: {e}")
 
 
 def main():
-    dashboard_url = f"http://localhost:{PORT}/index.html"
-    print("=" * 65)
-    print("     GroundedCVE - Threat Intelligence Ingestion Dashboard")
-    print("=" * 65)
-    print(f"🚀 Serving local UI at: {dashboard_url}")
-    print("Press Ctrl+C to stop the server.\n")
+    print("=" * 70)
+    print("     GroundedCVE — Threat Intelligence & Newsletter Dashboard")
+    print("     Primary Delivery Channel: Web Dashboard (Port 8080)")
+    print("=" * 70)
 
-    # Automatically open the browser
-    webbrowser.open(dashboard_url)
-
-    with socketserver.TCPServer(("", PORT), CustomHandler) as httpd:
-        try:
-            httpd.serve_forever()
-        except KeyboardInterrupt:
-            print("\nDashboard server stopped.")
+    if HAS_FLASK:
+        app = create_app()
+        threading.Thread(target=open_browser, daemon=True).start()
+        print(f"[*] Serving unified API and Executive Dashboard on http://localhost:{PORT}")
+        print("Press Ctrl+C to stop the server.\n")
+        app.run(host=HOST, port=PORT, debug=False)
+    else:
+        import http.server
+        import socketserver
+        print(f"[!] Flask not available, falling back to static server on http://localhost:{PORT}")
+        dashboard_url = f"http://localhost:{PORT}/dashboard/index.html"
+        webbrowser.open(dashboard_url)
+        with socketserver.TCPServer(("", PORT), http.server.SimpleHTTPRequestHandler) as httpd:
+            try:
+                httpd.serve_forever()
+            except KeyboardInterrupt:
+                print("\nServer stopped.")
 
 
 if __name__ == "__main__":

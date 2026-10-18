@@ -1,0 +1,25 @@
+{
+  "primary_channel": {
+    "type": "web_dashboard",
+    "name": "GroundedCVE Executive Dashboard",
+    "status": "active",
+    "url": "http://localhost:5000",
+    "description": "Primary delivery channel and interactive intelligence dashboard."
+  },
+  "secondary_channel": {
+    "type": "telegram",
+    "name": "Telegram Alert Bot",
+    "enabled": false,
+    "bot_token": "",
+    "chat_id": "",
+    "min_score_threshold": 75.0,
+    "notify_on_kev_only": true,
+    "status": "standby",
+    "description": "Secondary push notification channel for high-priority or KEV advisories."
+  },
+  "delivery_policy": {
+    "mode": "dashboard_primary",
+    "auto_dispatch_secondary": false,
+    "last_updated": "2026-10-18T20:29:23.291300+00:00"
+  }
+}

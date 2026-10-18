@@ -28,8 +28,8 @@ Thumbs.db
 
 # Data dumps & staging
 Backend/data/staging/envelopes_*.json
-Backend/data/staging/triaged_candidates.json
 
 # Docker volumes (Qdrant / Ollama persistent data)
 qdrant_storage/
 ollama_data/
+Backend/demo_slide4.py

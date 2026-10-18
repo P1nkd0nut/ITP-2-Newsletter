@@ -167,15 +167,40 @@ This computes and reports:
 - **Scope Pre-Filter Accuracy** (Observed: **100.0%**)
 - **CVSS Discrepancy Gate Accuracy** (100% anomaly alert trigger on real-world Day-0 gaps)
 
-### 6. Launch Frontend Dashboard
-Start the visual threat intelligence viewer:
+### 6. Launch Executive Threat Intelligence & Newsletter Hub (Primary Delivery Channel)
+Start the unified Flask REST API and Executive Web Dashboard:
+```bash
+python run_server.py
+```
+*(Automatically opens `http://localhost:5000` in your browser).*
+
+Alternatively, start via the frontend runner on port 8080:
 ```bash
 python Frontend/run_dashboard.py
 ```
-*(Automatically opens `http://localhost:8080/index.html` in your browser).*
+
+#### Channel Architecture
+- **Primary Delivery Channel (Web Dashboard)**: The authoritative home for weekly newsletter digests, 100-point priority rankings, interactive Chart.js analytics, and raw envelope verification.
+- **Secondary Delivery Channel (Telegram Bot)**: Optional, opt-in push notifications for critical zero-days (`priority_score >= 70` or CISA KEV active weaponizations). Configurable live or in simulation mode via the **Channel Config** tab in the dashboard.
+
+#### REST API Endpoints Reference
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/health` | GET | Health status and channel policy |
+| `/api/stats` | GET | Aggregated KPI metrics, distribution bands, and anomaly counts |
+| `/api/newsletters` | GET | Query candidates with scope filtering (`WEB`, `MOBILE`), search, and sorting |
+| `/api/newsletters/<id>` | GET | Deep-dive detail for a specific disclosure |
+| `/api/newsletter/digest` | GET | Curated weekly threat intelligence edition |
+| `/api/newsletter/export` | GET | Export issue in Markdown (`?format=markdown`) or HTML (`?format=html`) |
+| `/api/refresh` | POST | Live reload of staged threat candidate dataset |
+| `/api/links/stats` | GET | Cached link health, active ratio, and average latency statistics |
+| `/api/links/verify` | GET/POST | Fast concurrent verification of all cataloged reference links |
+| `/api/channels` | GET | Channel hierarchy status (Primary vs Secondary) |
+| `/api/channels/telegram` | PUT | Configure Telegram secondary notification settings |
+| `/api/channels/telegram/test`| POST | Verify secondary Telegram bot integration (live or simulated) |
 
 ### 7. Run Test Suite
-Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, and ground-truth validation (25 tests):
+Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, and channel dispatchers (53 automated tests):
 ```bash
 python -m unittest discover -s Testing -p "test_*.py" -v
 ```
