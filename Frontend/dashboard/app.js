@@ -685,12 +685,10 @@ function openDetailModal(itemId) {
   if (refsList) {
     if (allRefs.length > 0) {
       refsList.innerHTML = allRefs.map(ref => {
-        const isLive = ref.is_working !== false;
-        const statusCls = isLive 
-          ? 'bg-emerald-950 text-emerald-300 border-emerald-800' 
-          : 'bg-rose-950 text-rose-300 border-rose-800';
-        const dotCls = isLive ? 'bg-emerald-400' : 'bg-rose-400';
-        const statusLabel = ref.status_label || (isLive ? '200 OK (Verified)' : '404 Inactive');
+        const st = linkStatusStyle(ref);
+        const statusCls = st.pill;
+        const dotCls = st.dot;
+        const statusLabel = st.label;
 
         let typeBadgeCls = 'bg-slate-950 text-slate-300 border-slate-800';
         const tLower = (ref.link_type || '').toLowerCase();
@@ -727,6 +725,7 @@ function openDetailModal(itemId) {
                 <span class="h-1.5 w-1.5 rounded-full ${dotCls}"></span>
                 <span>${escapeHtml(statusLabel)}</span>
               </span>
+              ${ref.archive_url ? `<a href="${escapeHtml(ref.archive_url)}" target="_blank" class="text-cyan-400 hover:underline">Archived copy</a>` : ''}
               ${ref.latency_ms ? `<span class="text-slate-500">${ref.latency_ms}ms</span>` : ''}
             </div>
           </div>
@@ -914,6 +913,26 @@ function escapeHtml(str) {
 // Concurrent Link Health & Scalability Engine
 // ============================================================================
 
+// Maps a link record's state to badge colors. Unchecked, blocked and
+// temporary-error links are neutral/amber rather than shown as live.
+function linkStatusStyle(ref) {
+  const state = ref.state || (ref.is_working === true ? 'live' : ref.is_working === false ? 'dead' : 'unchecked');
+  const styles = {
+    live:      { pill: 'bg-emerald-950 text-emerald-300 border-emerald-800', dot: 'bg-emerald-400', text: 'text-emerald-400', label: 'Live' },
+    dead:      { pill: 'bg-rose-950 text-rose-300 border-rose-800',          dot: 'bg-rose-400',    text: 'text-rose-400',    label: 'Dead Link' },
+    moved:     { pill: 'bg-rose-950 text-rose-300 border-rose-800',          dot: 'bg-rose-400',    text: 'text-rose-400',    label: 'Likely Removed' },
+    blocked:   { pill: 'bg-amber-950 text-amber-300 border-amber-800',       dot: 'bg-amber-400',   text: 'text-amber-400',   label: 'Blocked (Unverified)' },
+    temporary: { pill: 'bg-amber-950 text-amber-300 border-amber-800',       dot: 'bg-amber-400',   text: 'text-amber-400',   label: 'Temporary Error' },
+    unchecked: { pill: 'bg-slate-950 text-slate-400 border-slate-700',       dot: 'bg-slate-500',   text: 'text-slate-400',   label: 'Not Yet Checked' },
+  };
+  const st = styles[state] || styles.unchecked;
+  return { ...st, label: ref.status_label || st.label };
+}
+
+function healthText(stats) {
+  return stats.health_percentage == null ? 'Not checked yet' : `${stats.health_percentage}% Active`;
+}
+
 async function loadLinkHealthStats() {
   try {
     const res = await fetch('/api/links/stats');
@@ -923,13 +942,13 @@ async function loadLinkHealthStats() {
 
     const badge = document.getElementById('badgeLinkHealth');
     if (badge) {
-      badge.innerText = `${stats.health_percentage || 100}% Active`;
+      badge.innerText = healthText(stats);
     }
 
     const kpiStatus = document.getElementById('lhKpiStatus');
     if (kpiStatus) {
-      kpiStatus.innerText = `${stats.health_percentage || 100}% Active`;
-      kpiStatus.className = stats.health_percentage >= 95 
+      kpiStatus.innerText = healthText(stats);
+      kpiStatus.className = (stats.health_percentage ?? 100) >= 95 
         ? 'text-base font-bold text-emerald-400' 
         : 'text-base font-bold text-amber-400';
     }
@@ -977,16 +996,16 @@ async function populateLinksTable(providedLinks = null) {
   }
 
   tbody.innerHTML = links.map(l => {
-    const isLive = l.is_working !== false;
-    const statusCls = isLive ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold';
-    const statusDot = isLive ? 'bg-emerald-400' : 'bg-rose-400';
+    const st = linkStatusStyle(l);
+    const statusCls = `${st.text} font-bold`;
+    const statusDot = st.dot;
 
     return `
       <tr class="hover:bg-slate-900/60 transition">
         <td class="p-2.5 whitespace-nowrap">
           <span class="inline-flex items-center space-x-1.5 ${statusCls}">
             <span class="h-1.5 w-1.5 rounded-full ${statusDot}"></span>
-            <span>${escapeHtml(l.status_label || (isLive ? '200 OK' : '404'))}</span>
+            <span>${escapeHtml(st.label)}</span>
           </span>
         </td>
         <td class="p-2.5 whitespace-nowrap text-slate-400">${escapeHtml(l.source_provider || 'NVD')}</td>
@@ -995,6 +1014,7 @@ async function populateLinksTable(providedLinks = null) {
           <a href="${escapeHtml(l.url)}" target="_blank" class="text-cyan-400 hover:underline">
             ${escapeHtml(l.url)}
           </a>
+          ${l.archive_url ? `<a href="${escapeHtml(l.archive_url)}" target="_blank" class="text-slate-400 hover:underline ml-1">(archived)</a>` : ''}
         </td>
         <td class="p-2.5 text-right whitespace-nowrap text-slate-400 font-mono">${l.latency_ms || 0}ms</td>
       </tr>
@@ -1025,7 +1045,7 @@ async function runLiveLinkVerification() {
         ⚡ <strong>Benchmark Completed:</strong> Tested <strong>${data.total_tested} URLs</strong> concurrently in 
         <strong>${b.verification_time_seconds || clientElapsed}s</strong> 
         (Avg: <strong>${b.avg_latency_ms}ms / link</strong>). 
-        Active Ratio: <strong>${b.health_percentage}%</strong>. 
+        Active Ratio: <strong>${healthText(b)}</strong>. 
         <span class="text-cyan-300">Throughput: ~${Math.round(data.total_tested / (b.verification_time_seconds || 1))} links/sec</span>.
       `;
     }
