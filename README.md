@@ -53,6 +53,7 @@ ITP2/
 │   ├── config.py                              # Central configuration & API endpoints
 │   ├── run_ingestion.py                       # CLI runner with rich summary tables & envelope previews
 │   ├── run_triage.py                          # CLI runner for Scope Pre-Filter, AI Scoring, & Anomaly Gate
+│   ├── run_chunking.py                        # CLI runner for cleaning + two-tier chunking (Task 2.2)
 │   ├── run_benchmark.py                       # Empirical Performance & Fact Extraction Benchmark (Task 4.1)
 │   ├── export_triage_dashboard.py             # Generative UI artifact exporter
 │   ├── data/
@@ -76,6 +77,10 @@ ITP2/
 │   │   ├── pre_filter.py                      # Dedicated Pentest Pre-Filter (Web vs Mobile isolation)
 │   │   ├── ai_evaluator.py                    # Practical Severity Assessor (OpenRouter Qwen 2.5 72B / Ollama)
 │   │   └── priority_scorer.py                 # 100-pt AI Priority Scoring + CVSS Discrepancy Gate
+│   ├── chunking/
+│   │   ├── models.py                          # Chunk dataclass (IDs, tier, heading path, traceability metadata)
+│   │   ├── cleaner.py                         # Per-format cleaning (JSON / HTML / Markdown / text) -> cleaned copy
+│   │   └── chunker.py                         # Heading-aware Tier 1 / Tier 2 chunking + gate evidence helper
 │   └── storage/
 │       ├── vector_db.py                       # Qdrant client helper
 │       └── init_qdrant.py                     # Creates the Qdrant collections (Task 2.1)
@@ -85,6 +90,7 @@ ITP2/
 │   └── run_dashboard.py                       # 1-command local dashboard server
 ├── Testing/
 │   ├── test_ingestion.py                      # Phase 1 test suite (10 unit & integration tests)
+│   ├── test_chunking.py                       # Task 2.2 chunking test suite (27 tests)
 │   ├── test_triage.py                         # Phase 2 test suite (9 pre-filter, scoring, & OpenRouter tests)
 │   └── test_benchmark.py                      # Task 4.1 benchmark test suite (6 validation tests)
 ├── DEMO_GUIDE.md                              # Presentation script & step-by-step cheatsheet for demo
@@ -155,6 +161,17 @@ This runs:
    - AI Practical Severity: **40 pts**
    - Public PoC Availability: **20 pts**
 4. **CVSS Anomaly Discrepancy Gate**: Flags any item where `|AI_Severity - CVSS| >= 4.0` for automated diagnosis of inflated Day-0 ratings or underestimated flaws.
+
+### 4b. Clean & Chunk Staged Envelopes (Task 2.2)
+```bash
+python Backend/run_chunking.py            # writes Backend/data/staging/latest_chunks.json
+python Backend/run_chunking.py --show 2   # also print the first 2 chunks of each item
+```
+- `Raw_Content` is never modified; a cleaned copy is chunked (HTML boilerplate, tracking tags, front-matter and badges removed; fenced code kept verbatim).
+- **Tier 1** (Executive Summary, <= 2,500 chars): prose. **Tier 2** (Technical PoC / Evidence, <= 5,000 chars): code blocks, commands, reproduction steps. Oversize content is split at logical boundaries and flagged (`oversize_split`), never truncated.
+- Every chunk carries `Item_ID`, `CVE_ID`, `Source_URL`, `Source_Type`, heading path and a deterministic `Chunk_ID`/`Point_ID`.
+- Pass `evidence_texts(chunks, item_id)` as the `evidence` argument of `VerificationGate.verify()`; chunk text is entity-decoded, so correct commands that are HTML-encoded in `Raw_Content` are not flagged.
+- Embedding and Qdrant indexing are Task 2.3 (not part of this step).
 
 ### 5. Run Task 4.1 Ground-Truth Benchmark & Validation Suite
 Execute empirical validation across the 20-sample ground-truth Web & Mobile dataset:
