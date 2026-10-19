@@ -28,6 +28,7 @@ Thumbs.db
 
 # Data dumps & staging
 Backend/data/staging/envelopes_*.json
+Backend/data/staging/latest_chunks.json
 Backend/data/staging/triaged_candidates.json
 
 # Docker volumes (Qdrant / Ollama persistent data)
