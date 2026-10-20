@@ -86,7 +86,10 @@ ITP2/
 ├── Testing/
 │   ├── test_ingestion.py                      # Phase 1 test suite (10 unit & integration tests)
 │   ├── test_triage.py                         # Phase 2 test suite (9 pre-filter, scoring, & OpenRouter tests)
-│   └── test_benchmark.py                      # Task 4.1 benchmark test suite (6 validation tests)
+│   ├── test_benchmark.py                      # Task 4.1 benchmark test suite (6 validation tests)
+│   ├── test_verification.py                   # Verification gate test suite (18 grounding & retry tests)
+│   ├── test_dashboard_api.py                  # REST API & channel dispatcher tests (10 tests)
+│   └── test_link_validator.py                 # Link health validator tests (13 tests)
 ├── DEMO_GUIDE.md                              # Presentation script & step-by-step cheatsheet for demo
 └── docker-compose.yml                         # Qdrant (vector DB) + Ollama (local embeddings)
 ```
@@ -200,7 +203,7 @@ python Frontend/run_dashboard.py
 | `/api/channels/telegram/test`| POST | Verify secondary Telegram bot integration (live or simulated) |
 
 ### 7. Run Test Suite
-Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, and channel dispatchers (53 automated tests):
+Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, and channel dispatchers (66 automated tests):
 ```bash
 python -m unittest discover -s Testing -p "test_*.py" -v
 ```

@@ -177,8 +177,12 @@ class AISeverityEvaluator:
         """
         text = f"{envelope.Title} {envelope.Raw_Content}".lower()
 
+        def mentions(terms) -> bool:
+            # Whole-word match so short terms like "rce" or "cors" don't fire inside "resource" or "scorsese"
+            return any(re.search(rf"\b{re.escape(term)}\b", text) for term in terms)
+
         # Critical impact tier (RCE, Auth Bypass, Remote Injection)
-        if any(term in text for term in [
+        if mentions([
             "remote code execution", "rce", "arbitrary command", "command injection",
             "authentication bypass", "auth bypass", "account takeover", "privilege escalation",
             "heap overflow", "buffer overflow", "pre-auth"
@@ -192,7 +196,7 @@ class AISeverityEvaluator:
             )
 
         # High impact tier (SSRF, SQLi, Intent Hijacking, Memory Corruption)
-        if any(term in text for term in [
+        if mentions([
             "sql injection", "sqli", "ssrf", "server-side request forgery",
             "insecure deserialization", "intent hijacking", "hooking bypass",
             "webview", "path traversal", "directory traversal", "file upload"
@@ -206,7 +210,7 @@ class AISeverityEvaluator:
             )
 
         # Medium impact tier (XSS, CSRF, Token Leaks)
-        if any(term in text for term in [
+        if mentions([
             "cross-site scripting", "xss", "csrf", "cross-site request forgery",
             "information disclosure", "token leak", "cors", "open redirect"
         ]):

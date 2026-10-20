@@ -21,6 +21,7 @@ from Backend.ingestion.collectors import (
     AppleSecurityCollector,
     GitHubPoCDetector,
 )
+from Backend.ingestion.change_tracker import apply_change_tracking, load_previous
 from Backend.ingestion.models import StagingEnvelope
 
 logger = logging.getLogger(__name__)
@@ -55,6 +56,9 @@ class IngestionPipeline:
         sources: Optional[List[str]] = None,
         limit_per_source: Optional[int] = 5,
         save_output: bool = True,
+        track_changes: bool = True,
+        retain_days: int = 30,
+        keep_snapshots: int = 0,
     ) -> Dict[str, Any]:
         """
         Executes ingestion for specified sources.
@@ -63,6 +67,11 @@ class IngestionPipeline:
             sources: List of source keys to collect from (defaults to all if None)
             limit_per_source: Max items per source collector
             save_output: Whether to persist staging envelopes to JSON file
+            track_changes: Compare against the previous latest_envelopes.json, label
+                items NEW/UPDATED/UNCHANGED and carry over items no longer in the feeds
+            retain_days: Carried-over items not fetched for this many days are dropped
+            keep_snapshots: Also write a timestamped envelopes_*.json and keep only the
+                newest N of them (0 = write none and leave existing ones alone)
             
         Returns:
             Dict containing ingestion summary, metrics, and envelope objects.
@@ -105,21 +114,31 @@ class IngestionPipeline:
                 seen_hashes.add(env.Content_Hash)
                 unique_envelopes.append(env)
 
+        latest_file = self.staging_dir / "latest_envelopes.json"
+        change_counts: Dict[str, int] = {}
+        if track_changes and unique_envelopes:
+            unique_envelopes, change_counts = apply_change_tracking(
+                unique_envelopes, load_previous(latest_file), retain_days=retain_days, now=start_time
+            )
+
         end_time = datetime.now(timezone.utc)
         duration_seconds = round((end_time - start_time).total_seconds(), 2)
 
         output_file_path: Optional[str] = None
         if save_output and unique_envelopes:
-            timestamp_str = start_time.strftime("%Y%m%d_%H%M%S")
-            output_file = self.staging_dir / f"envelopes_{timestamp_str}.json"
-            latest_file = self.staging_dir / "latest_envelopes.json"
-
             json_data = [env.model_dump() for env in unique_envelopes]
-            with open(output_file, "w", encoding="utf-8") as f:
-                json.dump(json_data, f, indent=2, ensure_ascii=False)
-
             with open(latest_file, "w", encoding="utf-8") as f:
                 json.dump(json_data, f, indent=2, ensure_ascii=False)
+            output_file_path = str(latest_file)
+
+            if keep_snapshots > 0:
+                timestamp_str = start_time.strftime("%Y%m%d_%H%M%S")
+                snapshot_file = self.staging_dir / f"envelopes_{timestamp_str}.json"
+                with open(snapshot_file, "w", encoding="utf-8") as f:
+                    json.dump(json_data, f, indent=2, ensure_ascii=False)
+                output_file_path = str(snapshot_file)
+                for stale in sorted(self.staging_dir.glob("envelopes_*.json"))[:-keep_snapshots]:
+                    stale.unlink()
 
             # Sync to Frontend/data.js for instant browser dashboard visualization
             frontend_dir = self.staging_dir.parent.parent / "Frontend"
@@ -128,8 +147,7 @@ class IngestionPipeline:
                 with open(frontend_data_js, "w", encoding="utf-8") as f:
                     f.write("window.INITIAL_ENVELOPES = " + json.dumps(json_data, ensure_ascii=False) + ";")
 
-            output_file_path = str(output_file)
-            logger.info(f"Persisted {len(unique_envelopes)} staging envelopes to {output_file}")
+            logger.info(f"Persisted {len(unique_envelopes)} staging envelopes to {latest_file}")
 
         return {
             "start_time": start_time.isoformat(),
@@ -139,6 +157,7 @@ class IngestionPipeline:
             "unique_envelopes": len(unique_envelopes),
             "source_counts": source_counts,
             "errors": errors,
+            "change_counts": change_counts,
             "output_file": output_file_path,
             "envelopes": unique_envelopes,
         }

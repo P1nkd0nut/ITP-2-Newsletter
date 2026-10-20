@@ -114,11 +114,11 @@
 
         <!-- Date Range Filter Window (Today / Past 7 Days / All Dates) -->
         <div class="flex items-center space-x-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs font-mono shrink-0">
-          <button onclick="filterDateWindow('TODAY')" id="dateBtn-TODAY" class="px-2.5 py-1.5 rounded-md text-slate-400 hover:text-white transition text-[11px]" title="Advisories published Today (19/10/2026)">
-            ⚡ Today (19 Oct)
+          <button onclick="filterDateWindow('TODAY')" id="dateBtn-TODAY" class="px-2.5 py-1.5 rounded-md text-slate-400 hover:text-white transition text-[11px]" title="Advisories published today">
+            ⚡ Today
           </button>
-          <button onclick="filterDateWindow('WEEK')" id="dateBtn-WEEK" class="px-2.5 py-1.5 rounded-md bg-cyan-600 text-white font-semibold transition text-[11px]" title="Advisories published in Past 7 Days (12/10 - 19/10)">
-            📅 Past 7 Days (12/10 - 19/10)
+          <button onclick="filterDateWindow('WEEK')" id="dateBtn-WEEK" class="px-2.5 py-1.5 rounded-md bg-cyan-600 text-white font-semibold transition text-[11px]" title="Advisories published in the past 7 days">
+            📅 Past 7 Days
           </button>
           <button onclick="filterDateWindow('ALL')" id="dateBtn-ALL" class="px-2.5 py-1.5 rounded-md text-slate-400 hover:text-white transition text-[11px]" title="All Historical Records">
             All Dates
@@ -174,7 +174,7 @@
 
       <!-- Active Filter Feedback & Count -->
       <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-1">
-        <span id="filterStatusText">Showing matching advisories in 1-week window (12/10 - 19/10/2026)</span>
+        <span id="filterStatusText">Showing matching advisories in the past 7 days</span>
         <button onclick="resetAllFilters()" class="text-cyan-400 hover:underline hover:text-cyan-300">
           Reset Filters
         </button>
@@ -197,7 +197,7 @@
           </span>
           <h2 class="text-base font-bold text-white flex items-center space-x-2">
             <span>Today's Disclosures</span>
-            <span class="text-xs font-mono text-rose-300 font-semibold px-2 py-0.5 rounded bg-rose-950 border border-rose-800">19 Oct 2026</span>
+            <span class="text-xs font-mono text-rose-300 font-semibold px-2 py-0.5 rounded bg-rose-950 border border-rose-800" id="todayDateBadge">Today</span>
           </h2>
           <span id="titleTodayCount" class="text-xs font-mono text-rose-400">(0)</span>
         </div>
@@ -299,6 +299,12 @@
           <div id="mVendorBulletinsBox" class="hidden pt-2 border-t border-slate-800/80 space-y-1 font-mono text-[11px]">
             <span class="text-slate-400 block font-bold">Vendor Security Bulletins & References:</span>
             <div id="mVendorBulletinsList" class="space-y-1"></div>
+          </div>
+
+          <!-- Change tracking: what differs from the previous ingestion run -->
+          <div id="mChangeBox" class="hidden pt-2 border-t border-slate-800/80 space-y-1 font-mono text-[11px]">
+            <span id="mChangeTitle" class="text-slate-400 block font-bold"></span>
+            <ul id="mChangeList" class="space-y-1 text-slate-300"></ul>
           </div>
         </div>
 

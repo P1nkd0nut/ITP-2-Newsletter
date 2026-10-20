@@ -41,13 +41,18 @@ class PriorityScoringEngine:
         self.pre_filter = pre_filter or PentestPreFilter()
         self.ai_evaluator = ai_evaluator or AISeverityEvaluator()
 
-    def process_envelope(self, envelope: StagingEnvelope) -> TriagedCandidate:
+    def process_envelope(
+        self, envelope: StagingEnvelope, cached_ai: Optional[AISeverityAssessment] = None
+    ) -> TriagedCandidate:
         """
         Processes a single staging envelope through:
         1. Scope Pre-Filter Gate
         2. AI Severity Evaluation (for in-scope items)
         3. 100-pt Priority Scoring
         4. CVSS Anomaly / Discrepancy Detection
+
+        A cached_ai assessment (from an earlier run of the same unchanged item)
+        skips the AI call; the score is still recomputed with current KEV/PoC data.
         """
         triaged_at = datetime.now(timezone.utc).isoformat()
 
@@ -71,7 +76,7 @@ class PriorityScoringEngine:
             )
 
         # Step 2: AI Practical Severity Evaluation (Qwen 2.5)
-        ai_assessment = self.ai_evaluator.evaluate(envelope)
+        ai_assessment = cached_ai or self.ai_evaluator.evaluate(envelope)
 
         # Step 3: Compute 100-Point Priority Score
         score, breakdown = self._calculate_100pt_score(envelope, ai_assessment)
@@ -158,8 +163,38 @@ class PriorityScoringEngine:
             troubleshoot_note=note,
         )
 
-    def triage_batch(self, envelopes: List[StagingEnvelope]) -> List[TriagedCandidate]:
-        """Triages and scores a list of envelopes, sorted by priority score descending."""
-        candidates = [self.process_envelope(env) for env in envelopes]
+    def triage_batch(
+        self,
+        envelopes: List[StagingEnvelope],
+        cached_ai: Optional[Dict[str, AISeverityAssessment]] = None,
+    ) -> List[TriagedCandidate]:
+        """
+        Triages and scores a list of envelopes, sorted by priority score descending.
+        cached_ai maps Item_ID to a reusable assessment for items that have not changed.
+        """
+        cached_ai = cached_ai or {}
+        candidates = [self.process_envelope(env, cached_ai.get(env.Item_ID)) for env in envelopes]
         candidates.sort(key=lambda c: c.priority_score, reverse=True)
         return candidates
+
+
+def reusable_assessments(
+    previous: List[TriagedCandidate], envelopes: List[StagingEnvelope]
+) -> Dict[str, AISeverityAssessment]:
+    """
+    AI assessments from a previous triage run that still apply: same item, same
+    source text (Content_Hash) and title, and scored by a real model rather than
+    the heuristic fallback (those are worth retrying).
+    """
+    prev_by_id = {c.envelope.Item_ID: c for c in previous}
+    reusable: Dict[str, AISeverityAssessment] = {}
+    for env in envelopes:
+        old = prev_by_id.get(env.Item_ID)
+        if not old or not old.ai_assessment:
+            continue
+        if old.envelope.Content_Hash != env.Content_Hash or old.envelope.Title != env.Title:
+            continue
+        if old.ai_assessment.evaluated_by == "heuristic_engine":
+            continue
+        reusable[env.Item_ID] = old.ai_assessment
+    return reusable

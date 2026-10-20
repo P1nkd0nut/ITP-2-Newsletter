@@ -33,3 +33,6 @@ Backend/data/staging/envelopes_*.json
 qdrant_storage/
 ollama_data/
 Backend/demo_slide4.py
+
+# Project proposal (kept local, not committed)
+IS_4_Project Plan*.pdf

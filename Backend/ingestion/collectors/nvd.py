@@ -11,7 +11,7 @@ from typing import List, Optional, Tuple, Any, Dict
 import urllib.parse
 from Backend.config import NVD_API_BASE_URL, NVD_API_KEY, DEFAULT_DAYS_BACK
 from Backend.ingestion.collectors.base import BaseCollector
-from Backend.ingestion.models import StagingEnvelope, SourceType
+from Backend.ingestion.models import PoCReference, StagingEnvelope, SourceType
 from Backend.ingestion.utils import (
     compute_content_hash,
     fetch_url,
@@ -105,6 +105,17 @@ class NvdCollector(BaseCollector):
                 # Extract reference URLs
                 ref_urls = [r.get("url") for r in cve.get("references", []) if r.get("url")]
 
+                # NVD analysts tag references that contain exploit code with "Exploit"
+                exploit_refs = [
+                    PoCReference(
+                        url=r["url"],
+                        source=f"NVD reference list for {cve_id}",
+                        matched_on="NVD 'Exploit' tag",
+                    )
+                    for r in cve.get("references", [])
+                    if r.get("url") and "Exploit" in (r.get("tags") or [])
+                ]
+
                 # Raw content stores the raw CVE JSON object string for lossless verification
                 raw_content_str = json.dumps(cve, indent=2, sort_keys=True)
 
@@ -122,6 +133,8 @@ class NvdCollector(BaseCollector):
                     CVSS=cvss_score,
                     CVSS_Version=cvss_version,
                     CWE=cwes if cwes else None,
+                    PoC_URLs=[p.url for p in exploit_refs] or None,
+                    PoC_Details=exploit_refs or None,
                     Extra_Metadata={
                         "vulnStatus": cve.get("vulnStatus"),
                         "references": ref_urls,

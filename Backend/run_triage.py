@@ -17,8 +17,8 @@ if str(ROOT_DIR) not in sys.path:
 from Backend.config import STAGING_DIR
 from Backend.ingestion.collectors.cisa_kev import CisaKevCollector
 from Backend.ingestion.models import StagingEnvelope
-from Backend.triage.models import ScopeCategory
-from Backend.triage.priority_scorer import PriorityScoringEngine
+from Backend.triage.models import ScopeCategory, TriagedCandidate
+from Backend.triage.priority_scorer import PriorityScoringEngine, reusable_assessments
 
 try:
     from rich.console import Console
@@ -49,6 +49,18 @@ def load_envelopes(staging_file: Path) -> list[StagingEnvelope]:
         data = json.load(f)
 
     return [StagingEnvelope.model_validate(item) for item in data]
+
+
+def load_previous_candidates(path: Path) -> list[TriagedCandidate]:
+    """Previous triage output, used to reuse AI scores for unchanged items."""
+    if not path.exists():
+        return []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return [TriagedCandidate.model_validate(item) for item in json.load(f)]
+    except Exception as e:
+        print(f"Warning: Could not read previous triage results ({e}). Scoring everything fresh.")
+        return []
 
 
 def print_rich_triage_dashboard(candidates, console: "Console", output_file: Path):
@@ -155,6 +167,11 @@ def main():
         help="Path to save scored and triaged candidates",
     )
     parser.add_argument(
+        "--rescore-all",
+        action="store_true",
+        help="Send every in-scope item to the AI again instead of reusing scores for unchanged items",
+    )
+    parser.add_argument(
         "-v", "--verbose",
         action="store_true",
         help="Enable verbose debug logging",
@@ -178,8 +195,10 @@ def main():
 
     engine = PriorityScoringEngine(kev_catalog=kev_set)
 
-    print(f"Executing Pre-Filter Gate & AI Severity Scoring across {len(envelopes)} items...")
-    candidates = engine.triage_batch(envelopes)
+    cached_ai = {} if args.rescore_all else reusable_assessments(load_previous_candidates(args.output), envelopes)
+    print(f"Executing Pre-Filter Gate & AI Severity Scoring across {len(envelopes)} items "
+          f"(reusing {len(cached_ai)} AI scores from the previous run for unchanged items)...")
+    candidates = engine.triage_batch(envelopes, cached_ai=cached_ai)
 
     # Save to JSON
     with open(args.output, "w", encoding="utf-8") as f:

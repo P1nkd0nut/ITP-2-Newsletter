@@ -5,7 +5,7 @@ Loads, filters, aggregates, and formats triaged threat intelligence candidates.
 import json
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from .link_validator import link_validator
@@ -16,6 +16,62 @@ ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 STAGING_DIR = ROOT_DIR / "Backend" / "data" / "staging"
 TRIAGED_FILE = STAGING_DIR / "triaged_candidates.json"
 ENVELOPES_FILE = STAGING_DIR / "latest_envelopes.json"
+
+
+def _names_cve(cve_id: Optional[str], text: Optional[str]) -> bool:
+    """True if text names this exact CVE (CVE-2024-3400 does not match CVE-2024-34001)."""
+    if not cve_id or not text:
+        return False
+    normalized = text.upper().replace("_", "-")
+    return re.search(rf"(?<![0-9]){re.escape(cve_id.upper())}(?![0-9])", normalized) is not None
+
+
+def describe_poc(url: str, cve_id: Optional[str], detail: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Labels a PoC link with where it came from and whether it is specific to this CVE."""
+    if detail and detail.get("source"):
+        found_via = detail["source"]
+        if detail.get("matched_on"):
+            found_via += f"; CVE ID matched in {detail['matched_on']}"
+        if detail.get("stars"):
+            found_via += f"; {detail['stars']} stars"
+        return {"source": "PoC Exploit Repository", "type": "PoC / Weaponized Exploit", "found_via": found_via}
+    if detail:
+        # Saved by an older GitHub search run, before results were checked for the CVE ID
+        return {
+            "source": "PoC Exploit Repository",
+            "type": "PoC / Weaponized Exploit",
+            "found_via": "GitHub repository search (older run; CVE match not checked)",
+        }
+    if _names_cve(cve_id, url):
+        return {
+            "source": "PoC Exploit Repository",
+            "type": "PoC / Weaponized Exploit",
+            "found_via": "Listed in the source record (no search record kept)",
+        }
+    # A link that does not name the CVE is a general tool repo, not proof of a PoC for this CVE
+    return {
+        "source": "Generic Tool Repository",
+        "type": "Not CVE-Specific (Demo Placeholder)",
+        "found_via": "Hand-entered in the seed data; this repo does not name this CVE",
+    }
+
+
+def references_provenance(env: Dict[str, Any]) -> str:
+    """Says which feed supplied an item's reference list."""
+    cve_id = env.get("CVE_ID") or "this item"
+    source_type = env.get("Source_Type")
+    if source_type == "GITHUB_ADVISORY":
+        ghsa_id = (env.get("Extra_Metadata") or {}).get("ghsa_id")
+        return f"GitHub Advisory {ghsa_id} reference list" if ghsa_id else "GitHub Advisory reference list"
+    if source_type == "NVD":
+        return f"NVD reference list for {cve_id}"
+    return f"Reference list in the {source_type or 'source'} record"
+
+
+def date_windows(today: Optional[date] = None) -> Dict[str, str]:
+    """ISO dates for the Today / Past 7 Days filters, based on the server's current date."""
+    today = today or date.today()
+    return {"today": today.isoformat(), "week_start": (today - timedelta(days=7)).isoformat()}
 
 
 class DataService:
@@ -96,6 +152,9 @@ class DataService:
         # Extract direct vendor bulletins and advisory links from Extra_Metadata or Raw_Content
         vendor_urls = []
         extra_meta = env.get("Extra_Metadata") or {}
+        source_type = env.get("Source_Type", "Feed")
+        # No collector writes vendor_bulletins, so these were entered by hand in the seed data
+        vendor_provenance = "Hand-entered in the seed data (not fetched by a collector)"
         if extra_meta.get("vendor_bulletins"):
             vendor_urls.extend(extra_meta.get("vendor_bulletins"))
 
@@ -108,6 +167,7 @@ class DataService:
                     continue
                 if clean_u not in vendor_urls:
                     vendor_urls.append(clean_u)
+            vendor_provenance = f"Found in the text of the {source_type} record"
 
         # Parse structured attributes if raw_content is JSON (e.g. CISA KEV or NVD)
         parsed_json = {}
@@ -232,23 +292,22 @@ class DataService:
                 "url": cve_rec_url,
                 "source": "CVE.org Official",
                 "type": "Authoritative Database Record",
+                "found_via": f"Built from the CVE ID ({cve_id})",
             })
             seen_urls.add(cve_rec_url)
             refs_to_check.append({
                 "url": nvd_rec_url,
                 "source": "NVD NIST Official",
                 "type": "Authoritative Database Record",
+                "found_via": f"Built from the CVE ID ({cve_id})",
             })
             seen_urls.add(nvd_rec_url)
 
-        # 2. PoC exploit repositories
+        # 2. PoC exploit repositories, labelled with where each one was found
+        poc_details = {d.get("url"): d for d in (env.get("PoC_Details") or []) if isinstance(d, dict)}
         for poc_url in (env.get("PoC_URLs") or []):
             if poc_url and poc_url not in seen_urls:
-                refs_to_check.append({
-                    "url": poc_url,
-                    "source": "PoC Exploit Framework",
-                    "type": "PoC / Weaponized Exploit",
-                })
+                refs_to_check.append({"url": poc_url, **describe_poc(poc_url, cve_id, poc_details.get(poc_url))})
                 seen_urls.add(poc_url)
 
         # 3. NVD / CVE references (including community forums, issues, commits, advisories)
@@ -258,6 +317,7 @@ class DataService:
                     "url": ref_url,
                     "source": "NVD / CVE Reference",
                     "type": None,  # Will be classified by validator
+                    "found_via": references_provenance(env),
                 })
                 seen_urls.add(ref_url)
 
@@ -268,6 +328,7 @@ class DataService:
                     "url": vb_url,
                     "source": "Vendor Advisory Portal",
                     "type": "Vendor Security Advisory",
+                    "found_via": vendor_provenance,
                 })
                 seen_urls.add(vb_url)
 
@@ -278,6 +339,7 @@ class DataService:
                 "url": primary_src,
                 "source": f"{env.get('Source_Type', 'Feed')} Primary Source",
                 "type": "Primary Feed Source",
+                "found_via": f"Source URL of the {source_type} feed item",
             })
             seen_urls.add(primary_src)
 
@@ -291,6 +353,7 @@ class DataService:
                 force_refresh=False,
                 allow_network=False,
             )
+            verified["found_via"] = r_desc.get("found_via")
             verified_refs.append(verified)
 
         c["external_references"] = verified_refs
@@ -361,7 +424,7 @@ class DataService:
 
         # 3. Discrepancy only
         if discrepancy_only:
-            items = [x for x in items if x.get("discrepancy", {}).get("is_discrepancy", False)]
+            items = [x for x in items if (x.get("discrepancy") or {}).get("is_discrepancy", False)]
 
         # 4. Category filter
         if category and category.upper() != "ALL":
@@ -375,17 +438,16 @@ class DataService:
         # 5. Date filter (presets & range)
         if date_preset:
             dp_lower = date_preset.strip().lower()
+            win = date_windows()
             if dp_lower in ["today", "today_oct19", "oct19", "19oct"]:
-                # Today window: 2026-10-19
                 items = [
                     x for x in items
-                    if (x.get("published_date_iso") or "") == "2026-10-19"
+                    if (x.get("published_date_iso") or "") == win["today"]
                 ]
             elif dp_lower in ["week", "week_oct12", "7days"]:
-                # 1-week window: 2026-10-12 to 2026-10-19
                 items = [
                     x for x in items
-                    if "2026-10-12" <= (x.get("published_date_iso") or "") <= "2026-10-19"
+                    if win["week_start"] <= (x.get("published_date_iso") or "") <= win["today"]
                 ]
             elif dp_lower in ["oct12", "12oct"]:
                 items = [
@@ -409,7 +471,7 @@ class DataService:
             for item in items:
                 env = item.get("envelope", {})
                 pf = item.get("pre_filter", {})
-                ai = item.get("ai_assessment", {})
+                ai = (item.get("ai_assessment") or {})
                 std_cat = item.get("standard_category", "")
                 search_blob = " ".join([
                     str(env.get("CVE_ID") or ""),
@@ -429,12 +491,14 @@ class DataService:
         # 8. Sorting
         reverse = sort_order.lower() == "desc"
         if sort_by == "timeline":
+            win = date_windows()
+
             def timeline_key(x):
                 dt_iso = x.get("published_date_iso") or ""
                 p_score = float(x.get("priority_score", 0.0))
-                if dt_iso >= "2026-10-19":
+                if dt_iso >= win["today"]:
                     tier = 0
-                elif dt_iso >= "2026-10-12":
+                elif dt_iso >= win["week_start"]:
                     tier = 1
                 else:
                     tier = 2
@@ -482,7 +546,7 @@ class DataService:
         out_scope = [x for x in candidates if not x.get("pre_filter", {}).get("is_in_scope", False)]
         web = [x for x in candidates if x.get("pre_filter", {}).get("category") == "WEB"]
         mobile = [x for x in candidates if x.get("pre_filter", {}).get("category") == "MOBILE"]
-        anomalies = [x for x in candidates if x.get("discrepancy", {}).get("is_discrepancy", False)]
+        anomalies = [x for x in candidates if (x.get("discrepancy") or {}).get("is_discrepancy", False)]
         kev_items = [
             x for x in in_scope
             if x.get("envelope", {}).get("KEV_Status")
@@ -522,7 +586,7 @@ class DataService:
         anomaly_list = []
         for a in anomalies:
             env = a.get("envelope", {})
-            disc = a.get("discrepancy", {})
+            disc = (a.get("discrepancy") or {})
             anomaly_list.append({
                 "item_id": env.get("Item_ID"),
                 "cve_id": env.get("CVE_ID"),
@@ -538,7 +602,7 @@ class DataService:
         for x in candidates[:5]:
             env = x.get("envelope", {})
             pf = x.get("pre_filter", {})
-            ai = x.get("ai_assessment", {})
+            ai = (x.get("ai_assessment") or {})
             top_ranked.append({
                 "item_id": env.get("Item_ID"),
                 "cve_id": env.get("CVE_ID") or env.get("Item_ID"),

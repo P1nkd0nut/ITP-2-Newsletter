@@ -27,6 +27,8 @@ class PoCReference(BaseModel):
     author: Optional[str] = None
     created_at: Optional[str] = None
     description: Optional[str] = None
+    source: Optional[str] = None  # Where the link was found, shown on the dashboard
+    matched_on: Optional[str] = None  # What tied it to the CVE (repo name, description, NVD tag)
 
 
 class StagingEnvelope(BaseModel):
@@ -63,6 +65,13 @@ class StagingEnvelope(BaseModel):
     Extra_Metadata: Optional[Dict[str, Any]] = Field(
         default=None, description="Additional source-specific structured attributes"
     )
+
+    # Change tracking across ingestion runs (set by change_tracker)
+    Change_Status: Optional[str] = Field(default=None, description="NEW, UPDATED or UNCHANGED versus the previous run")
+    Change_Summary: Optional[List[str]] = Field(default=None, description="What differs from the previous run, if UPDATED")
+    First_Seen: Optional[str] = Field(default=None, description="ISO 8601 timestamp of the first run that fetched this item")
+    Last_Seen: Optional[str] = Field(default=None, description="ISO 8601 timestamp of the latest run that fetched this item")
+    Last_Changed: Optional[str] = Field(default=None, description="ISO 8601 timestamp of the run that last saw it change")
 
     class Config:
         populate_by_name = True

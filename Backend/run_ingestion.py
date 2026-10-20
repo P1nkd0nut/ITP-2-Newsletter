@@ -62,6 +62,8 @@ def print_rich_summary(summary: dict, console: "Console"):
     console.print(f"\n[bold]Total Items Captured:[/bold] {summary['total_collected']}")
     console.print(f"[bold]Unique Staging Envelopes:[/bold] {summary['unique_envelopes']}")
     console.print(f"[bold]Execution Duration:[/bold] {summary['duration_seconds']}s")
+    if summary.get("change_counts"):
+        console.print(f"[bold]Changes vs previous run:[/bold] {format_change_counts(summary['change_counts'])}")
     if summary.get("output_file"):
         console.print(f"[bold]Staging JSON File:[/bold] [underline cyan]{summary['output_file']}[/underline cyan]")
 
@@ -94,6 +96,14 @@ def print_rich_summary(summary: dict, console: "Console"):
             console.print(Panel(preview_text, title=f"[bold]{env.Source_Type.value} Envelope[/bold]", expand=False))
 
 
+def format_change_counts(counts: dict) -> str:
+    return (
+        f"{counts.get('NEW', 0)} new, {counts.get('UPDATED', 0)} updated, "
+        f"{counts.get('UNCHANGED', 0)} unchanged, {counts.get('CARRIED_OVER', 0)} carried over "
+        f"from earlier runs, {counts.get('EXPIRED', 0)} expired"
+    )
+
+
 def print_plain_summary(summary: dict):
     print("=" * 60)
     print("       GroundedCVE - Threat Intelligence Ingestion Stage")
@@ -103,6 +113,8 @@ def print_plain_summary(summary: dict):
     print(f"\nTotal Captured: {summary['total_collected']}")
     print(f"Unique Envelopes: {summary['unique_envelopes']}")
     print(f"Duration: {summary['duration_seconds']}s")
+    if summary.get("change_counts"):
+        print(f"Changes vs previous run: {format_change_counts(summary['change_counts'])}")
     if summary.get("output_file"):
         print(f"Saved to: {summary['output_file']}")
 
@@ -130,6 +142,23 @@ def main():
         help="Enable public GitHub PoC detection enrichment for CVEs",
     )
     parser.add_argument(
+        "--no-track",
+        action="store_true",
+        help="Skip change tracking: replace latest_envelopes.json instead of comparing with it",
+    )
+    parser.add_argument(
+        "--retain-days",
+        type=int,
+        default=30,
+        help="Keep items that dropped out of the feeds for this many days",
+    )
+    parser.add_argument(
+        "--keep-snapshots",
+        type=int,
+        default=0,
+        help="Also save a timestamped envelopes_*.json, keeping the newest N (0 = none)",
+    )
+    parser.add_argument(
         "--list-sources",
         action="store_true",
         help="List all registered threat feed collectors and exit",
@@ -154,7 +183,13 @@ def main():
     source_list = [s.strip() for s in args.sources.split(",")] if args.sources else None
 
     print(f"Starting GroundedCVE data ingestion (limit={args.limit} per source)...")
-    summary = pipeline.run(sources=source_list, limit_per_source=args.limit)
+    summary = pipeline.run(
+        sources=source_list,
+        limit_per_source=args.limit,
+        track_changes=not args.no_track,
+        retain_days=args.retain_days,
+        keep_snapshots=args.keep_snapshots,
+    )
 
     if HAVE_RICH:
         console = Console()

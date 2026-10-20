@@ -155,14 +155,16 @@ class TestDashboardAPI(unittest.TestCase):
 
     def test_09_date_range_and_sorting_query(self):
         """Verify 1-week date range preset filtering and date-based sorting."""
-        # 1-week preset (12/10/2026 to 19/10/2026)
+        # 1-week preset (past 7 days up to today)
+        from Backend.api.data_service import date_windows
+        win = date_windows()
         res_week = self.client.get("/api/newsletters?date_preset=week")
         self.assertEqual(res_week.status_code, 200)
         week_data = res_week.get_json()
         self.assertGreaterEqual(week_data["total"], 8)
         for item in week_data["items"]:
             iso_date = item.get("published_date_iso", "")
-            self.assertTrue("2026-10-12" <= iso_date <= "2026-10-19")
+            self.assertTrue(win["week_start"] <= iso_date <= win["today"])
 
         # 12 Oct 2026 specific preset
         res_oct12 = self.client.get("/api/newsletters?date_preset=oct12")

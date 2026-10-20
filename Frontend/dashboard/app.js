@@ -7,16 +7,42 @@
 let candidatesData = [];
 let currentDesk = 'ALL';
 let currentSearch = '';
-let currentDateFilter = 'WEEK'; // 'TODAY' | 'WEEK' (12/10 - 19/10/2026) | 'ALL'
+let currentDateFilter = 'WEEK'; // 'TODAY' | 'WEEK' (past 7 days) | 'ALL'
 let currentCategory = 'ALL';
 let currentSort = 'timeline'; // 'timeline' (Today first) | 'score_desc' | 'date_desc' | 'date_asc' | 'ai_desc' | 'score_asc'
 let activeCandidate = null;
+
+// Date windows follow the viewer's current date (YYYY-MM-DD strings compare in order)
+const DATES = computeDateWindows(new Date());
+
+function computeDateWindows(now) {
+  const pad = n => String(n).padStart(2, '0');
+  const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const shift = days => new Date(now.getFullYear(), now.getMonth(), now.getDate() + days);
+  const weekStart = shift(-7);
+  return {
+    today: iso(now),
+    yesterday: iso(shift(-1)),
+    weekStart: iso(weekStart),
+    todayLabel: now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+    todayShort: now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+    weekLabel: `${pad(weekStart.getDate())}/${pad(weekStart.getMonth() + 1)} - ${pad(now.getDate())}/${pad(now.getMonth() + 1)}`,
+  };
+}
+
+function applyDateLabels() {
+  const set = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
+  set('dateBtn-TODAY', `⚡ Today (${DATES.todayShort})`);
+  set('dateBtn-WEEK', `📅 Past 7 Days (${DATES.weekLabel})`);
+  set('todayDateBadge', DATES.todayLabel);
+}
 
 // ============================================================================
 // Initialization & Data Loading
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+  applyDateLabels();
   // Listen for Escape key to close modals
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -213,6 +239,22 @@ function updateMetrics() {
 }
 
 // Category Badge Helper
+// NEW / UPDATED badge from the ingestion change tracker (nothing for UNCHANGED)
+function changeBadge(env) {
+  if (env.Change_Status === 'NEW') {
+    return '<span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-violet-950 text-violet-300 border border-violet-800" title="First seen in the latest ingestion run">🆕 NEW</span>';
+  }
+  if (env.Change_Status === 'UPDATED') {
+    const tip = escapeAttr((env.Change_Summary || []).join(' | ') || 'Changed since the previous ingestion run');
+    return `<span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-950 text-indigo-300 border border-indigo-800" title="${tip}">🔄 UPDATED</span>`;
+  }
+  return '';
+}
+
+function escapeAttr(text) {
+  return String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function getCategoryPill(cat) {
   const c = (cat || '').toLowerCase();
   if (c.includes('remote code execution') || c.includes('rce')) {
@@ -264,12 +306,12 @@ function getFilteredCandidates() {
   if (currentDateFilter === 'TODAY') {
     items = items.filter(x => {
       const d = x.published_date_iso || (x.envelope && (x.envelope.Published_Date || '')).slice(0, 10);
-      return d === '2026-10-19';
+      return d === DATES.today;
     });
   } else if (currentDateFilter === 'WEEK') {
     items = items.filter(x => {
       const d = x.published_date_iso || (x.envelope && (x.envelope.Published_Date || '')).slice(0, 10);
-      return d >= '2026-10-12' && d <= '2026-10-19';
+      return d >= DATES.weekStart && d <= DATES.today;
     });
   }
 
@@ -341,24 +383,24 @@ function getFilteredCandidates() {
 function renderContent() {
   const filtered = getFilteredCandidates();
 
-  // Partition into Today (19 Oct 2026), Past 7 Days (12 Oct - 18 Oct 2026), and Earlier
-  const todayItems = filtered.filter(x => (x.published_date_iso || (x.envelope && x.envelope.Published_Date || '').slice(0, 10)) === '2026-10-19');
+  // Partition into Today, Past 7 Days (excluding today), and Earlier
+  const todayItems = filtered.filter(x => (x.published_date_iso || (x.envelope && x.envelope.Published_Date || '').slice(0, 10)) === DATES.today);
   const weekItems = filtered.filter(x => {
     const d = x.published_date_iso || (x.envelope && x.envelope.Published_Date || '').slice(0, 10);
-    return d >= '2026-10-12' && d <= '2026-10-18';
+    return d >= DATES.weekStart && d <= DATES.yesterday;
   });
   const olderItems = filtered.filter(x => {
     const d = x.published_date_iso || (x.envelope && x.envelope.Published_Date || '').slice(0, 10);
-    return d < '2026-10-12';
+    return d < DATES.weekStart;
   });
 
   // Update status text
   const statusEl = document.getElementById('filterStatusText');
   if (statusEl) {
     const windowLabel = currentDateFilter === 'TODAY'
-      ? 'Today: 19 Oct 2026'
+      ? `Today: ${DATES.todayLabel}`
       : currentDateFilter === 'WEEK'
-      ? 'Past 7 Days: 12/10 - 19/10/2026'
+      ? `Past 7 Days: ${DATES.weekLabel}`
       : 'All Historical Dates';
     const deskLabel = currentDesk !== 'ALL' ? ` &bull; Desk: ${currentDesk}` : '';
     const catLabel = currentCategory !== 'ALL' ? ` &bull; Category: ${currentCategory}` : '';
@@ -445,6 +487,7 @@ function renderSpotlight(topItem) {
           <span class="px-2 py-0.5 rounded text-[10px] font-mono text-slate-400 bg-slate-950 border border-slate-800">
             📅 ${pubDateFmt}
           </span>
+          ${changeBadge(env)}
           ${isKev ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-950 text-rose-300 border border-rose-800">🔥 CISA KEV</span>' : ''}
           ${hasPoc ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-950 text-amber-300 border border-amber-800">💻 PoC Available</span>' : ''}
           ${disc.is_discrepancy ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-900 text-rose-200">⚠️ Discrepancy</span>' : ''}
@@ -504,7 +547,7 @@ function renderDeskGrid(containerId, items, desk) {
           
           <!-- Top Row: CVE ID & Category & Score -->
           <div class="flex items-center justify-between text-[11px] font-mono">
-            <span class="font-bold text-cyan-400">${env.CVE_ID || env.Item_ID}</span>
+            <span class="flex items-center gap-1.5"><span class="font-bold text-cyan-400">${env.CVE_ID || env.Item_ID}</span>${changeBadge(env)}</span>
             <span class="font-bold ${scoreColor}">${score.toFixed(1)} / 100</span>
           </div>
 
@@ -605,6 +648,28 @@ function openDetailModal(itemId) {
     vBox.classList.add('hidden');
   }
 
+  // What changed since the previous ingestion run
+  const changeBox = document.getElementById('mChangeBox');
+  if (changeBox) {
+    const changes = env.Change_Summary || [];
+    if (env.Change_Status === 'NEW' || (env.Change_Status === 'UPDATED' && changes.length)) {
+      changeBox.classList.remove('hidden');
+      const firstSeen = env.First_Seen ? env.First_Seen.slice(0, 10) : '';
+      document.getElementById('mChangeTitle').innerText = env.Change_Status === 'NEW'
+        ? `New in the latest ingestion run${firstSeen ? ` (first seen ${firstSeen})` : ''}`
+        : `Updated since the previous run (first seen ${firstSeen}):`;
+      const list = document.getElementById('mChangeList');
+      list.innerHTML = '';
+      changes.forEach(c => {
+        const li = document.createElement('li');
+        li.textContent = `• ${c}`;
+        list.appendChild(li);
+      });
+    } else {
+      changeBox.classList.add('hidden');
+    }
+  }
+
   // 100-Point Score Formula Breakdown
   const totalScore = (item.priority_score || 0).toFixed(1);
   const kevPts = bd.cisa_kev_points || 0;
@@ -685,16 +750,16 @@ function openDetailModal(itemId) {
   if (refsList) {
     if (allRefs.length > 0) {
       refsList.innerHTML = allRefs.map(ref => {
-        const isLive = ref.is_working !== false;
-        const statusCls = isLive 
-          ? 'bg-emerald-950 text-emerald-300 border-emerald-800' 
-          : 'bg-rose-950 text-rose-300 border-rose-800';
-        const dotCls = isLive ? 'bg-emerald-400' : 'bg-rose-400';
-        const statusLabel = ref.status_label || (isLive ? '200 OK (Verified)' : '404 Inactive');
+        const st = linkStatusStyle(ref);
+        const statusCls = st.pill;
+        const dotCls = st.dot;
+        const statusLabel = st.label;
 
         let typeBadgeCls = 'bg-slate-950 text-slate-300 border-slate-800';
         const tLower = (ref.link_type || '').toLowerCase();
-        if (tLower.includes('poc') || tLower.includes('exploit')) {
+        if (tLower.includes('not cve-specific')) {
+          typeBadgeCls = 'bg-slate-950 text-slate-400 border-slate-700 border-dashed';
+        } else if (tLower.includes('poc') || tLower.includes('exploit')) {
           typeBadgeCls = 'bg-amber-950 text-amber-300 border-amber-800';
         } else if (tLower.includes('forum') || tLower.includes('discussion')) {
           typeBadgeCls = 'bg-purple-950 text-purple-300 border-purple-800';
@@ -720,6 +785,7 @@ function openDetailModal(itemId) {
               <a href="${escapeHtml(ref.url)}" target="_blank" class="text-xs text-cyan-400 hover:text-cyan-300 hover:underline block truncate font-mono">
                 &bull; ${escapeHtml(ref.url)}
               </a>
+              ${ref.found_via ? `<div class="text-[10px] text-slate-500">Found via: ${escapeHtml(ref.found_via)}</div>` : ''}
             </div>
             
             <div class="shrink-0 flex items-center space-x-2 text-[10px] font-mono">
@@ -727,6 +793,7 @@ function openDetailModal(itemId) {
                 <span class="h-1.5 w-1.5 rounded-full ${dotCls}"></span>
                 <span>${escapeHtml(statusLabel)}</span>
               </span>
+              ${ref.archive_url ? `<a href="${escapeHtml(ref.archive_url)}" target="_blank" class="text-cyan-400 hover:underline">Archived copy</a>` : ''}
               ${ref.latency_ms ? `<span class="text-slate-500">${ref.latency_ms}ms</span>` : ''}
             </div>
           </div>
@@ -914,6 +981,26 @@ function escapeHtml(str) {
 // Concurrent Link Health & Scalability Engine
 // ============================================================================
 
+// Maps a link record's state to badge colors. Unchecked, blocked and
+// temporary-error links are neutral/amber rather than shown as live.
+function linkStatusStyle(ref) {
+  const state = ref.state || (ref.is_working === true ? 'live' : ref.is_working === false ? 'dead' : 'unchecked');
+  const styles = {
+    live:      { pill: 'bg-emerald-950 text-emerald-300 border-emerald-800', dot: 'bg-emerald-400', text: 'text-emerald-400', label: 'Live' },
+    dead:      { pill: 'bg-rose-950 text-rose-300 border-rose-800',          dot: 'bg-rose-400',    text: 'text-rose-400',    label: 'Dead Link' },
+    moved:     { pill: 'bg-rose-950 text-rose-300 border-rose-800',          dot: 'bg-rose-400',    text: 'text-rose-400',    label: 'Likely Removed' },
+    blocked:   { pill: 'bg-amber-950 text-amber-300 border-amber-800',       dot: 'bg-amber-400',   text: 'text-amber-400',   label: 'Blocked (Unverified)' },
+    temporary: { pill: 'bg-amber-950 text-amber-300 border-amber-800',       dot: 'bg-amber-400',   text: 'text-amber-400',   label: 'Temporary Error' },
+    unchecked: { pill: 'bg-slate-950 text-slate-400 border-slate-700',       dot: 'bg-slate-500',   text: 'text-slate-400',   label: 'Not Yet Checked' },
+  };
+  const st = styles[state] || styles.unchecked;
+  return { ...st, label: ref.status_label || st.label };
+}
+
+function healthText(stats) {
+  return stats.health_percentage == null ? 'Not checked yet' : `${stats.health_percentage}% Active`;
+}
+
 async function loadLinkHealthStats() {
   try {
     const res = await fetch('/api/links/stats');
@@ -923,13 +1010,13 @@ async function loadLinkHealthStats() {
 
     const badge = document.getElementById('badgeLinkHealth');
     if (badge) {
-      badge.innerText = `${stats.health_percentage || 100}% Active`;
+      badge.innerText = healthText(stats);
     }
 
     const kpiStatus = document.getElementById('lhKpiStatus');
     if (kpiStatus) {
-      kpiStatus.innerText = `${stats.health_percentage || 100}% Active`;
-      kpiStatus.className = stats.health_percentage >= 95 
+      kpiStatus.innerText = healthText(stats);
+      kpiStatus.className = (stats.health_percentage ?? 100) >= 95 
         ? 'text-base font-bold text-emerald-400' 
         : 'text-base font-bold text-amber-400';
     }
@@ -977,16 +1064,16 @@ async function populateLinksTable(providedLinks = null) {
   }
 
   tbody.innerHTML = links.map(l => {
-    const isLive = l.is_working !== false;
-    const statusCls = isLive ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold';
-    const statusDot = isLive ? 'bg-emerald-400' : 'bg-rose-400';
+    const st = linkStatusStyle(l);
+    const statusCls = `${st.text} font-bold`;
+    const statusDot = st.dot;
 
     return `
       <tr class="hover:bg-slate-900/60 transition">
         <td class="p-2.5 whitespace-nowrap">
           <span class="inline-flex items-center space-x-1.5 ${statusCls}">
             <span class="h-1.5 w-1.5 rounded-full ${statusDot}"></span>
-            <span>${escapeHtml(l.status_label || (isLive ? '200 OK' : '404'))}</span>
+            <span>${escapeHtml(st.label)}</span>
           </span>
         </td>
         <td class="p-2.5 whitespace-nowrap text-slate-400">${escapeHtml(l.source_provider || 'NVD')}</td>
@@ -995,6 +1082,7 @@ async function populateLinksTable(providedLinks = null) {
           <a href="${escapeHtml(l.url)}" target="_blank" class="text-cyan-400 hover:underline">
             ${escapeHtml(l.url)}
           </a>
+          ${l.archive_url ? `<a href="${escapeHtml(l.archive_url)}" target="_blank" class="text-slate-400 hover:underline ml-1">(archived)</a>` : ''}
         </td>
         <td class="p-2.5 text-right whitespace-nowrap text-slate-400 font-mono">${l.latency_ms || 0}ms</td>
       </tr>
@@ -1025,7 +1113,7 @@ async function runLiveLinkVerification() {
         ⚡ <strong>Benchmark Completed:</strong> Tested <strong>${data.total_tested} URLs</strong> concurrently in 
         <strong>${b.verification_time_seconds || clientElapsed}s</strong> 
         (Avg: <strong>${b.avg_latency_ms}ms / link</strong>). 
-        Active Ratio: <strong>${b.health_percentage}%</strong>. 
+        Active Ratio: <strong>${healthText(b)}</strong>. 
         <span class="text-cyan-300">Throughput: ~${Math.round(data.total_tested / (b.verification_time_seconds || 1))} links/sec</span>.
       `;
     }
