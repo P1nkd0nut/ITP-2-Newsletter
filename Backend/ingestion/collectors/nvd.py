@@ -75,71 +75,9 @@ class NvdCollector(BaseCollector):
             vulnerabilities = data.get("vulnerabilities", [])
 
             for entry in vulnerabilities:
-                cve = entry.get("cve", {})
-                cve_id = cve.get("id", "").strip().upper()
-                if not cve_id:
+                envelope = self._envelope_from_cve(entry.get("cve", {}), ingested_at)
+                if envelope is None:
                     continue
-
-                published = cve.get("published", "")
-                
-                # Extract English description
-                descriptions = cve.get("descriptions", [])
-                raw_desc = ""
-                for d in descriptions:
-                    if d.get("lang") == "en":
-                        raw_desc = d.get("value", "")
-                        break
-                if not raw_desc and descriptions:
-                    raw_desc = descriptions[0].get("value", "")
-
-                # Extract CVSS
-                cvss_score, cvss_version = self._extract_cvss(cve.get("metrics", {}))
-
-                # Extract CWE
-                cwes = self._extract_cwes(cve.get("weaknesses", []))
-
-                # Extract CPE configurations / products
-                products = self._extract_products(cve.get("configurations", []))
-                vendor_product = ", ".join(products[:3]) if products else None
-
-                # Extract reference URLs
-                ref_urls = [r.get("url") for r in cve.get("references", []) if r.get("url")]
-
-                # NVD analysts tag references that contain exploit code with "Exploit"
-                exploit_refs = [
-                    PoCReference(
-                        url=r["url"],
-                        source=f"NVD reference list for {cve_id}",
-                        matched_on="NVD 'Exploit' tag",
-                    )
-                    for r in cve.get("references", [])
-                    if r.get("url") and "Exploit" in (r.get("tags") or [])
-                ]
-
-                # Raw content stores the raw CVE JSON object string for lossless verification
-                raw_content_str = json.dumps(cve, indent=2, sort_keys=True)
-
-                envelope = StagingEnvelope(
-                    Item_ID=f"nvd-{cve_id.lower()}",
-                    Source_Type=self.source_type,
-                    Title=f"{cve_id} - {raw_desc[:90]}..." if len(raw_desc) > 90 else f"{cve_id} - {raw_desc}",
-                    Source_URL=f"https://nvd.nist.gov/vuln/detail/{cve_id}",
-                    Published_Date=normalize_to_iso(published),
-                    Ingested_At=ingested_at,
-                    Content_Hash=compute_content_hash(raw_content_str),
-                    Raw_Content=raw_content_str,
-                    CVE_ID=cve_id,
-                    Vendor_Product=vendor_product,
-                    CVSS=cvss_score,
-                    CVSS_Version=cvss_version,
-                    CWE=cwes if cwes else None,
-                    PoC_URLs=[p.url for p in exploit_refs] or None,
-                    PoC_Details=exploit_refs or None,
-                    Extra_Metadata={
-                        "vulnStatus": cve.get("vulnStatus"),
-                        "references": ref_urls,
-                    },
-                )
                 envelopes.append(envelope)
 
                 if limit and len(envelopes) >= limit:
@@ -150,6 +88,86 @@ class NvdCollector(BaseCollector):
 
         logger.info(f"Successfully collected {len(envelopes)} items from NVD 2.0")
         return envelopes
+
+    def fetch_by_cve_id(self, cve_id: str) -> Optional[StagingEnvelope]:
+        """Re-fetches one CVE record, used to check older items for updates."""
+        req_url = f"{self.base_url}?{urllib.parse.urlencode({'cveId': cve_id})}"
+        try:
+            data = json.loads(fetch_url(req_url, headers=self._get_headers(), timeout=20))
+            vulnerabilities = data.get("vulnerabilities", [])
+            if not vulnerabilities:
+                return None
+            return self._envelope_from_cve(vulnerabilities[0].get("cve", {}), get_utc_now_iso())
+        except Exception as e:
+            logger.warning(f"Could not re-check {cve_id} on NVD: {e}")
+            return None
+
+    def _envelope_from_cve(self, cve: Dict[str, Any], ingested_at: str) -> Optional[StagingEnvelope]:
+        cve_id = cve.get("id", "").strip().upper()
+        if not cve_id:
+            return None
+
+        published = cve.get("published", "")
+        
+        # Extract English description
+        descriptions = cve.get("descriptions", [])
+        raw_desc = ""
+        for d in descriptions:
+            if d.get("lang") == "en":
+                raw_desc = d.get("value", "")
+                break
+        if not raw_desc and descriptions:
+            raw_desc = descriptions[0].get("value", "")
+
+        # Extract CVSS
+        cvss_score, cvss_version = self._extract_cvss(cve.get("metrics", {}))
+
+        # Extract CWE
+        cwes = self._extract_cwes(cve.get("weaknesses", []))
+
+        # Extract CPE configurations / products
+        products = self._extract_products(cve.get("configurations", []))
+        vendor_product = ", ".join(products[:3]) if products else None
+
+        # Extract reference URLs
+        ref_urls = [r.get("url") for r in cve.get("references", []) if r.get("url")]
+
+        # NVD analysts tag references that contain exploit code with "Exploit"
+        exploit_refs = [
+            PoCReference(
+                url=r["url"],
+                source=f"NVD reference list for {cve_id}",
+                matched_on="NVD 'Exploit' tag",
+            )
+            for r in cve.get("references", [])
+            if r.get("url") and "Exploit" in (r.get("tags") or [])
+        ]
+
+        # Raw content stores the raw CVE JSON object string for lossless verification
+        raw_content_str = json.dumps(cve, indent=2, sort_keys=True)
+
+        envelope = StagingEnvelope(
+            Item_ID=f"nvd-{cve_id.lower()}",
+            Source_Type=self.source_type,
+            Title=f"{cve_id} - {raw_desc[:90]}..." if len(raw_desc) > 90 else f"{cve_id} - {raw_desc}",
+            Source_URL=f"https://nvd.nist.gov/vuln/detail/{cve_id}",
+            Published_Date=normalize_to_iso(published),
+            Ingested_At=ingested_at,
+            Content_Hash=compute_content_hash(raw_content_str),
+            Raw_Content=raw_content_str,
+            CVE_ID=cve_id,
+            Vendor_Product=vendor_product,
+            CVSS=cvss_score,
+            CVSS_Version=cvss_version,
+            CWE=cwes if cwes else None,
+            PoC_URLs=[p.url for p in exploit_refs] or None,
+            PoC_Details=exploit_refs or None,
+            Extra_Metadata={
+                "vulnStatus": cve.get("vulnStatus"),
+                "references": ref_urls,
+            },
+        )
+        return envelope
 
     def _extract_cvss(self, metrics: Dict[str, Any]) -> Tuple[Optional[float], Optional[str]]:
         # Check CVSS v4.0 first

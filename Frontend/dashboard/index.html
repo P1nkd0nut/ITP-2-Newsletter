@@ -216,7 +216,6 @@
           <span class="h-2.5 w-2.5 rounded-full bg-cyan-400"></span>
           <h2 class="text-base font-bold text-white flex items-center space-x-2">
             <span>Past 7 Days</span>
-            <span class="text-xs font-mono text-cyan-400 font-normal">(12 Oct – 18 Oct 2026)</span>
           </h2>
           <span id="titleWeekCount" class="text-xs font-mono text-cyan-400">(0)</span>
         </div>
@@ -259,6 +258,7 @@
             <span id="mCveId" class="text-cyan-400 font-bold">CVE-0000-0000</span>
             <span id="mPublishedDate" class="text-slate-400">📅 Date</span>
             <span id="mSource" class="text-slate-500">Source</span>
+            <span id="mCheckedLabel" class="text-slate-500"></span>
           </div>
           <h3 id="mTitle" class="text-base sm:text-lg font-bold text-white leading-snug"></h3>
         </div>
@@ -267,6 +267,11 @@
 
       <!-- Modal Body -->
       <div class="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs font-sans">
+
+        <!-- Over-a-year-old notice -->
+        <div id="mFreezeBox" class="hidden bg-slate-800/60 border border-slate-600 rounded-lg p-3 text-[11px] text-slate-200 font-sans">
+          <strong class="text-white">🔒 Not updated.</strong> <span id="mFreezeText"></span>
+        </div>
 
         <!-- Direct Authoritative CVE & Bulletin Links -->
         <div class="bg-slate-950 border border-slate-800 rounded-lg p-3.5 space-y-2">

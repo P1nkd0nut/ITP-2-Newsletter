@@ -32,9 +32,41 @@ function computeDateWindows(now) {
 
 function applyDateLabels() {
   const set = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
-  set('dateBtn-TODAY', `⚡ Today (${DATES.todayShort})`);
-  set('dateBtn-WEEK', `📅 Past 7 Days (${DATES.weekLabel})`);
-  set('todayDateBadge', DATES.todayLabel);
+  set('dateBtn-TODAY', '⚡ Today');
+  set('dateBtn-WEEK', '📅 Past 7 Days');
+  set('todayDateBadge', 'Today');
+}
+
+// Exact dates are not shown to users; items show how recent they are instead
+const FREEZE_AFTER_DAYS = 365;
+const FREEZE_NOTICE = 'Published over a year ago. PoCs and details for older CVEs are no longer updated, so check the source for newer information.';
+
+function ageInDays(published) {
+  const t = Date.parse(published || '');
+  return Number.isNaN(t) ? null : Math.max(0, Math.floor((Date.now() - t) / 86400000));
+}
+
+function recencyLabel(published) {
+  const age = ageInDays(published);
+  if (age === null) return 'Monitored';
+  if (age <= 7) return 'Recent';
+  if (age <= 30) return 'Past month';
+  if (age <= 90) return 'Past 3 months';
+  if (age <= 180) return 'Past 6 months';
+  if (age <= 365) return 'Past year';
+  return 'Over a year ago';
+}
+
+function isFrozen(item) {
+  if (typeof item.updates_frozen === 'boolean') return item.updates_frozen;
+  const age = ageInDays(item.envelope && item.envelope.Published_Date);
+  return age !== null && age > FREEZE_AFTER_DAYS;
+}
+
+function frozenBadge(item) {
+  return isFrozen(item)
+    ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-600" title="${escapeAttr(FREEZE_NOTICE)}">🔒 Not updated</span>`
+    : '';
 }
 
 // ============================================================================
@@ -118,7 +150,9 @@ function fallbackData() {
         },
         standard_category: isWeb ? "Remote Code Execution (RCE)" : "Mobile Component Hijacking",
         published_date_iso: pubIso,
-        published_date_formatted: pubIso || "Monitored",
+        published_date_formatted: recencyLabel(pubDate),
+        updates_frozen: (ageInDays(pubDate) || 0) > FREEZE_AFTER_DAYS,
+        freeze_notice: (ageInDays(pubDate) || 0) > FREEZE_AFTER_DAYS ? FREEZE_NOTICE : null,
         triaged_at: env.Ingested_At || new Date().toISOString(),
       };
     });
@@ -398,10 +432,10 @@ function renderContent() {
   const statusEl = document.getElementById('filterStatusText');
   if (statusEl) {
     const windowLabel = currentDateFilter === 'TODAY'
-      ? `Today: ${DATES.todayLabel}`
+      ? 'Today'
       : currentDateFilter === 'WEEK'
-      ? `Past 7 Days: ${DATES.weekLabel}`
-      : 'All Historical Dates';
+      ? 'Past 7 Days'
+      : 'All Time';
     const deskLabel = currentDesk !== 'ALL' ? ` &bull; Desk: ${currentDesk}` : '';
     const catLabel = currentCategory !== 'ALL' ? ` &bull; Category: ${currentCategory}` : '';
     const searchLabel = currentSearch ? ` &bull; Search: "${currentSearch}"` : '';
@@ -468,7 +502,7 @@ function renderSpotlight(topItem) {
   const disc = topItem.discrepancy || {};
   const isKev = Boolean(env.KEV_Status);
   const hasPoc = Boolean(env.PoC_URLs && env.PoC_URLs.length > 0);
-  const pubDateFmt = topItem.published_date_formatted || (env.Published_Date ? env.Published_Date.slice(0, 10) : 'Monitored');
+  const pubDateFmt = topItem.published_date_formatted || recencyLabel(env.Published_Date);
   const catPill = getCategoryPill(topItem.standard_category || ai.offensive_impact);
 
   box.innerHTML = `
@@ -488,6 +522,7 @@ function renderSpotlight(topItem) {
             📅 ${pubDateFmt}
           </span>
           ${changeBadge(env)}
+          ${frozenBadge(topItem)}
           ${isKev ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-950 text-rose-300 border border-rose-800">🔥 CISA KEV</span>' : ''}
           ${hasPoc ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-950 text-amber-300 border border-amber-800">💻 PoC Available</span>' : ''}
           ${disc.is_discrepancy ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-900 text-rose-200">⚠️ Discrepancy</span>' : ''}
@@ -534,7 +569,7 @@ function renderDeskGrid(containerId, items, desk) {
     const indepth = item.in_depth || {};
     const isKev = Boolean(env.KEV_Status);
     const hasPoc = Boolean(env.PoC_URLs && env.PoC_URLs.length > 0);
-    const pubDateFmt = item.published_date_formatted || (env.Published_Date ? env.Published_Date.slice(0, 10) : 'Monitored');
+    const pubDateFmt = item.published_date_formatted || recencyLabel(env.Published_Date);
     const catPill = getCategoryPill(item.standard_category || ai.offensive_impact);
 
     const score = item.priority_score || 0;
@@ -570,6 +605,7 @@ function renderDeskGrid(containerId, items, desk) {
         <div class="pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
           <div class="flex items-center space-x-1.5">
             <span class="text-slate-500">📅 ${pubDateFmt}</span>
+            ${frozenBadge(item)}
             ${isKev ? '<span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 font-bold border border-rose-800">🔥 KEV</span>' : ''}
             ${hasPoc ? '<span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 font-bold border border-amber-800">💻 PoC</span>' : ''}
             ${disc.is_discrepancy ? '<span class="px-1.5 py-0.5 rounded bg-rose-900 text-rose-200 font-bold">⚠️ Discrepancy</span>' : ''}
@@ -605,7 +641,7 @@ function openDetailModal(itemId) {
   document.getElementById('mTitle').innerText = env.Title || 'Advisory';
   document.getElementById('mCveId').innerText = env.CVE_ID || env.Item_ID;
   document.getElementById('mSource').innerText = env.Source_Type || 'Feed';
-  document.getElementById('mPublishedDate').innerText = `📅 ${item.published_date_formatted || (env.Published_Date ? env.Published_Date.slice(0, 10) : 'Monitored')}`;
+  document.getElementById('mPublishedDate').innerText = `📅 ${item.published_date_formatted || recencyLabel(env.Published_Date)}`;
   document.getElementById('mCategoryBadge').innerText = item.standard_category || ai.offensive_impact || 'Advisory';
 
   const scopeBadge = document.getElementById('mScopeBadge');
@@ -648,16 +684,26 @@ function openDetailModal(itemId) {
     vBox.classList.add('hidden');
   }
 
+  // Older than a year: no longer updated
+  const freezeBox = document.getElementById('mFreezeBox');
+  if (freezeBox) {
+    freezeBox.classList.toggle('hidden', !isFrozen(item));
+    document.getElementById('mFreezeText').innerText = item.freeze_notice || FREEZE_NOTICE;
+  }
+  const checkedEl = document.getElementById('mCheckedLabel');
+  if (checkedEl) {
+    checkedEl.innerText = item.checked_label ? `• ${item.checked_label}` : '';
+  }
+
   // What changed since the previous ingestion run
   const changeBox = document.getElementById('mChangeBox');
   if (changeBox) {
     const changes = env.Change_Summary || [];
     if (env.Change_Status === 'NEW' || (env.Change_Status === 'UPDATED' && changes.length)) {
       changeBox.classList.remove('hidden');
-      const firstSeen = env.First_Seen ? env.First_Seen.slice(0, 10) : '';
       document.getElementById('mChangeTitle').innerText = env.Change_Status === 'NEW'
-        ? `New in the latest ingestion run${firstSeen ? ` (first seen ${firstSeen})` : ''}`
-        : `Updated since the previous run (first seen ${firstSeen}):`;
+        ? 'New in the latest ingestion run'
+        : 'Updated since the previous run:';
       const list = document.getElementById('mChangeList');
       list.innerHTML = '';
       changes.forEach(c => {

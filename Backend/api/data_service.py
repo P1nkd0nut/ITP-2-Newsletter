@@ -8,6 +8,7 @@ import re
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional
+from Backend.ingestion.recheck_policy import FREEZE_NOTICE, age_days, is_frozen, recency_label
 from .link_validator import link_validator
 
 logger = logging.getLogger(__name__)
@@ -214,22 +215,26 @@ class DataService:
 
         c["standard_category"] = standard_category
 
-        # Format publication date
+        # Publication date is kept only for filtering/sorting; users see a relative label
         pub_date_raw = env.get("Published_Date", "")
-        pub_date_iso = ""
-        pub_date_fmt = "Monitored"
-        if pub_date_raw:
-            try:
-                # Handle ISO timestamps with or without timezone
-                clean_iso = pub_date_raw.replace("Z", "+00:00")
-                dt = datetime.fromisoformat(clean_iso)
-                pub_date_iso = dt.strftime("%Y-%m-%d")
-                pub_date_fmt = dt.strftime("%d %b %Y")
-            except Exception:
-                pub_date_iso = pub_date_raw[:10]
-                pub_date_fmt = pub_date_raw[:10]
+        pub_date_iso = pub_date_raw[:10]
+        try:
+            pub_date_iso = datetime.fromisoformat(pub_date_raw.replace("Z", "+00:00")).strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+        pub_date_fmt = recency_label(pub_date_raw)
         c["published_date_iso"] = pub_date_iso
         c["published_date_formatted"] = pub_date_fmt
+        c["recency_label"] = pub_date_fmt
+        c["updates_frozen"] = is_frozen(pub_date_raw)
+        c["freeze_notice"] = FREEZE_NOTICE if c["updates_frozen"] else None
+        last_checked = env.get("Last_Checked") or env.get("Last_Seen")
+        checked_age = age_days(last_checked)
+        c["checked_label"] = (
+            None if checked_age is None
+            else "Checked today" if checked_age == 0
+            else f"Checked {checked_age} day{'s' if checked_age != 1 else ''} ago"
+        )
 
         # Structured AI evaluation breakdown for why it is rated high/low
         score_bd = c.get("score_breakdown") or {}
@@ -371,6 +376,9 @@ class DataService:
             "standard_category": standard_category,
             "published_date_formatted": pub_date_fmt,
             "published_date_iso": pub_date_iso,
+            "updates_frozen": c["updates_frozen"],
+            "freeze_notice": c["freeze_notice"],
+            "checked_label": c["checked_label"],
             "ai_evaluation_breakdown": c["ai_evaluation_breakdown"],
             "external_references": verified_refs,
         }

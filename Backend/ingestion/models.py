@@ -72,6 +72,7 @@ class StagingEnvelope(BaseModel):
     First_Seen: Optional[str] = Field(default=None, description="ISO 8601 timestamp of the first run that fetched this item")
     Last_Seen: Optional[str] = Field(default=None, description="ISO 8601 timestamp of the latest run that fetched this item")
     Last_Changed: Optional[str] = Field(default=None, description="ISO 8601 timestamp of the run that last saw it change")
+    Last_Checked: Optional[str] = Field(default=None, description="ISO 8601 timestamp of the last time the source was checked for updates")
 
     class Config:
         populate_by_name = True

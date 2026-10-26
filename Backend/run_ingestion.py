@@ -100,7 +100,9 @@ def format_change_counts(counts: dict) -> str:
     return (
         f"{counts.get('NEW', 0)} new, {counts.get('UPDATED', 0)} updated, "
         f"{counts.get('UNCHANGED', 0)} unchanged, {counts.get('CARRIED_OVER', 0)} carried over "
-        f"from earlier runs, {counts.get('EXPIRED', 0)} expired"
+        f"from earlier runs, {counts.get('EXPIRED', 0)} expired, "
+        f"{counts.get('RECHECKED', 0)} older re-checked ({counts.get('RECHECK_UPDATED', 0)} changed), "
+        f"{counts.get('FROZEN', 0)} over a year old (frozen)"
     )
 
 
@@ -149,8 +151,13 @@ def main():
     parser.add_argument(
         "--retain-days",
         type=int,
-        default=30,
-        help="Keep items that dropped out of the feeds for this many days",
+        default=None,
+        help="Drop items that dropped out of the feeds after this many days (default: keep, re-checked by age)",
+    )
+    parser.add_argument(
+        "--no-recheck",
+        action="store_true",
+        help="Do not re-check older items for updates this run",
     )
     parser.add_argument(
         "--keep-snapshots",
@@ -189,6 +196,7 @@ def main():
         track_changes=not args.no_track,
         retain_days=args.retain_days,
         keep_snapshots=args.keep_snapshots,
+        recheck_older=not args.no_recheck,
     )
 
     if HAVE_RICH:

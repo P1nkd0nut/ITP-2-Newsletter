@@ -202,6 +202,25 @@ python Frontend/run_dashboard.py
 | `/api/channels/telegram` | PUT | Configure Telegram secondary notification settings |
 | `/api/channels/telegram/test`| POST | Verify secondary Telegram bot integration (live or simulated) |
 
+#### Keeping older CVEs up to date
+Ingestion re-checks CVEs that dropped out of the feeds, less often as they age (`Backend/ingestion/recheck_policy.py`):
+
+| CVE age | Re-checked |
+| :--- | :--- |
+| Under 1 month | every daily run |
+| 1–6 months | monthly |
+| 6–12 months | quarterly |
+| Over 1 year | never (frozen, shown with a "Not updated" disclaimer) |
+
+NVD records are fetched again and PoC searches repeated; anything that changed is flagged `UPDATED` with a summary. Use `--no-recheck` to skip this. The dashboard shows how recent an item is ("Recent", "Past month", "Over a year ago") instead of exact dates.
+
+### 6b. Run in Docker
+```bash
+docker compose up -d --build                  # dashboard on http://localhost:5000 (+ Qdrant, Ollama)
+docker compose --profile scheduler up -d      # also run ingest + triage once a day
+```
+Keys go in a `.env` file (see `.env.example`); `Backend/data` is mounted so data persists.
+
 ### 7. Run Test Suite
 Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, and channel dispatchers (66 automated tests):
 ```bash

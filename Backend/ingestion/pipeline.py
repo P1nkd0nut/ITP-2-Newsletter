@@ -21,8 +21,9 @@ from Backend.ingestion.collectors import (
     AppleSecurityCollector,
     GitHubPoCDetector,
 )
-from Backend.ingestion.change_tracker import apply_change_tracking, load_previous
-from Backend.ingestion.models import StagingEnvelope
+from Backend.ingestion.change_tracker import UNCHANGED, UPDATED, apply_change_tracking, describe_changes, load_previous, merge_recheck
+from Backend.ingestion.recheck_policy import is_due, is_frozen
+from Backend.ingestion.models import SourceType, StagingEnvelope
 
 logger = logging.getLogger(__name__)
 
@@ -51,14 +52,56 @@ class IngestionPipeline:
     def list_available_sources(self) -> List[str]:
         return list(self.registry.keys())
 
+    def _recheck_due_items(self, items: List[StagingEnvelope], now: datetime):
+        """
+        Re-checks items that were not in this run's feeds but are due under the age
+        policy: NVD records are fetched again and PoC search is repeated.
+        """
+        now_iso = now.isoformat()
+        nvd = self.registry.get("nvd")
+        counts = {"RECHECKED": 0, "RECHECK_UPDATED": 0}
+        result: List[StagingEnvelope] = []
+        for item in items:
+            carried_over = item.Last_Seen is not None and item.Last_Seen < now_iso
+            if not (carried_over and item.CVE_ID and is_due(item.Published_Date, item.Last_Checked, now)):
+                result.append(item)
+                continue
+
+            updated = item
+            if item.Source_Type == SourceType.NVD and nvd is not None and hasattr(nvd, "fetch_by_cve_id"):
+                fresh = nvd.fetch_by_cve_id(item.CVE_ID)
+                if fresh is None:
+                    result.append(item)  # fetch failed; try again next run
+                    continue
+                if self.poc_detector:
+                    self.poc_detector.enrich_envelope_with_pocs(fresh, limit=2)
+                updated = merge_recheck(item, fresh, now_iso)
+            elif self.poc_detector:
+                before = item.model_copy(deep=True)
+                self.poc_detector.enrich_envelope_with_pocs(item, limit=2)
+                changes = describe_changes(before, item)
+                item.Last_Checked = now_iso
+                if changes:
+                    item.Change_Status, item.Change_Summary, item.Last_Changed = UPDATED, changes, now_iso
+            else:
+                result.append(item)
+                continue
+
+            counts["RECHECKED"] += 1
+            if updated.Change_Status == UPDATED and updated.Last_Changed == now_iso:
+                counts["RECHECK_UPDATED"] += 1
+            result.append(updated)
+        return result, counts
+
     def run(
         self,
         sources: Optional[List[str]] = None,
         limit_per_source: Optional[int] = 5,
         save_output: bool = True,
         track_changes: bool = True,
-        retain_days: int = 30,
+        retain_days: Optional[int] = None,
         keep_snapshots: int = 0,
+        recheck_older: bool = True,
     ) -> Dict[str, Any]:
         """
         Executes ingestion for specified sources.
@@ -69,7 +112,10 @@ class IngestionPipeline:
             save_output: Whether to persist staging envelopes to JSON file
             track_changes: Compare against the previous latest_envelopes.json, label
                 items NEW/UPDATED/UNCHANGED and carry over items no longer in the feeds
-            retain_days: Carried-over items not fetched for this many days are dropped
+            retain_days: If set, carried-over items not fetched for this many days are
+                dropped. By default the age policy applies instead (see recheck_policy)
+            recheck_older: Re-check items that dropped out of the feeds when their age
+                tier says they are due. CVEs older than a year are never updated
             keep_snapshots: Also write a timestamped envelopes_*.json and keep only the
                 newest N of them (0 = write none and leave existing ones alone)
             
@@ -95,7 +141,7 @@ class IngestionPipeline:
                 # Optional PoC detection enrichment
                 if self.enable_poc_detection and self.poc_detector:
                     for item in items:
-                        if item.CVE_ID:
+                        if item.CVE_ID and not is_frozen(item.Published_Date, start_time):
                             self.poc_detector.enrich_envelope_with_pocs(item, limit=2)
 
                 all_envelopes.extend(items)
@@ -120,6 +166,10 @@ class IngestionPipeline:
             unique_envelopes, change_counts = apply_change_tracking(
                 unique_envelopes, load_previous(latest_file), retain_days=retain_days, now=start_time
             )
+
+        if recheck_older and unique_envelopes:
+            unique_envelopes, rechecked = self._recheck_due_items(unique_envelopes, start_time)
+            change_counts.update(rechecked)
 
         end_time = datetime.now(timezone.utc)
         duration_seconds = round((end_time - start_time).total_seconds(), 2)

@@ -1,0 +1,10 @@
+.git
+.claude
+.env
+__pycache__
+*.pyc
+qdrant_storage
+ollama_data
+Testing
+*.pdf
+Backend/data/staging/envelopes_*.json

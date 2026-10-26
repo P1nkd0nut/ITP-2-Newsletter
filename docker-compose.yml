@@ -1,4 +1,36 @@
+x-app: &app
+  build: .
+  env_file:
+    - path: .env
+      required: false
+  environment:
+    QDRANT_HOST: qdrant
+    OLLAMA_HOST: http://ollama:11434
+  volumes:
+    - ./Backend/data:/app/Backend/data
+
 services:
+  # Dashboard + REST API on http://localhost:5000
+  app:
+    <<: *app
+    container_name: groundedcve-app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+
+  # Daily ingest + triage. Older CVEs are re-checked on a schedule by age and
+  # CVEs over a year old are never updated (see Backend/ingestion/recheck_policy.py).
+  # Start with: docker compose --profile scheduler up -d
+  scheduler:
+    <<: *app
+    container_name: groundedcve-scheduler
+    restart: unless-stopped
+    profiles: ["scheduler"]
+    command: >
+      sh -c "while true; do
+      python Backend/run_ingestion.py --poc && python Backend/run_triage.py;
+      sleep 86400; done"
+
   qdrant:
     image: qdrant/qdrant:latest
     container_name: groundedcve-qdrant

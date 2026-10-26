@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from Backend.ingestion.models import StagingEnvelope
+from Backend.ingestion.recheck_policy import is_frozen, parse_ts
 
 logger = logging.getLogger(__name__)
 
@@ -118,31 +119,39 @@ def _carry_forward_pocs(old: StagingEnvelope, new: StagingEnvelope) -> None:
     new.PoC_Details = [details[u] for u in kept if u in details] + (new.PoC_Details or [])
 
 
-def _parse_ts(value: Optional[str]) -> Optional[datetime]:
-    if not value:
-        return None
-    try:
-        ts = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        return ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
-    except ValueError:
-        return None
+def merge_recheck(old: StagingEnvelope, fresh: StagingEnvelope, now_iso: str) -> StagingEnvelope:
+    """Folds a re-fetched version of an older item into its stored record, labelling what changed."""
+    fresh.First_Seen = old.First_Seen or old.Ingested_At
+    fresh.Last_Seen = old.Last_Seen
+    fresh.Last_Checked = now_iso
+    _carry_forward_pocs(old, fresh)
+    changes = describe_changes(old, fresh)
+    if changes:
+        fresh.Change_Status, fresh.Change_Summary, fresh.Last_Changed = UPDATED, changes, now_iso
+    else:
+        fresh.Change_Status, fresh.Change_Summary = UNCHANGED, None
+        fresh.Last_Changed = old.Last_Changed or fresh.First_Seen
+    return fresh
 
 
 def apply_change_tracking(
     current: List[StagingEnvelope],
     previous: List[StagingEnvelope],
-    retain_days: int = 30,
+    retain_days: Optional[int] = None,
     now: Optional[datetime] = None,
 ) -> Tuple[List[StagingEnvelope], Dict[str, int]]:
     """
     Labels `current` against `previous` and appends previous items that were not
-    fetched this run, dropping any not seen within `retain_days`.
+    fetched this run. Items published over a year ago are frozen: the stored
+    version is kept as is and never updated. If `retain_days` is set, carried-over
+    items not seen for that long are dropped; otherwise the age policy decides
+    how often they are re-checked and they are kept.
     Returns (merged envelopes, counts per status).
     """
     now = now or datetime.now(timezone.utc)
     now_iso = now.isoformat()
     prev_by_key = {item_key(p): p for p in previous}
-    counts = {NEW: 0, UPDATED: 0, UNCHANGED: 0, "CARRIED_OVER": 0, "EXPIRED": 0}
+    counts = {NEW: 0, UPDATED: 0, UNCHANGED: 0, "CARRIED_OVER": 0, "EXPIRED": 0, "FROZEN": 0}
 
     merged: List[StagingEnvelope] = []
     seen_keys = set()
@@ -152,7 +161,17 @@ def apply_change_tracking(
             continue
         seen_keys.add(key)
         old = prev_by_key.get(key)
+        if old is not None and is_frozen(env.Published_Date, now):
+            old.Change_Status = UNCHANGED
+            old.Change_Summary = None
+            old.First_Seen = old.First_Seen or old.Ingested_At
+            old.Last_Seen = now_iso
+            old.Last_Changed = old.Last_Changed or old.First_Seen
+            counts["FROZEN"] += 1
+            merged.append(old)
+            continue
         env.Last_Seen = now_iso
+        env.Last_Checked = now_iso
         if old is None:
             env.Change_Status = NEW
             env.Change_Summary = None
@@ -173,12 +192,12 @@ def apply_change_tracking(
         counts[env.Change_Status] += 1
         merged.append(env)
 
-    cutoff = now - timedelta(days=retain_days)
+    cutoff = now - timedelta(days=retain_days) if retain_days is not None else None
     for key, old in prev_by_key.items():
         if key in seen_keys:
             continue
-        last_seen = _parse_ts(old.Last_Seen or old.Ingested_At)
-        if last_seen and last_seen < cutoff:
+        last_seen = parse_ts(old.Last_Seen or old.Ingested_At)
+        if cutoff and last_seen and last_seen < cutoff:
             counts["EXPIRED"] += 1
             continue
         # Not in today's feed window; nothing new was observed about it
@@ -186,6 +205,7 @@ def apply_change_tracking(
         old.Change_Summary = None
         old.First_Seen = old.First_Seen or old.Ingested_At
         old.Last_Seen = old.Last_Seen or old.Ingested_At
+        old.Last_Checked = old.Last_Checked or old.Last_Seen
         old.Last_Changed = old.Last_Changed or old.First_Seen
         counts["CARRIED_OVER"] += 1
         merged.append(old)
