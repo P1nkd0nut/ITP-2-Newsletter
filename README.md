@@ -6,6 +6,32 @@ GroundedCVE is an automated threat intelligence retrieval and curation platform 
 
 ---
 
+## Quick start (Docker, one command)
+
+Needs [Docker Desktop](https://www.docker.com/products/docker-desktop/) running and an [OpenRouter API key](https://openrouter.ai/keys).
+
+```bash
+git clone https://github.com/P1nkd0nut/ITP-2-Newsletter.git
+cd ITP-2-Newsletter
+cp .env.example .env          # then put your OPENROUTER_API_KEY in .env (Telegram optional)
+docker compose up -d --build
+```
+
+Open **http://localhost:5000**. That's it. Docker starts:
+
+| Container | What it does |
+|---|---|
+| `app` | Dashboard + API on port 5000 |
+| `scheduler` | Runs the full pipeline at start and then every 24 h: ingest → triage → chunk → embed into Qdrant → write grounded summaries → verification gate → weekly Telegram digest |
+| `qdrant` | Vector database (port 6333) |
+| `ollama` | Embeddings (`nomic-embed-text`, downloaded automatically by `ollama-pull` on first start). Internal only, so it doesn't clash with an Ollama you already run on port 11434 |
+
+Watch the first run with `docker compose logs -f scheduler` (the first start downloads the ~270 MB embedding model). The dashboard shows a green **✓ Verified** badge on items whose summary passed the gate, and only those go into the digest. If `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are set, the digest is sent on the first run and then once every 7 days.
+
+Stop everything with `docker compose down`. Data stays in `Backend/data`, `qdrant_storage` and `ollama_data`.
+
+---
+
 ## Phase 1: Source Collection & Knowledge Ingestion (Task 1.3)
 
 This repository contains the completed **Stage 1 (Knowledge Ingestion & Staging Standardization)** pipeline. It collects unstructured vulnerability disclosures, proof-of-concept repositories, and offensive security research across Web and Mobile ecosystems, outputting to a standardized JSON staging envelope without data corruption.
@@ -58,6 +84,7 @@ ITP2/
 │   ├── run_chunking.py                        # CLI runner that cleans envelopes and writes chunked output
 │   ├── run_indexing.py                        # Embeds chunks with nomic-embed-text and upserts them into Qdrant
 │   ├── run_summarise.py                       # Writes grounded cards and gates them before publishing
+│   ├── run_pipeline.py                        # All stages in order; the Docker scheduler runs this
 │   ├── export_triage_dashboard.py             # Generative UI artifact exporter
 │   ├── data/
 │   │   ├── ground_truth_20.json               # 20-sample human-verified Web & Mobile extraction set
@@ -109,11 +136,11 @@ ITP2/
 │   ├── test_poc_provenance.py                 # CVE-specific PoC links & reference provenance (6 tests)
 │   ├── test_reader_and_telegram.py            # Incident reader page & Telegram weekly digest (16 tests)
 │   ├── test_manual_check.py                   # Manual spot-check sampler & scorer (4 tests)
-│   ├── test_grounded_summaries.py             # Qdrant indexing, grounded cards & publish gate (20 tests)
+│   ├── test_grounded_summaries.py             # Qdrant indexing, grounded cards, publish gate & scheduler (22 tests)
 │   ├── test_apple_collector.py                # One item per Apple advisory with real dates (6 tests)
 │   └── MANUAL_CHECKS.md                       # How the team hand-checks the automated results
 ├── DEMO_GUIDE.md                              # Presentation script & step-by-step cheatsheet for demo
-└── docker-compose.yml                         # Qdrant (vector DB) + Ollama (local embeddings)
+└── docker-compose.yml                         # app, scheduler, Qdrant (vector DB), Ollama (embeddings)
 ```
 
 ---
@@ -252,17 +279,17 @@ NVD records are fetched again and PoC searches repeated; anything that changed i
 
 ### 6b. Run in Docker
 ```bash
-docker compose up -d --build                  # dashboard on http://localhost:5000 (+ Qdrant, Ollama)
-docker compose --profile scheduler up -d      # also run ingest + triage once a day
+docker compose up -d --build                  # dashboard + daily pipeline (see Quick start above)
+docker compose run --rm scheduler python Backend/run_pipeline.py   # run the pipeline once more now
 ```
-Keys go in a `.env` file (see `.env.example`); `Backend/data` is mounted so data persists.
+Keys go in a `.env` file (see `.env.example`); `Backend/data` is mounted so data persists. Outside Docker, `python Backend/run_pipeline.py` runs the same stages once.
 
 ### 7. Run Test Suite
-Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (171 automated tests):
+Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (173 automated tests):
 ```bash
 python -m unittest discover -s Testing -p "test_*.py" -v
 ```
-Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access. CI runs the other 164 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
+Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access. CI runs the other 166 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
 
 ### 8. Presentation & Demo Guide
 For full presentation instructions, talking points, and cheat-sheet commands for project reviews, see:

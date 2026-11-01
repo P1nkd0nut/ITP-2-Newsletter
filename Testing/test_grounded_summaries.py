@@ -9,6 +9,7 @@ Run:
 """
 import hashlib
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -27,6 +28,7 @@ from Backend.api import telegram_service as tg
 from Backend.chunking.models import Chunk
 from Backend.config import EMBED_DIM
 from Backend.ingestion.models import SourceType, StagingEnvelope
+from Backend import run_pipeline
 from Backend.run_summarise import select_items
 from Backend.storage import embedder as embedder_mod
 from Backend.storage.embedder import OllamaEmbedder
@@ -352,6 +354,30 @@ class TestPublishingUsesOnlyVerifiedCards(unittest.TestCase):
         self.assertEqual(len(messages), 2)
         self.assertIn("/incident/verified", messages[1])
         self.assertIn("Grounded write-up.", messages[1])
+
+    def test_dashboard_picks_up_new_cards_without_a_restart(self):
+        self.assertIsNone({c["envelope"]["Item_ID"]: c for c in self.service.get_all_candidates()}["unverified"]["grounded_card"])
+        cards_path = ds.GROUNDED_CARDS_FILE
+        records = json.loads(cards_path.read_text(encoding="utf-8"))
+        unverified_hash = next(c["envelope"]["Content_Hash"] for c in self.service.get_all_candidates()
+                               if c["envelope"]["Item_ID"] == "unverified")
+        records.append(dict(records[0], Item_ID="unverified", Content_Hash=unverified_hash))
+        cards_path.write_text(json.dumps(records), encoding="utf-8")
+        os.utime(cards_path, ns=(1, 1))  # make sure the mtime differs on coarse filesystems
+        by_id = {c["envelope"]["Item_ID"]: c for c in self.service.get_all_candidates()}
+        self.assertIsNotNone(by_id["unverified"]["grounded_card"])
+
+
+class TestPipelineDigestSchedule(unittest.TestCase):
+    def test_digest_due_after_interval_only(self):
+        now = datetime(2026, 11, 8, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "last.json"
+            self.assertTrue(run_pipeline.digest_due(now, 7, state))  # never sent
+            state.write_text(json.dumps({"sent_at": (now - timedelta(days=3)).isoformat()}), encoding="utf-8")
+            self.assertFalse(run_pipeline.digest_due(now, 7, state))
+            state.write_text(json.dumps({"sent_at": (now - timedelta(days=7)).isoformat()}), encoding="utf-8")
+            self.assertTrue(run_pipeline.digest_due(now, 7, state))
 
 
 if __name__ == "__main__":
