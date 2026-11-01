@@ -7,34 +7,19 @@
 let candidatesData = [];
 let currentDesk = 'ALL';
 let currentSearch = '';
-let currentDateFilter = 'WEEK'; // 'TODAY' | 'WEEK' (past 7 days) | 'ALL'
+let currentDateFilter = 'RECENT'; // 'RECENT' (past week) | 'MONTH' (past month) | 'ALL'
 let currentCategory = 'ALL';
-let currentSort = 'timeline'; // 'timeline' (Today first) | 'score_desc' | 'date_desc' | 'date_asc' | 'ai_desc' | 'score_asc'
+let currentSort = 'timeline'; // 'timeline' (newest first, then score) | 'score_desc' | 'date_desc' | 'date_asc' | 'ai_desc' | 'score_asc'
 let activeCandidate = null;
 
-// Date windows follow the viewer's current date (YYYY-MM-DD strings compare in order)
-const DATES = computeDateWindows(new Date());
+// Users see how recent an item is, never its date. Buckets match recencyLabel().
+const RECENT_DAYS = 7;
+const MONTH_DAYS = 30;
 
-function computeDateWindows(now) {
-  const pad = n => String(n).padStart(2, '0');
-  const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  const shift = days => new Date(now.getFullYear(), now.getMonth(), now.getDate() + days);
-  const weekStart = shift(-7);
-  return {
-    today: iso(now),
-    yesterday: iso(shift(-1)),
-    weekStart: iso(weekStart),
-    todayLabel: now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-    todayShort: now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-    weekLabel: `${pad(weekStart.getDate())}/${pad(weekStart.getMonth() + 1)} - ${pad(now.getDate())}/${pad(now.getMonth() + 1)}`,
-  };
-}
-
-function applyDateLabels() {
-  const set = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
-  set('dateBtn-TODAY', '⚡ Today');
-  set('dateBtn-WEEK', '📅 Past 7 Days');
-  set('todayDateBadge', 'Today');
+function recencyBucket(x) {
+  const age = ageInDays(x.envelope && x.envelope.Published_Date);
+  if (age === null || age <= RECENT_DAYS) return 'RECENT';
+  return age <= MONTH_DAYS ? 'MONTH' : 'OLDER';
 }
 
 // Exact dates are not shown to users; items show how recent they are instead
@@ -81,7 +66,6 @@ function verifiedBadge(item) {
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-  applyDateLabels();
   // Listen for Escape key to close modals
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -116,20 +100,16 @@ async function loadData() {
   updateMetrics();
   // A fresh install starts with older seed data until the scheduler's first run
   // finishes; show All Dates rather than an empty week.
-  if (!fallbackApplied && currentDateFilter === 'WEEK' && candidatesData.length > 0 &&
-      !candidatesData.some(x => publishedDay(x) >= DATES.weekStart)) {
+  if (!fallbackApplied && currentDateFilter === 'RECENT' && candidatesData.length > 0 &&
+      !candidatesData.some(x => recencyBucket(x) === 'RECENT')) {
     fallbackApplied = true;
-    filterDateWindow('ALL');
+    filterDateWindow(candidatesData.some(x => recencyBucket(x) === 'MONTH') ? 'MONTH' : 'ALL');
     return;
   }
   renderContent();
 }
 
 let fallbackApplied = false;
-
-function publishedDay(x) {
-  return x.published_date_iso || ((x.envelope && x.envelope.Published_Date) || '').slice(0, 10);
-}
 
 function fallbackData() {
   if (window.INITIAL_ENVELOPES && window.INITIAL_ENVELOPES.length > 0) {
@@ -206,7 +186,7 @@ function filterDesk(desk) {
 function filterDateWindow(windowType) {
   currentDateFilter = windowType;
 
-  ['TODAY', 'WEEK', 'ALL'].forEach(w => {
+  ['RECENT', 'MONTH', 'ALL'].forEach(w => {
     const btn = document.getElementById(`dateBtn-${w}`);
     if (btn) {
       btn.className = w === windowType
@@ -264,7 +244,7 @@ function clearSearch() {
 function resetAllFilters() {
   currentDesk = 'ALL';
   currentSearch = '';
-  currentDateFilter = 'WEEK';
+  currentDateFilter = 'RECENT';
   currentCategory = 'ALL';
   currentSort = 'timeline';
 
@@ -277,7 +257,7 @@ function resetAllFilters() {
   if (sortSelect) sortSelect.value = 'timeline';
 
   filterDesk('ALL');
-  filterDateWindow('WEEK');
+  filterDateWindow('RECENT');
   filterCategory('ALL');
 }
 
@@ -346,7 +326,7 @@ function getCategoryPill(cat) {
 }
 
 // ============================================================================
-// Render Content (Timeline Sections: Today First, Then Past 7 Days)
+// Render Content (Sections: Recent, Past month, Older)
 // ============================================================================
 
 function getFilteredCandidates() {
@@ -360,17 +340,11 @@ function getFilteredCandidates() {
     items = items.filter(x => x.pre_filter.category === 'MOBILE');
   }
 
-  // 2. Date window filter
-  if (currentDateFilter === 'TODAY') {
-    items = items.filter(x => {
-      const d = x.published_date_iso || (x.envelope && (x.envelope.Published_Date || '')).slice(0, 10);
-      return d === DATES.today;
-    });
-  } else if (currentDateFilter === 'WEEK') {
-    items = items.filter(x => {
-      const d = x.published_date_iso || (x.envelope && (x.envelope.Published_Date || '')).slice(0, 10);
-      return d >= DATES.weekStart && d <= DATES.today;
-    });
+  // 2. Recency window filter
+  if (currentDateFilter === 'RECENT') {
+    items = items.filter(x => recencyBucket(x) === 'RECENT');
+  } else if (currentDateFilter === 'MONTH') {
+    items = items.filter(x => recencyBucket(x) !== 'OLDER');
   }
 
   // 3. Category filter
@@ -441,25 +415,19 @@ function getFilteredCandidates() {
 function renderContent() {
   const filtered = getFilteredCandidates();
 
-  // Partition into Today, Past 7 Days (excluding today), and Earlier
-  const todayItems = filtered.filter(x => (x.published_date_iso || (x.envelope && x.envelope.Published_Date || '').slice(0, 10)) === DATES.today);
-  const weekItems = filtered.filter(x => {
-    const d = x.published_date_iso || (x.envelope && x.envelope.Published_Date || '').slice(0, 10);
-    return d >= DATES.weekStart && d <= DATES.yesterday;
-  });
-  const olderItems = filtered.filter(x => {
-    const d = x.published_date_iso || (x.envelope && x.envelope.Published_Date || '').slice(0, 10);
-    return d < DATES.weekStart;
-  });
+  // Partition into Recent, Past month and Older
+  const todayItems = filtered.filter(x => recencyBucket(x) === 'RECENT');
+  const weekItems = filtered.filter(x => recencyBucket(x) === 'MONTH');
+  const olderItems = filtered.filter(x => recencyBucket(x) === 'OLDER');
 
   // Update status text
   const statusEl = document.getElementById('filterStatusText');
   if (statusEl) {
-    const windowLabel = currentDateFilter === 'TODAY'
-      ? 'Today'
-      : currentDateFilter === 'WEEK'
-      ? 'Past 7 Days'
-      : 'All Time';
+    const windowLabel = currentDateFilter === 'RECENT'
+      ? 'Recent'
+      : currentDateFilter === 'MONTH'
+      ? 'Past month'
+      : 'All';
     const deskLabel = currentDesk !== 'ALL' ? ` &bull; Desk: ${currentDesk}` : '';
     const catLabel = currentCategory !== 'ALL' ? ` &bull; Category: ${currentCategory}` : '';
     const searchLabel = currentSearch ? ` &bull; Search: "${currentSearch}"` : '';
@@ -485,9 +453,9 @@ function renderContent() {
     spotlightBox.classList.add('hidden');
   }
 
-  // Section 1: Today's Disclosures (First on the page)
-  if (currentDateFilter === 'TODAY' || currentDateFilter === 'WEEK' || currentDateFilter === 'ALL') {
-    if (todayItems.length > 0 || currentDateFilter === 'TODAY') {
+  // Section 1: Recent (first on the page)
+  if (currentDateFilter === 'RECENT' || currentDateFilter === 'MONTH' || currentDateFilter === 'ALL') {
+    if (todayItems.length > 0 || currentDateFilter === 'RECENT') {
       secToday.classList.remove('hidden');
       renderDeskGrid('gridToday', todayItems);
     } else {
@@ -497,9 +465,9 @@ function renderContent() {
     secToday.classList.add('hidden');
   }
 
-  // Section 2: Past 7 Days Disclosures
-  if (currentDateFilter === 'WEEK' || currentDateFilter === 'ALL') {
-    if (weekItems.length > 0 || currentDateFilter === 'WEEK') {
+  // Section 2: Past month
+  if (currentDateFilter === 'MONTH' || currentDateFilter === 'ALL') {
+    if (weekItems.length > 0 || currentDateFilter === 'MONTH') {
       secWeek.classList.remove('hidden');
       renderDeskGrid('gridWeek', weekItems);
     } else {
@@ -509,7 +477,7 @@ function renderContent() {
     secWeek.classList.add('hidden');
   }
 
-  // Section 3: Earlier / Historical Archive
+  // Section 3: Older
   if (currentDateFilter === 'ALL') {
     secOlder.classList.remove('hidden');
     renderDeskGrid('gridOlder', olderItems);
@@ -543,7 +511,7 @@ function renderSpotlight(topItem) {
             ${catPill.label}
           </span>
           <span class="px-2 py-0.5 rounded text-[10px] font-mono text-slate-400 bg-slate-950 border border-slate-800">
-            📅 ${pubDateFmt}
+            ${pubDateFmt}
           </span>
           ${changeBadge(env)}
           ${frozenBadge(topItem)}
@@ -628,7 +596,7 @@ function renderDeskGrid(containerId, items, desk) {
 
         <div class="pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
           <div class="flex items-center space-x-1.5">
-            <span class="text-slate-500">📅 ${pubDateFmt}</span>
+            <span class="text-slate-500">${pubDateFmt}</span>
             ${frozenBadge(item)}
             ${verifiedBadge(item)}
             ${isKev ? '<span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 font-bold border border-rose-800">🔥 KEV</span>' : ''}
@@ -667,7 +635,7 @@ function openDetailModal(itemId) {
   document.getElementById('mCveId').innerText = env.CVE_ID || env.Item_ID;
   document.getElementById('btnReaderPage').href = `/incident/${encodeURIComponent(env.Item_ID || '')}`;
   document.getElementById('mSource').innerText = env.Source_Type || 'Feed';
-  document.getElementById('mPublishedDate').innerText = `📅 ${item.published_date_formatted || recencyLabel(env.Published_Date)}`;
+  document.getElementById('mPublishedDate').innerText = item.published_date_formatted || recencyLabel(env.Published_Date);
   document.getElementById('mCategoryBadge').innerText = item.standard_category || ai.offensive_impact || 'Advisory';
 
   const scopeBadge = document.getElementById('mScopeBadge');
