@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+
+      - name: Run offline test suite
+        run: pytest Testing -v -k "not TestCollectorsLive and not TestIngestionPipeline"
+
+      # These hit real feeds (CISA, NVD, GitHub, RSS) and can fail on rate limits
+      # or outages, so they are reported but do not fail the build.
+      - name: Run live-network collector tests
+        continue-on-error: true
+        run: pytest Testing/test_ingestion.py -v -k "TestCollectorsLive or TestIngestionPipeline"
