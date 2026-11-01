@@ -56,6 +56,8 @@ ITP2/
 │   ├── run_triage.py                          # CLI runner for Scope Pre-Filter, AI Scoring, & Anomaly Gate
 │   ├── run_benchmark.py                       # Empirical Performance & Fact Extraction Benchmark (Task 4.1)
 │   ├── run_chunking.py                        # CLI runner that cleans envelopes and writes chunked output
+│   ├── run_indexing.py                        # Embeds chunks with nomic-embed-text and upserts them into Qdrant
+│   ├── run_summarise.py                       # Writes grounded cards and gates them before publishing
 │   ├── export_triage_dashboard.py             # Generative UI artifact exporter
 │   ├── data/
 │   │   ├── ground_truth_20.json               # 20-sample human-verified Web & Mobile extraction set
@@ -82,9 +84,14 @@ ITP2/
 │   │   ├── cleaner.py                         # Normalises JSON/HTML/Markdown/text raw content
 │   │   ├── chunker.py                         # Splits cleaned content into traceable chunks
 │   │   └── models.py                          # Chunk data model
+│   ├── summarisation/
+│   │   ├── summariser.py                      # Writes each card from the item's own retrieved chunks
+│   │   └── card_store.py                      # Passed cards (grounded_cards.json) & quarantine log
 │   └── storage/
 │       ├── vector_db.py                       # Qdrant client helper
-│       └── init_qdrant.py                     # Creates the Qdrant collections (Task 2.1)
+│       ├── init_qdrant.py                     # Creates the Qdrant collections (Task 2.1)
+│       ├── embedder.py                        # Ollama nomic-embed-text client
+│       └── indexer.py                         # Chunk upsert & per-item retrieval (Qdrant, file fallback)
 ├── Frontend/
 │   ├── index.html                             # Cyber-themed interactive dashboard
 │   ├── data.js                                # Auto-synced envelopes data for instant loading
@@ -100,8 +107,10 @@ ITP2/
 │   ├── test_change_tracking.py                # Change tracking between runs & AI-score reuse (13 tests)
 │   ├── test_recheck_policy.py                 # Age-based re-check tiers, 1-year freeze, recency labels (13 tests)
 │   ├── test_poc_provenance.py                 # CVE-specific PoC links & reference provenance (6 tests)
-│   ├── test_reader_and_telegram.py            # Incident reader page & Telegram weekly digest (15 tests)
+│   ├── test_reader_and_telegram.py            # Incident reader page & Telegram weekly digest (16 tests)
 │   ├── test_manual_check.py                   # Manual spot-check sampler & scorer (4 tests)
+│   ├── test_grounded_summaries.py             # Qdrant indexing, grounded cards & publish gate (20 tests)
+│   ├── test_apple_collector.py                # One item per Apple advisory with real dates (6 tests)
 │   └── MANUAL_CHECKS.md                       # How the team hand-checks the automated results
 ├── DEMO_GUIDE.md                              # Presentation script & step-by-step cheatsheet for demo
 └── docker-compose.yml                         # Qdrant (vector DB) + Ollama (local embeddings)
@@ -172,6 +181,20 @@ This runs:
    - Public PoC Availability: **20 pts**
 4. **CVSS Anomaly Discrepancy Gate**: Flags any item where `|AI_Severity - CVSS| >= 4.0` for automated diagnosis of inflated Day-0 ratings or underestimated flaws.
 
+### 4b. Write Grounded Summaries (Task 2.3, 3.1 & 3.2)
+Chunk the staged items, embed the chunks into Qdrant, then write and gate the cards:
+```bash
+python Backend/run_chunking.py
+python Backend/run_indexing.py      # needs Qdrant + Ollama with nomic-embed-text
+python Backend/run_summarise.py     # top 10 in-scope items from the last 7 days
+```
+Each card is written by the LLM (OpenRouter Qwen 2.5 72B, or `--ollama-model` for a local model) using only that item's own chunks, then checked by the source-verification gate. A failing card is regenerated once with the gate's reasons; if it still fails it is quarantined.
+
+- Passed cards go to `Backend/data/staging/grounded_cards.json`. The dashboard digest, the newsletter export and the Telegram weekly digest only include items with a passed card.
+- Quarantined cards and generation errors are appended to `Backend/data/staging/quarantine_log.jsonl` with the failing facts.
+- If Qdrant is not running, chunks are read straight from `latest_chunks.json`.
+- Cards are only rewritten when the item's source changes (`--force` to rewrite all).
+
 ### 5. Run Task 4.1 Ground-Truth Benchmark & Validation Suite
 Execute empirical validation across the 20-sample ground-truth Web & Mobile dataset:
 ```bash
@@ -235,11 +258,11 @@ docker compose --profile scheduler up -d      # also run ingest + triage once a 
 Keys go in a `.env` file (see `.env.example`); `Backend/data` is mounted so data persists.
 
 ### 7. Run Test Suite
-Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, and channel dispatchers (144 automated tests):
+Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (171 automated tests):
 ```bash
 python -m unittest discover -s Testing -p "test_*.py" -v
 ```
-Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access. CI runs the other 137 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
+Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access. CI runs the other 164 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
 
 ### 8. Presentation & Demo Guide
 For full presentation instructions, talking points, and cheat-sheet commands for project reviews, see:

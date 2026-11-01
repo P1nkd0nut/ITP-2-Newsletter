@@ -106,10 +106,16 @@ def send_message(token: str, chat_id: str, text: str) -> Dict[str, Any]:
 # ----------------------------------------------------------------------------
 
 def select_digest_items(candidates: List[Dict[str, Any]], days: int = 7, top_n: int = 10) -> List[Dict[str, Any]]:
-    """In-scope (Web/Mobile) incidents published in the last `days` days, highest priority first."""
+    """
+    In-scope (Web/Mobile) incidents published in the last `days` days, highest
+    priority first. Only items whose card passed the source-verification gate
+    are sent; unverified and quarantined items are left out.
+    """
     picked = []
     for c in candidates:
         if not (c.get("pre_filter") or {}).get("is_in_scope", False):
+            continue
+        if not c.get("grounded_card"):
             continue
         age = age_days((c.get("envelope") or {}).get("Published_Date"))
         if age is not None and age <= days:
@@ -131,7 +137,8 @@ def _display_title(c: Dict[str, Any]) -> str:
 def _summary(c: Dict[str, Any]) -> str:
     in_depth = c.get("in_depth") or {}
     return (
-        in_depth.get("brief_summary")
+        (c.get("grounded_card") or {}).get("mechanism")
+        or in_depth.get("brief_summary")
         or in_depth.get("full_description")
         or (c.get("ai_assessment") or {}).get("reasoning")
         or ""

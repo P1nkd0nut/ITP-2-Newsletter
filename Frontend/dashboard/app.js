@@ -69,6 +69,13 @@ function frozenBadge(item) {
     : '';
 }
 
+function verifiedBadge(item) {
+  const card = item.grounded_card;
+  return card
+    ? `<span class="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 font-bold border border-emerald-800" title="Summary written from the source and passed ${card.checks_run} verification checks">✓ Verified</span>`
+    : '';
+}
+
 // ============================================================================
 // Initialization & Data Loading
 // ============================================================================
@@ -598,7 +605,7 @@ function renderDeskGrid(containerId, items, desk) {
           </h4>
 
           <p class="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
-            ${briefText}
+            ${item.grounded_card ? escapeHtml(briefText) : briefText}
           </p>
         </div>
 
@@ -606,6 +613,7 @@ function renderDeskGrid(containerId, items, desk) {
           <div class="flex items-center space-x-1.5">
             <span class="text-slate-500">📅 ${pubDateFmt}</span>
             ${frozenBadge(item)}
+            ${verifiedBadge(item)}
             ${isKev ? '<span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 font-bold border border-rose-800">🔥 KEV</span>' : ''}
             ${hasPoc ? '<span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 font-bold border border-amber-800">💻 PoC</span>' : ''}
             ${disc.is_discrepancy ? '<span class="px-1.5 py-0.5 rounded bg-rose-900 text-rose-200 font-bold">⚠️ Discrepancy</span>' : ''}
