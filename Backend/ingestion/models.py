@@ -4,7 +4,7 @@ Strictly implements the specification in Task 1.3.
 """
 from enum import Enum
 from typing import List, Optional, Union, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SourceType(str, Enum):
@@ -74,9 +74,9 @@ class StagingEnvelope(BaseModel):
     Last_Changed: Optional[str] = Field(default=None, description="ISO 8601 timestamp of the run that last saw it change")
     Last_Checked: Optional[str] = Field(default=None, description="ISO 8601 timestamp of the last time the source was checked for updates")
 
-    class Config:
-        populate_by_name = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        populate_by_name=True,
+        json_schema_extra={
             "example": {
                 "Item_ID": "cve-2024-0044",
                 "Source_Type": "NVD",
@@ -95,4 +95,5 @@ class StagingEnvelope(BaseModel):
                 "KEV_Status": False,
                 "PoC_URLs": ["https://github.com/example/cve-2024-0044-poc"]
             }
-        }
+        },
+    )
