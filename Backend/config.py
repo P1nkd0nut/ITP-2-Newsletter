@@ -66,3 +66,8 @@ CHUNK_TIER2_MAX_CHARS = 5000   # Technical PoC / Evidence Tier cap
 CHUNK_MIN_MERGE_CHARS = 400    # start a new chunk at a new h1/h2 section once the buffer has this much
 CHUNK_THIN_SOURCE_CHARS = 300  # cleaned text shorter than this is flagged "thin_source"
 CHUNKS_FILE = STAGING_DIR / "latest_chunks.json"
+
+# Grounded summaries (Task 3.1) - only gate-PASSED cards are written here and published
+GROUNDED_CARDS_FILE = STAGING_DIR / "grounded_cards.json"
+QUARANTINE_LOG_FILE = STAGING_DIR / "quarantine_log.jsonl"
+SUMMARY_TOP_K_CHUNKS = 8

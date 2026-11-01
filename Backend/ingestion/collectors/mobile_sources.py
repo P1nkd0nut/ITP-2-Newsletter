@@ -9,7 +9,11 @@ import hashlib
 import json
 import logging
 import re
+from datetime import datetime, timezone
 from typing import List, Optional
+
+from bs4 import BeautifulSoup
+
 from Backend.config import (
     FRIDA_RELEASES_URL,
     ANDROID_BULLETIN_INDEX_URL,
@@ -136,8 +140,53 @@ class AndroidBulletinCollector(BaseCollector):
         return envelopes
 
 
+APPLE_ADVISORY_LINK_RE = re.compile(r"support\.apple\.com/(?:[a-z]{2}-[a-z]{2}/)?(?:kb/HT)?(\d+)", re.IGNORECASE)
+CVE_ID_RE = re.compile(r"\bCVE-\d{4}-\d{4,7}\b")
+
+
+def parse_apple_release_date(text: str) -> Optional[str]:
+    """Apple's index uses dates like '26 Oct 2026'. Returns ISO 8601, or None if unparseable."""
+    text = " ".join((text or "").split())
+    for fmt in ("%d %b %Y", "%d %B %Y", "%B %d, %Y"):
+        try:
+            return datetime.strptime(text, fmt).replace(tzinfo=timezone.utc).isoformat()
+        except ValueError:
+            continue
+    return None
+
+
+def parse_apple_index(html: str) -> List[dict]:
+    """
+    One entry per row of the Apple security releases table that links to an advisory.
+    Rows without a link ("This update has no published CVE entries.") are skipped.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    releases, seen = [], set()
+    for row in soup.select("table tr"):
+        cells = row.find_all("td")
+        link = row.find("a", href=True)
+        if len(cells) < 3 or link is None:
+            continue
+        url = link["href"].strip()
+        if url.startswith("/"):
+            url = f"https://support.apple.com{url}"
+        m = APPLE_ADVISORY_LINK_RE.search(url)
+        released = parse_apple_release_date(cells[-1].get_text(" ", strip=True))
+        if not m or not released or url in seen:
+            continue
+        seen.add(url)
+        releases.append({
+            "advisory_id": m.group(1),
+            "name": link.get_text(" ", strip=True),
+            "available_for": cells[1].get_text(" ", strip=True),
+            "url": url,
+            "published": released,
+        })
+    return releases
+
+
 class AppleSecurityCollector(BaseCollector):
-    """Collects Apple Security Release disclosures."""
+    """Collects Apple Security Release disclosures, one envelope per advisory."""
 
     def __init__(self):
         super().__init__(name="Apple Security Releases", source_type=SourceType.APPLE_SECURITY)
@@ -148,22 +197,39 @@ class AppleSecurityCollector(BaseCollector):
         ingested_at = get_utc_now_iso()
 
         try:
-            raw_html = fetch_url(APPLE_SECURITY_RELEASES_URL)
-            # Match release rows or sections mentioning iOS, iPadOS, macOS
-            # Save raw HTML disclosure page as staging envelope
-            envelope = StagingEnvelope(
-                Item_ID="apple-security-releases-index",
+            releases = parse_apple_index(fetch_url(APPLE_SECURITY_RELEASES_URL))
+        except Exception as e:
+            logger.error(f"Error collecting Apple Security releases: {e}")
+            return envelopes
+
+        # The index lists newest first
+        if limit is not None and limit > 0:
+            releases = releases[:limit]
+
+        for rel in releases:
+            try:
+                raw_html = fetch_url(rel["url"])
+            except Exception as e:
+                logger.warning(f"Could not fetch Apple advisory {rel['url']}: {e}")
+                continue
+
+            cve_ids = sorted(set(CVE_ID_RE.findall(raw_html)))
+            envelopes.append(StagingEnvelope(
+                Item_ID=f"apple-{rel['advisory_id']}",
                 Source_Type=self.source_type,
-                Title="Apple Security Releases (iOS, iPadOS, macOS, Safari)",
-                Source_URL=APPLE_SECURITY_RELEASES_URL,
-                Published_Date=ingested_at,
+                Title=f"Apple Security Release: {rel['name']}",
+                Source_URL=rel["url"],
+                Published_Date=rel["published"],
                 Ingested_At=ingested_at,
                 Content_Hash=compute_content_hash(raw_html),
                 Raw_Content=raw_html,
-                Vendor_Product="Apple iOS / iPadOS / macOS",
-            )
-            envelopes.append(envelope)
-        except Exception as e:
-            logger.error(f"Error collecting Apple Security releases: {e}")
+                Vendor_Product=f"Apple {rel['name']}",
+                Extra_Metadata={
+                    "advisory_id": rel["advisory_id"],
+                    "available_for": rel["available_for"],
+                    "cve_ids": cve_ids,
+                },
+            ))
 
+        logger.info(f"Successfully collected {len(envelopes)} items from Apple Security Releases")
         return envelopes

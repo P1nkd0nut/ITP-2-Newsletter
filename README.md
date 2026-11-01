@@ -6,6 +6,32 @@ GroundedCVE is an automated threat intelligence retrieval and curation platform 
 
 ---
 
+## Quick start (Docker, one command)
+
+Needs [Docker Desktop](https://www.docker.com/products/docker-desktop/) running and an [OpenRouter API key](https://openrouter.ai/keys).
+
+```bash
+git clone https://github.com/P1nkd0nut/ITP-2-Newsletter.git
+cd ITP-2-Newsletter
+cp .env.example .env          # then put your OPENROUTER_API_KEY in .env (Telegram optional)
+docker compose up -d --build
+```
+
+Open **http://localhost:5000**. That's it. Docker starts:
+
+| Container | What it does |
+|---|---|
+| `app` | Dashboard + API on port 5000 |
+| `scheduler` | Runs the full pipeline at start and then every day at 08:00 Singapore time (`PIPELINE_RUN_TIME` / `PIPELINE_TIMEZONE` in `.env`): ingest → triage → chunk → embed into Qdrant → write grounded summaries → verification gate → weekly Telegram digest |
+| `qdrant` | Vector database (port 6333) |
+| `ollama` | Embeddings (`nomic-embed-text`, downloaded automatically by `ollama-pull` on first start). Internal only, so it doesn't clash with an Ollama you already run on port 11434 |
+
+Watch the first run with `docker compose logs -f scheduler` (the first start downloads the ~270 MB embedding model). The dashboard shows a green **✓ Verified** badge on items whose summary passed the gate, and only those go into the digest. If `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are set, the digest is sent on the first run and then once every 7 days.
+
+Stop everything with `docker compose down`. Data stays in `Backend/data`, `qdrant_storage` and `ollama_data`.
+
+---
+
 ## Phase 1: Source Collection & Knowledge Ingestion (Task 1.3)
 
 This repository contains the completed **Stage 1 (Knowledge Ingestion & Staging Standardization)** pipeline. It collects unstructured vulnerability disclosures, proof-of-concept repositories, and offensive security research across Web and Mobile ecosystems, outputting to a standardized JSON staging envelope without data corruption.
@@ -56,6 +82,9 @@ ITP2/
 │   ├── run_triage.py                          # CLI runner for Scope Pre-Filter, AI Scoring, & Anomaly Gate
 │   ├── run_benchmark.py                       # Empirical Performance & Fact Extraction Benchmark (Task 4.1)
 │   ├── run_chunking.py                        # CLI runner that cleans envelopes and writes chunked output
+│   ├── run_indexing.py                        # Embeds chunks with nomic-embed-text and upserts them into Qdrant
+│   ├── run_summarise.py                       # Writes grounded cards and gates them before publishing
+│   ├── run_pipeline.py                        # All stages in order; the Docker scheduler runs this
 │   ├── export_triage_dashboard.py             # Generative UI artifact exporter
 │   ├── data/
 │   │   ├── ground_truth_20.json               # 20-sample human-verified Web & Mobile extraction set
@@ -82,9 +111,14 @@ ITP2/
 │   │   ├── cleaner.py                         # Normalises JSON/HTML/Markdown/text raw content
 │   │   ├── chunker.py                         # Splits cleaned content into traceable chunks
 │   │   └── models.py                          # Chunk data model
+│   ├── summarisation/
+│   │   ├── summariser.py                      # Writes each card from the item's own retrieved chunks
+│   │   └── card_store.py                      # Passed cards (grounded_cards.json) & quarantine log
 │   └── storage/
 │       ├── vector_db.py                       # Qdrant client helper
-│       └── init_qdrant.py                     # Creates the Qdrant collections (Task 2.1)
+│       ├── init_qdrant.py                     # Creates the Qdrant collections (Task 2.1)
+│       ├── embedder.py                        # Ollama nomic-embed-text client
+│       └── indexer.py                         # Chunk upsert & per-item retrieval (Qdrant, file fallback)
 ├── Frontend/
 │   ├── index.html                             # Cyber-themed interactive dashboard
 │   ├── data.js                                # Auto-synced envelopes data for instant loading
@@ -100,11 +134,14 @@ ITP2/
 │   ├── test_change_tracking.py                # Change tracking between runs & AI-score reuse (13 tests)
 │   ├── test_recheck_policy.py                 # Age-based re-check tiers, 1-year freeze, recency labels (13 tests)
 │   ├── test_poc_provenance.py                 # CVE-specific PoC links & reference provenance (6 tests)
-│   ├── test_reader_and_telegram.py            # Incident reader page & Telegram weekly digest (15 tests)
+│   ├── test_reader_and_telegram.py            # Incident reader page & Telegram weekly digest (16 tests)
 │   ├── test_manual_check.py                   # Manual spot-check sampler & scorer (4 tests)
+│   ├── test_grounded_summaries.py             # Qdrant indexing, grounded cards, publish gate & scheduler (23 tests)
+│   ├── test_novelty.py                        # Digest novelty check: one item per CVE, no repeats (10 tests)
+│   ├── test_apple_collector.py                # One item per Apple advisory with real dates (6 tests)
 │   └── MANUAL_CHECKS.md                       # How the team hand-checks the automated results
 ├── DEMO_GUIDE.md                              # Presentation script & step-by-step cheatsheet for demo
-└── docker-compose.yml                         # Qdrant (vector DB) + Ollama (local embeddings)
+└── docker-compose.yml                         # app, scheduler, Qdrant (vector DB), Ollama (embeddings)
 ```
 
 ---
@@ -172,6 +209,26 @@ This runs:
    - Public PoC Availability: **20 pts**
 4. **CVSS Anomaly Discrepancy Gate**: Flags any item where `|AI_Severity - CVSS| >= 4.0` for automated diagnosis of inflated Day-0 ratings or underestimated flaws.
 
+### 4b. Write Grounded Summaries (Task 2.3, 3.1 & 3.2)
+Chunk the staged items, embed the chunks into Qdrant, then write and gate the cards:
+```bash
+python Backend/run_chunking.py
+python Backend/run_indexing.py      # needs Qdrant + Ollama with nomic-embed-text
+python Backend/run_summarise.py     # top 10 in-scope items from the last 7 days
+```
+Each card is written by the LLM (OpenRouter Qwen 2.5 72B, or `--ollama-model` for a local model) using only that item's own chunks, then checked by the source-verification gate. A failing card is regenerated once with the gate's reasons; if it still fails it is quarantined.
+
+- Passed cards go to `Backend/data/staging/grounded_cards.json`. The dashboard digest, the newsletter export and the Telegram weekly digest only include items with a passed card.
+- Quarantined cards and generation errors are appended to `Backend/data/staging/quarantine_log.jsonl` with the failing facts.
+- If Qdrant is not running, chunks are read straight from `latest_chunks.json`.
+- Cards are only rewritten when the item's source changes (`--force` to rewrite all).
+
+**Novelty check (weekly digest).** The newsletter never repeats itself:
+- The same CVE reported by several sources (NVD, CISA KEV, GitHub Advisory) is sent once, as the highest-priority version.
+- Every incident a digest sends is recorded in `Backend/data/staging/published_ledger.json` and in the Qdrant `groundedcve_published` collection. It is only sent again when something new happened (added to CISA KEV, a new public PoC, or a CVSS change), marked "🔁 Update: …".
+- Write-ups with no CVE ID (PortSwigger, Project Zero) are compared with published cards by embedding; a near-identical one (cosine ≥ 0.92, `NOVELTY_SIMILARITY` in `.env`) is skipped. On our cards the same text scores 0.975 or higher, and the closest two different advisories score 0.89.
+- `python Backend/run_telegram_digest.py --include-sent` turns this off for one run.
+
 ### 5. Run Task 4.1 Ground-Truth Benchmark & Validation Suite
 Execute empirical validation across the 20-sample ground-truth Web & Mobile dataset:
 ```bash
@@ -225,21 +282,23 @@ Ingestion re-checks CVEs that dropped out of the feeds, less often as they age (
 | 6–12 months | quarterly |
 | Over 1 year | never (frozen, shown with a "Not updated" disclaimer) |
 
-NVD records are fetched again and PoC searches repeated; anything that changed is flagged `UPDATED` with a summary. Use `--no-recheck` to skip this. The dashboard shows how recent an item is ("Recent", "Past month", "Over a year ago") instead of exact dates.
+NVD records are fetched again and PoC searches repeated; anything that changed is flagged `UPDATED` with a summary. Use `--no-recheck` to skip this. The dashboard never shows exact dates: cards say how recent an item is ("Recent", "Past month", "Over a year ago") and the filters are Recent / Past month / All.
+
+Why these cut-offs: most change happens early. Mandiant measured an average time-to-exploit of 5 days in 2023 ([source](https://cloud.google.com/blog/topics/threat-intelligence/time-to-exploit-trends-2023?hl=en)), and VulnCheck found about a quarter of known-exploited CVEs were exploited on or before their publication day ([source](https://www.vulncheck.com/blog/state-of-exploitation-1h-2026)), so the first month is checked daily. Later changes still happen (VulnCheck reports a median of 80 to 120 days from publication to a CISA KEV listing), so checks continue monthly and then quarterly for the first year. An old CVE that CISA newly adds to KEV is not missed by the freeze: it arrives as a new item from the daily KEV pull.
 
 ### 6b. Run in Docker
 ```bash
-docker compose up -d --build                  # dashboard on http://localhost:5000 (+ Qdrant, Ollama)
-docker compose --profile scheduler up -d      # also run ingest + triage once a day
+docker compose up -d --build                  # dashboard + daily pipeline (see Quick start above)
+docker compose run --rm scheduler python Backend/run_pipeline.py   # run the pipeline once more now
 ```
-Keys go in a `.env` file (see `.env.example`); `Backend/data` is mounted so data persists.
+Keys go in a `.env` file (see `.env.example`); `Backend/data` is mounted so data persists. Outside Docker, `python Backend/run_pipeline.py` runs the same stages once.
 
 ### 7. Run Test Suite
-Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, and channel dispatchers (144 automated tests):
+Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (184 automated tests):
 ```bash
 python -m unittest discover -s Testing -p "test_*.py" -v
 ```
-Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access. CI runs the other 137 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
+Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access. CI runs the other 177 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
 
 ### 8. Presentation & Demo Guide
 For full presentation instructions, talking points, and cheat-sheet commands for project reviews, see:
