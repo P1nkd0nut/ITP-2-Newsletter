@@ -1,4 +1,5 @@
 # GroundedCVE: AI-Powered CVE Newsletter & Threat Intelligence Engine
+[![CI](https://github.com/P1nkd0nut/ITP-2-Newsletter/actions/workflows/ci.yml/badge.svg)](https://github.com/P1nkd0nut/ITP-2-Newsletter/actions/workflows/ci.yml)
 > **ICT 2114 Integrative Team Project — IS 24 | Team 4 (Singapore Institute of Technology)**
 
 GroundedCVE is an automated threat intelligence retrieval and curation platform designed to bridge the discovery gap for Web and Mobile application security engineers and penetration testers. The platform systematically collects, structures, ranks, verifies, and synthesises actionable vulnerability disclosures with strict source grounding.
@@ -95,7 +96,13 @@ ITP2/
 │   ├── test_verification.py                   # Verification gate test suite (18 grounding & retry tests)
 │   ├── test_dashboard_api.py                  # REST API & channel dispatcher tests (10 tests)
 │   ├── test_link_validator.py                 # Link health validator tests (13 tests)
-│   └── test_chunking.py                       # Content cleaning & chunking tests (27 tests)
+│   ├── test_chunking.py                       # Content cleaning & chunking tests (27 tests)
+│   ├── test_change_tracking.py                # Change tracking between runs & AI-score reuse (13 tests)
+│   ├── test_recheck_policy.py                 # Age-based re-check tiers, 1-year freeze, recency labels (13 tests)
+│   ├── test_poc_provenance.py                 # CVE-specific PoC links & reference provenance (6 tests)
+│   ├── test_reader_and_telegram.py            # Incident reader page & Telegram weekly digest (15 tests)
+│   ├── test_manual_check.py                   # Manual spot-check sampler & scorer (4 tests)
+│   └── MANUAL_CHECKS.md                       # How the team hand-checks the automated results
 ├── DEMO_GUIDE.md                              # Presentation script & step-by-step cheatsheet for demo
 └── docker-compose.yml                         # Qdrant (vector DB) + Ollama (local embeddings)
 ```
@@ -228,10 +235,11 @@ docker compose --profile scheduler up -d      # also run ingest + triage once a 
 Keys go in a `.env` file (see `.env.example`); `Backend/data` is mounted so data persists.
 
 ### 7. Run Test Suite
-Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, and channel dispatchers (66 automated tests):
+Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, and channel dispatchers (144 automated tests):
 ```bash
 python -m unittest discover -s Testing -p "test_*.py" -v
 ```
+Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access. CI runs the other 137 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
 
 ### 8. Presentation & Demo Guide
 For full presentation instructions, talking points, and cheat-sheet commands for project reviews, see:
