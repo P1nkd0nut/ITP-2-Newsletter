@@ -96,6 +96,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadData();
   await loadTelegramSettings();
   await loadLinkHealthStats();
+
+  // Pick up new results from the scheduler without a page refresh
+  setInterval(loadData, 5 * 60 * 1000);
 });
 
 async function loadData() {
@@ -111,7 +114,21 @@ async function loadData() {
   }
 
   updateMetrics();
+  // A fresh install starts with older seed data until the scheduler's first run
+  // finishes; show All Dates rather than an empty week.
+  if (!fallbackApplied && currentDateFilter === 'WEEK' && candidatesData.length > 0 &&
+      !candidatesData.some(x => publishedDay(x) >= DATES.weekStart)) {
+    fallbackApplied = true;
+    filterDateWindow('ALL');
+    return;
+  }
   renderContent();
+}
+
+let fallbackApplied = false;
+
+function publishedDay(x) {
+  return x.published_date_iso || ((x.envelope && x.envelope.Published_Date) || '').slice(0, 10);
 }
 
 function fallbackData() {
