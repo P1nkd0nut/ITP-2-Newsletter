@@ -26,7 +26,7 @@ services:
       qdrant:
         condition: service_healthy
 
-  # Runs the whole pipeline on start, then every PIPELINE_INTERVAL_HOURS (default 24):
+  # Runs the whole pipeline on start, then every day at PIPELINE_RUN_TIME (default 08:00 Asia/Singapore):
   # ingest -> triage -> chunk -> index -> grounded summaries + gate -> weekly Telegram digest.
   # Follow it with: docker compose logs -f scheduler
   scheduler:

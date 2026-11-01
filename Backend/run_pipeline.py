@@ -13,12 +13,13 @@ Settings (all optional, from .env):
   INGEST_LIMIT              items per source per run          (default 5)
   SUMMARY_TOP               cards to write per run            (default 10)
   SUMMARY_OLLAMA_MODEL      local model to use if OPENROUTER_API_KEY is empty
-  PIPELINE_INTERVAL_HOURS   hours between runs with --loop    (default 24)
+  PIPELINE_RUN_TIME         daily run time with --loop, HH:MM  (default 08:00)
+  PIPELINE_TIMEZONE         timezone for PIPELINE_RUN_TIME    (default Asia/Singapore)
   DIGEST_INTERVAL_DAYS      days between Telegram digests     (default 7)
 
 Usage:
     python Backend/run_pipeline.py            # one run
-    python Backend/run_pipeline.py --loop     # run forever (Docker scheduler)
+    python Backend/run_pipeline.py --loop     # run now, then every day at PIPELINE_RUN_TIME (Docker scheduler)
 """
 import argparse
 import json
@@ -26,9 +27,10 @@ import os
 import subprocess
 import sys
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time as dtime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
+from zoneinfo import ZoneInfo
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
@@ -64,7 +66,19 @@ def last_digest_sent(path: Path = DIGEST_STATE_FILE) -> Optional[datetime]:
 
 def digest_due(now: datetime, interval_days: int, path: Path = DIGEST_STATE_FILE) -> bool:
     last = last_digest_sent(path)
-    return last is None or now - last >= timedelta(days=interval_days)
+    # an hour of slack so a run that starts a few seconds early still counts as a week later
+    return last is None or now - last >= timedelta(days=interval_days, hours=-1)
+
+
+def next_run_at(now: datetime, run_time: str, tz_name: str) -> datetime:
+    """Next occurrence of run_time ("HH:MM") in tz_name strictly after now."""
+    tz = ZoneInfo(tz_name)
+    hour, minute = (int(x) for x in run_time.split(":"))
+    local_now = now.astimezone(tz)
+    candidate = datetime.combine(local_now.date(), dtime(hour, minute), tzinfo=tz)
+    if candidate <= local_now:
+        candidate = datetime.combine(local_now.date() + timedelta(days=1), dtime(hour, minute), tzinfo=tz)
+    return candidate
 
 
 def run_once() -> None:
@@ -99,16 +113,20 @@ def run_once() -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Run the whole GroundedCVE pipeline")
-    ap.add_argument("--loop", action="store_true", help="repeat every PIPELINE_INTERVAL_HOURS")
+    ap.add_argument("--loop", action="store_true", help="run now, then every day at PIPELINE_RUN_TIME")
     args = ap.parse_args()
+    run_time = os.getenv("PIPELINE_RUN_TIME", "08:00").strip() or "08:00"
+    tz_name = os.getenv("PIPELINE_TIMEZONE", "Asia/Singapore").strip() or "Asia/Singapore"
 
+    # Run straight away so a fresh install has data, then at the daily time
     while True:
         run_once()
         if not args.loop:
             return
-        hours = env_int("PIPELINE_INTERVAL_HOURS", 24)
-        print(f"Sleeping {hours}h until the next run", flush=True)
-        time.sleep(hours * 3600)
+        nxt = next_run_at(datetime.now(timezone.utc), run_time, tz_name)
+        print(f"Next run at {nxt.isoformat()} ({tz_name})", flush=True)
+        while (wait := (nxt - datetime.now(timezone.utc)).total_seconds()) > 0:
+            time.sleep(min(wait, 3600))  # wake hourly so a sleeping laptop doesn't skip a day
 
 
 if __name__ == "__main__":
