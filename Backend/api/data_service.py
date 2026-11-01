@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 from Backend.ingestion.recheck_policy import FREEZE_NOTICE, age_days, is_frozen, recency_label
 from Backend.summarisation.card_store import load_cards
+from Backend.api.novelty import merge_same_flaw
 from .link_validator import link_validator
 
 logger = logging.getLogger(__name__)
@@ -705,7 +706,7 @@ class DataService:
         all_items = self.get_all_candidates()
         in_scope = [x for x in all_items if x.get("pre_filter", {}).get("is_in_scope", False)]
         # Only cards that passed the source-verification gate are published
-        verified = [x for x in in_scope if x.get("grounded_card")]
+        verified = merge_same_flaw([x for x in in_scope if x.get("grounded_card")])
         top_items = verified[:top_n]
 
         now = datetime.now(timezone.utc)
