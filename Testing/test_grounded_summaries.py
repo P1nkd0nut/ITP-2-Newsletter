@@ -379,6 +379,15 @@ class TestPipelineDigestSchedule(unittest.TestCase):
             state.write_text(json.dumps({"sent_at": (now - timedelta(days=7)).isoformat()}), encoding="utf-8")
             self.assertTrue(run_pipeline.digest_due(now, 7, state))
 
+    def test_next_run_is_8am_singapore_time(self):
+        sg = "Asia/Singapore"
+        before = datetime(2026, 11, 1, 23, 0, tzinfo=timezone.utc)   # 07:00 SGT on 2 Nov
+        after = datetime(2026, 11, 2, 1, 0, tzinfo=timezone.utc)     # 09:00 SGT on 2 Nov
+        self.assertEqual(run_pipeline.next_run_at(before, "08:00", sg),
+                         datetime(2026, 11, 2, 0, 0, tzinfo=timezone.utc))
+        self.assertEqual(run_pipeline.next_run_at(after, "08:00", sg),
+                         datetime(2026, 11, 3, 0, 0, tzinfo=timezone.utc))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -22,7 +22,7 @@ Open **http://localhost:5000**. That's it. Docker starts:
 | Container | What it does |
 |---|---|
 | `app` | Dashboard + API on port 5000 |
-| `scheduler` | Runs the full pipeline at start and then every 24 h: ingest → triage → chunk → embed into Qdrant → write grounded summaries → verification gate → weekly Telegram digest |
+| `scheduler` | Runs the full pipeline at start and then every day at 08:00 Singapore time (`PIPELINE_RUN_TIME` / `PIPELINE_TIMEZONE` in `.env`): ingest → triage → chunk → embed into Qdrant → write grounded summaries → verification gate → weekly Telegram digest |
 | `qdrant` | Vector database (port 6333) |
 | `ollama` | Embeddings (`nomic-embed-text`, downloaded automatically by `ollama-pull` on first start). Internal only, so it doesn't clash with an Ollama you already run on port 11434 |
 
@@ -136,7 +136,7 @@ ITP2/
 │   ├── test_poc_provenance.py                 # CVE-specific PoC links & reference provenance (6 tests)
 │   ├── test_reader_and_telegram.py            # Incident reader page & Telegram weekly digest (16 tests)
 │   ├── test_manual_check.py                   # Manual spot-check sampler & scorer (4 tests)
-│   ├── test_grounded_summaries.py             # Qdrant indexing, grounded cards, publish gate & scheduler (22 tests)
+│   ├── test_grounded_summaries.py             # Qdrant indexing, grounded cards, publish gate & scheduler (23 tests)
 │   ├── test_apple_collector.py                # One item per Apple advisory with real dates (6 tests)
 │   └── MANUAL_CHECKS.md                       # How the team hand-checks the automated results
 ├── DEMO_GUIDE.md                              # Presentation script & step-by-step cheatsheet for demo
@@ -285,11 +285,11 @@ docker compose run --rm scheduler python Backend/run_pipeline.py   # run the pip
 Keys go in a `.env` file (see `.env.example`); `Backend/data` is mounted so data persists. Outside Docker, `python Backend/run_pipeline.py` runs the same stages once.
 
 ### 7. Run Test Suite
-Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (173 automated tests):
+Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (174 automated tests):
 ```bash
 python -m unittest discover -s Testing -p "test_*.py" -v
 ```
-Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access. CI runs the other 166 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
+Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access. CI runs the other 167 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
 
 ### 8. Presentation & Demo Guide
 For full presentation instructions, talking points, and cheat-sheet commands for project reviews, see:
