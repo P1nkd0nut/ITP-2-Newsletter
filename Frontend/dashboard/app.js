@@ -447,7 +447,8 @@ function renderContent() {
   // Spotlight (only in ALL mode, with no search or category filter, showing today's #1 threat or top threat)
   if (currentDesk === 'ALL' && !currentSearch && currentCategory === 'ALL' && filtered.length > 0) {
     spotlightBox.classList.remove('hidden');
-    const topSpot = todayItems.length > 0 ? todayItems[0] : filtered[0];
+    // Highest priority score in the current view; the list itself may be sorted newest first
+    const topSpot = filtered.reduce((best, x) => ((x.priority_score || 0) > (best.priority_score || 0) ? x : best), filtered[0]);
     renderSpotlight(topSpot);
   } else {
     spotlightBox.classList.add('hidden');
