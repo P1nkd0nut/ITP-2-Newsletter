@@ -4,7 +4,13 @@ Verifies REST endpoints, newsletter digest curation, channel policies, and Teleg
 """
 import unittest
 import json
+import shutil
+import tempfile
+from datetime import date
 from pathlib import Path
+from unittest import mock
+from Backend.api import data_service as ds
+from Backend.api import telegram_service as tg
 from Backend.api.app import create_app
 from Backend.api.data_service import DataService
 from Backend.api.telegram_service import TelegramService
@@ -13,8 +19,31 @@ from Backend.api.telegram_service import TelegramService
 class TestDashboardAPI(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        # Work on a temp copy of channel_config.json so tests never touch the tracked file
+        cls.tmp = tempfile.TemporaryDirectory()
+        tmp_config = Path(cls.tmp.name) / "channel_config.json"
+        if tg.CONFIG_FILE.exists():
+            shutil.copy(tg.CONFIG_FILE, tmp_config)
+        cls.config_patcher = mock.patch.object(tg, "CONFIG_FILE", tmp_config)
+        cls.config_patcher.start()
+
         cls.app = create_app()
         cls.client = cls.app.test_client()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.config_patcher.stop()
+        cls.tmp.cleanup()
+
+    def _all_items(self, query=""):
+        """Collect every item across pages (page_size is capped at 100)."""
+        items, page = [], 1
+        while True:
+            data = self.client.get(f"/api/newsletters?page={page}&page_size=100&{query}").get_json()
+            items.extend(data["items"])
+            if page >= data.get("total_pages", 1):
+                return items
+            page += 1
 
     def test_01_health_endpoint(self):
         """Verify API health status and channel hierarchy."""
@@ -155,14 +184,25 @@ class TestDashboardAPI(unittest.TestCase):
 
     def test_09_date_range_and_sorting_query(self):
         """Verify 1-week date range preset filtering and date-based sorting."""
-        # 1-week preset (past 7 days up to today)
-        from Backend.api.data_service import date_windows
-        win = date_windows()
-        res_week = self.client.get("/api/newsletters?date_preset=week")
+        # 1-week preset (past 7 days up to "today"). Pin "today" to the newest item in the
+        # dataset so the test does not depend on the real date.
+        dates = sorted(
+            x["published_date_iso"] for x in self._all_items() if x.get("published_date_iso")
+        )
+        self.assertTrue(dates, "dataset has no dated items")
+        anchor = date.fromisoformat(dates[-1])
+        win = ds.date_windows(anchor)
+        expected_week = sum(1 for d in dates if win["week_start"] <= d <= win["today"])
+
+        real_date_windows = ds.date_windows
+        pinned = lambda today=None: real_date_windows(today or anchor)
+        with mock.patch.object(ds, "date_windows", pinned):
+            res_week = self.client.get("/api/newsletters?date_preset=week")
+            week_items = self._all_items("date_preset=week")
         self.assertEqual(res_week.status_code, 200)
-        week_data = res_week.get_json()
-        self.assertGreaterEqual(week_data["total"], 8)
-        for item in week_data["items"]:
+        self.assertGreaterEqual(res_week.get_json()["total"], 1)
+        self.assertEqual(res_week.get_json()["total"], expected_week)
+        for item in week_items:
             iso_date = item.get("published_date_iso", "")
             self.assertTrue(win["week_start"] <= iso_date <= win["today"])
 
