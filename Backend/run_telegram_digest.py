@@ -19,7 +19,25 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from Backend.api.data_service import data_service
-from Backend.api.telegram_service import base_url, bot_token, build_weekly_digest, telegram_service
+from Backend.api.novelty import DEFAULT_SIMILARITY, NoveltyChecker, PublishedIndex
+from Backend.api.telegram_service import base_url, bot_token, compose_digest, select_digest_items, telegram_service
+
+
+def make_novelty_checker() -> NoveltyChecker:
+    """Ledger of sent items, plus the Qdrant published collection when Qdrant and Ollama answer."""
+    index = None
+    try:
+        import os
+        from Backend.storage.embedder import OllamaEmbedder
+        from Backend.storage.vector_db import get_client
+
+        client = get_client()
+        client.info()
+        threshold = float(os.getenv("NOVELTY_SIMILARITY", DEFAULT_SIMILARITY))
+        index = PublishedIndex(client, OllamaEmbedder(), threshold=threshold)
+    except Exception as e:
+        print(f"Qdrant not reachable ({e.__class__.__name__}); novelty check uses the sent-items ledger only")
+    return NoveltyChecker(index=index)
 
 
 def main():
@@ -32,13 +50,17 @@ def main():
     parser.add_argument("--chat-id", help="Override TELEGRAM_CHAT_ID for this run")
     parser.add_argument("--dry-run", action="store_true", help="Print the messages without sending")
     parser.add_argument("-y", "--yes", action="store_true", help="Send without asking for approval")
+    parser.add_argument("--include-sent", action="store_true",
+                        help="Also include items sent in earlier digests that have nothing new")
     args = parser.parse_args()
 
     # Windows consoles default to a code page that can't print the emoji in the messages
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
 
-    messages = build_weekly_digest(data_service.get_all_candidates(), days=args.days, top_n=args.top)
+    novelty = None if args.include_sent else make_novelty_checker()
+    items = select_digest_items(data_service.get_all_candidates(), days=args.days, top_n=args.top, novelty=novelty)
+    messages = compose_digest(items, args.days)
     chat_id = args.chat_id or telegram_service.chat_id()
 
     for i, text in enumerate(messages, 1):
@@ -63,6 +85,11 @@ def main():
             return
 
     result = telegram_service.send_digest(messages, chat_id=chat_id)
+    # messages[0] is the header; remember every incident that actually went out
+    sent_items = items[: max(0, result["sent"] - 1)]
+    if sent_items:
+        (novelty or NoveltyChecker()).record(sent_items)
+        print(f"Recorded {len(sent_items)} sent incidents so later digests don't repeat them.")
     if result["error"]:
         sys.exit(f"Sent {result['sent']}/{result['total']} messages, then stopped: {result['error']}")
     print(f"Sent {result['sent']}/{result['total']} messages to chat {chat_id}.")

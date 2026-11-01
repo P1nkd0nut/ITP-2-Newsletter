@@ -137,6 +137,7 @@ ITP2/
 │   ├── test_reader_and_telegram.py            # Incident reader page & Telegram weekly digest (16 tests)
 │   ├── test_manual_check.py                   # Manual spot-check sampler & scorer (4 tests)
 │   ├── test_grounded_summaries.py             # Qdrant indexing, grounded cards, publish gate & scheduler (23 tests)
+│   ├── test_novelty.py                        # Digest novelty check: one item per CVE, no repeats (10 tests)
 │   ├── test_apple_collector.py                # One item per Apple advisory with real dates (6 tests)
 │   └── MANUAL_CHECKS.md                       # How the team hand-checks the automated results
 ├── DEMO_GUIDE.md                              # Presentation script & step-by-step cheatsheet for demo
@@ -222,6 +223,12 @@ Each card is written by the LLM (OpenRouter Qwen 2.5 72B, or `--ollama-model` fo
 - If Qdrant is not running, chunks are read straight from `latest_chunks.json`.
 - Cards are only rewritten when the item's source changes (`--force` to rewrite all).
 
+**Novelty check (weekly digest).** The newsletter never repeats itself:
+- The same CVE reported by several sources (NVD, CISA KEV, GitHub Advisory) is sent once, as the highest-priority version.
+- Every incident a digest sends is recorded in `Backend/data/staging/published_ledger.json` and in the Qdrant `groundedcve_published` collection. It is only sent again when something new happened (added to CISA KEV, a new public PoC, or a CVSS change), marked "🔁 Update: …".
+- Write-ups with no CVE ID (PortSwigger, Project Zero) are compared with published cards by embedding; a near-identical one (cosine ≥ 0.92, `NOVELTY_SIMILARITY` in `.env`) is skipped. On our cards the same text scores 0.975 or higher, and the closest two different advisories score 0.89.
+- `python Backend/run_telegram_digest.py --include-sent` turns this off for one run.
+
 ### 5. Run Task 4.1 Ground-Truth Benchmark & Validation Suite
 Execute empirical validation across the 20-sample ground-truth Web & Mobile dataset:
 ```bash
@@ -287,11 +294,11 @@ docker compose run --rm scheduler python Backend/run_pipeline.py   # run the pip
 Keys go in a `.env` file (see `.env.example`); `Backend/data` is mounted so data persists. Outside Docker, `python Backend/run_pipeline.py` runs the same stages once.
 
 ### 7. Run Test Suite
-Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (174 automated tests):
+Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (184 automated tests):
 ```bash
 python -m unittest discover -s Testing -p "test_*.py" -v
 ```
-Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access. CI runs the other 167 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
+Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access. CI runs the other 177 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
 
 ### 8. Presentation & Demo Guide
 For full presentation instructions, talking points, and cheat-sheet commands for project reviews, see:

@@ -45,3 +45,4 @@ Backend/data/staging/backup_demo_seed/
 Backend/data/staging/grounded_cards.json
 Backend/data/staging/quarantine_log.jsonl
 Backend/data/staging/last_digest_sent.json
+Backend/data/staging/published_ledger.json
