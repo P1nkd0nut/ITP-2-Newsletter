@@ -54,6 +54,7 @@ ITP2/
 │   ├── run_ingestion.py                       # CLI runner with rich summary tables & envelope previews
 │   ├── run_triage.py                          # CLI runner for Scope Pre-Filter, AI Scoring, & Anomaly Gate
 │   ├── run_benchmark.py                       # Empirical Performance & Fact Extraction Benchmark (Task 4.1)
+│   ├── run_chunking.py                        # CLI runner that cleans envelopes and writes chunked output
 │   ├── export_triage_dashboard.py             # Generative UI artifact exporter
 │   ├── data/
 │   │   ├── ground_truth_20.json               # 20-sample human-verified Web & Mobile extraction set
@@ -76,6 +77,10 @@ ITP2/
 │   │   ├── pre_filter.py                      # Dedicated Pentest Pre-Filter (Web vs Mobile isolation)
 │   │   ├── ai_evaluator.py                    # Practical Severity Assessor (OpenRouter Qwen 2.5 72B / Ollama)
 │   │   └── priority_scorer.py                 # 100-pt AI Priority Scoring + CVSS Discrepancy Gate
+│   ├── chunking/
+│   │   ├── cleaner.py                         # Normalises JSON/HTML/Markdown/text raw content
+│   │   ├── chunker.py                         # Splits cleaned content into traceable chunks
+│   │   └── models.py                          # Chunk data model
 │   └── storage/
 │       ├── vector_db.py                       # Qdrant client helper
 │       └── init_qdrant.py                     # Creates the Qdrant collections (Task 2.1)
@@ -89,7 +94,8 @@ ITP2/
 │   ├── test_benchmark.py                      # Task 4.1 benchmark test suite (6 validation tests)
 │   ├── test_verification.py                   # Verification gate test suite (18 grounding & retry tests)
 │   ├── test_dashboard_api.py                  # REST API & channel dispatcher tests (10 tests)
-│   └── test_link_validator.py                 # Link health validator tests (13 tests)
+│   ├── test_link_validator.py                 # Link health validator tests (13 tests)
+│   └── test_chunking.py                       # Content cleaning & chunking tests (27 tests)
 ├── DEMO_GUIDE.md                              # Presentation script & step-by-step cheatsheet for demo
 └── docker-compose.yml                         # Qdrant (vector DB) + Ollama (local embeddings)
 ```
