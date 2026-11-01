@@ -275,7 +275,9 @@ Ingestion re-checks CVEs that dropped out of the feeds, less often as they age (
 | 6–12 months | quarterly |
 | Over 1 year | never (frozen, shown with a "Not updated" disclaimer) |
 
-NVD records are fetched again and PoC searches repeated; anything that changed is flagged `UPDATED` with a summary. Use `--no-recheck` to skip this. The dashboard shows how recent an item is ("Recent", "Past month", "Over a year ago") instead of exact dates.
+NVD records are fetched again and PoC searches repeated; anything that changed is flagged `UPDATED` with a summary. Use `--no-recheck` to skip this. The dashboard never shows exact dates: cards say how recent an item is ("Recent", "Past month", "Over a year ago") and the filters are Recent / Past month / All.
+
+Why these cut-offs: most change happens early. Mandiant measured an average time-to-exploit of 5 days in 2023 ([source](https://cloud.google.com/blog/topics/threat-intelligence/time-to-exploit-trends-2023?hl=en)), and VulnCheck found about a quarter of known-exploited CVEs were exploited on or before their publication day ([source](https://www.vulncheck.com/blog/state-of-exploitation-1h-2026)), so the first month is checked daily. Later changes still happen (VulnCheck reports a median of 80 to 120 days from publication to a CISA KEV listing), so checks continue monthly and then quarterly for the first year. An old CVE that CISA newly adds to KEV is not missed by the freeze: it arrives as a new item from the daily KEV pull.
 
 ### 6b. Run in Docker
 ```bash
