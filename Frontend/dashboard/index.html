@@ -481,6 +481,11 @@
           <span>Push to Telegram Secondary Wire</span>
         </button>
 
+        <a id="btnReaderPage" href="#" target="_blank" rel="noopener" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-medium border border-slate-700 transition flex items-center space-x-1.5">
+          <span>📄</span>
+          <span>Reader Page</span>
+        </a>
+
         <button onclick="closeDetailModal()" class="px-5 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-semibold shadow transition">
           Close
         </button>
@@ -508,8 +513,8 @@
         </label>
 
         <div>
-          <label class="block text-slate-400 text-[11px] font-mono mb-1">Bot Token (leave blank for demo simulation)</label>
-          <input type="password" id="inputToken" placeholder="Optional Telegram Bot Token" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-white">
+          <label class="block text-slate-400 text-[11px] font-mono mb-1">Bot Token</label>
+          <p id="tokenStatus" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-slate-400">Set TELEGRAM_BOT_TOKEN in .env (without it, alerts run in demo simulation)</p>
         </div>
 
         <div>

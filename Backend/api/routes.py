@@ -244,9 +244,7 @@ def test_telegram_channel():
     """Dispatches a test notification to verify secondary channel integration."""
     try:
         body = request.get_json() or {}
-        token = body.get("bot_token")
-        chat_id = body.get("chat_id")
-        result = telegram_service.send_test_message(token, chat_id)
+        result = telegram_service.send_test_message(body.get("chat_id"))
         return jsonify(result)
     except Exception as e:
         logger.error(f"Error testing Telegram channel: {e}")

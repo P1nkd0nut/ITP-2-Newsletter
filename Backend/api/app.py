@@ -6,10 +6,12 @@ from pathlib import Path
 from flask import Flask, send_from_directory, send_file
 from flask_cors import CORS
 from .routes import api_bp
+from .data_service import data_service
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 FRONTEND_DIR = ROOT_DIR / "Frontend"
 DASHBOARD_DIR = FRONTEND_DIR / "dashboard"
+READER_DIR = FRONTEND_DIR / "reader"
 
 
 def create_app():
@@ -27,6 +29,13 @@ def create_app():
             return send_file(str(dashboard_index))
         # Fallback to Frontend/index.html if dashboard folder not found
         return send_file(str(FRONTEND_DIR / "index.html"))
+
+    # Reader page for one incident; Telegram messages link here
+    @app.route("/incident/<path:item_id>")
+    def incident_page(item_id):
+        if not data_service.get_candidate_by_id(item_id):
+            return send_file(str(READER_DIR / "not_found.html")), 404
+        return send_file(str(READER_DIR / "incident.html"))
 
     # Dedicated route to view raw ingestion staging envelopes
     @app.route("/ingestion")

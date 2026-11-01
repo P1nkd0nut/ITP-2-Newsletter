@@ -6,6 +6,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["Frontend/run_dashboard.py"],
       "port": 8080
+    },
+    {
+      "name": "app",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["run_server.py"],
+      "port": 5000
     }
   ]
 }

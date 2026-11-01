@@ -640,6 +640,7 @@ function openDetailModal(itemId) {
   // Header
   document.getElementById('mTitle').innerText = env.Title || 'Advisory';
   document.getElementById('mCveId').innerText = env.CVE_ID || env.Item_ID;
+  document.getElementById('btnReaderPage').href = `/incident/${encodeURIComponent(env.Item_ID || '')}`;
   document.getElementById('mSource').innerText = env.Source_Type || 'Feed';
   document.getElementById('mPublishedDate').innerText = `📅 ${item.published_date_formatted || recencyLabel(env.Published_Date)}`;
   document.getElementById('mCategoryBadge').innerText = item.standard_category || ai.offensive_impact || 'Advisory';
@@ -884,8 +885,9 @@ async function loadTelegramSettings() {
     const toggle = document.getElementById('toggleTelegram');
     if (toggle) toggle.checked = Boolean(sec.enabled);
 
-    const token = document.getElementById('inputToken');
-    if (token && sec.bot_token) token.value = sec.bot_token;
+    // The token itself stays in .env; the API only says whether it is set
+    const tokenStatus = document.getElementById('tokenStatus');
+    if (tokenStatus && sec.bot_token_set) tokenStatus.innerText = '✅ Loaded from .env (TELEGRAM_BOT_TOKEN)';
 
     const chat = document.getElementById('inputChatId');
     if (chat && sec.chat_id) chat.value = sec.chat_id;
@@ -904,7 +906,6 @@ function closeSettingsModal() {
 
 async function saveTelegramSettings() {
   const enabled = document.getElementById('toggleTelegram').checked;
-  const token = document.getElementById('inputToken').value.trim();
   const chat = document.getElementById('inputChatId').value.trim();
 
   try {
@@ -914,7 +915,6 @@ async function saveTelegramSettings() {
       body: JSON.stringify({
         secondary_channel: {
           enabled: enabled,
-          bot_token: token,
           chat_id: chat,
         }
       })
@@ -935,14 +935,13 @@ async function testTelegramAlert() {
   box.innerText = 'Dispatching test alert...';
   box.className = 'p-2.5 rounded text-[11px] font-mono border border-slate-700 text-slate-300';
 
-  const token = document.getElementById('inputToken').value.trim();
   const chat = document.getElementById('inputChatId').value.trim();
 
   try {
     const res = await fetch('/api/channels/telegram/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bot_token: token, chat_id: chat })
+      body: JSON.stringify({ chat_id: chat })
     });
     const data = await res.json();
 
