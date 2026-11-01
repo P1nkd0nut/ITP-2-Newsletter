@@ -2,6 +2,7 @@
 REST API routes for GroundedCVE Threat Intelligence & Newsletter Hub.
 """
 import logging
+from html import escape
 import time
 from flask import Blueprint, jsonify, request, Response
 from .data_service import data_service
@@ -182,7 +183,9 @@ def export_newsletter():
     </div>
     <h3>{t['cve_id']} — {t['title']}</h3>
     <p><strong>Offensive Impact:</strong> {t['offensive_impact']} | <strong>AI Severity:</strong> {t['ai_severity']}/10 (CVSS: {t['cvss'] or 'N/A'})</p>
-    <p><strong>Analysis:</strong> {t['reasoning']}</p>
+    <p><strong>What it is:</strong> {escape(t['grounded_card']['mechanism'])}</p>
+    <p><strong>Impact:</strong> {escape(t['grounded_card']['impact'])}</p>
+    {"<p><strong>Fix:</strong> " + escape(t['grounded_card']['remediation']) + "</p>" if t['grounded_card'].get('remediation') else ""}
     {"<p style='color:#dc2626;'><strong>[!] CVSS Anomaly Alert:</strong> " + t['troubleshoot_note'] + "</p>" if t.get('is_discrepancy') else ""}
     <p><a href="{t['source_url']}" target="_blank">View Canonical Advisory &rarr;</a></p>
   </div>
