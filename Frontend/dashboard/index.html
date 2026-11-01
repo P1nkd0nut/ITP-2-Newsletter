@@ -112,16 +112,16 @@
           </button>
         </div>
 
-        <!-- Date Range Filter Window (Today / Past 7 Days / All Dates) -->
+        <!-- Recency filter (Recent / Past month / All): no dates are shown to users -->
         <div class="flex items-center space-x-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs font-mono shrink-0">
-          <button onclick="filterDateWindow('TODAY')" id="dateBtn-TODAY" class="px-2.5 py-1.5 rounded-md text-slate-400 hover:text-white transition text-[11px]" title="Advisories published today">
-            ⚡ Today
+          <button onclick="filterDateWindow('RECENT')" id="dateBtn-RECENT" class="px-2.5 py-1.5 rounded-md bg-cyan-600 text-white font-semibold transition text-[11px]" title="Published in the past week">
+            Recent
           </button>
-          <button onclick="filterDateWindow('WEEK')" id="dateBtn-WEEK" class="px-2.5 py-1.5 rounded-md bg-cyan-600 text-white font-semibold transition text-[11px]" title="Advisories published in the past 7 days">
-            📅 Past 7 Days
+          <button onclick="filterDateWindow('MONTH')" id="dateBtn-MONTH" class="px-2.5 py-1.5 rounded-md text-slate-400 hover:text-white transition text-[11px]" title="Published in the past month">
+            Past month
           </button>
-          <button onclick="filterDateWindow('ALL')" id="dateBtn-ALL" class="px-2.5 py-1.5 rounded-md text-slate-400 hover:text-white transition text-[11px]" title="All Historical Records">
-            All Dates
+          <button onclick="filterDateWindow('ALL')" id="dateBtn-ALL" class="px-2.5 py-1.5 rounded-md text-slate-400 hover:text-white transition text-[11px]" title="Everything we track">
+            All
           </button>
         </div>
 
@@ -129,10 +129,9 @@
         <div class="flex items-center space-x-1.5 shrink-0">
           <span class="text-[11px] font-mono text-slate-400 hidden sm:inline">Sort:</span>
           <select id="sortSelect" onchange="handleSortChange(this.value)" class="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-cyan-500 cursor-pointer">
-            <option value="timeline">📅 Today First → Past 7 Days</option>
+            <option value="timeline">Newest first</option>
             <option value="score_desc">🔥 Threat Score (High → Low)</option>
-            <option value="date_desc">📅 Date (Newest First)</option>
-            <option value="date_asc">📅 Date (Oldest First)</option>
+            <option value="date_asc">Oldest first</option>
             <option value="ai_desc">🧠 AI Severity (High → Low)</option>
             <option value="score_asc">📉 Threat Score (Low → High)</option>
           </select>
@@ -174,7 +173,7 @@
 
       <!-- Active Filter Feedback & Count -->
       <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-1">
-        <span id="filterStatusText">Showing matching advisories in the past 7 days</span>
+        <span id="filterStatusText">Showing recent advisories</span>
         <button onclick="resetAllFilters()" class="text-cyan-400 hover:underline hover:text-cyan-300">
           Reset Filters
         </button>
@@ -185,9 +184,9 @@
     <!-- Spotlight: Top Priority Threat (Short & Sweet Hero Card) -->
     <div id="spotlightContainer"></div>
 
-    <!-- Timeline Sections: Today's CVE First, Followed by Past 7 Days, Followed by Archive -->
+    <!-- Sections: Recent first, then Past month, then Older -->
     
-    <!-- 1. TODAY'S DISCLOSURES (FIRST ON THE PAGE) -->
+    <!-- 1. RECENT (PAST WEEK) -->
     <section id="section-today" class="space-y-3">
       <div class="flex items-center justify-between border-b border-rose-900/60 pb-2">
         <div class="flex items-center space-x-2">
@@ -196,8 +195,7 @@
             <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
           </span>
           <h2 class="text-base font-bold text-white flex items-center space-x-2">
-            <span>Today's Disclosures</span>
-            <span class="text-xs font-mono text-rose-300 font-semibold px-2 py-0.5 rounded bg-rose-950 border border-rose-800" id="todayDateBadge">Today</span>
+            <span>Recent</span>
           </h2>
           <span id="titleTodayCount" class="text-xs font-mono text-rose-400">(0)</span>
         </div>
@@ -209,17 +207,17 @@
       </div>
     </section>
 
-    <!-- 2. PAST 7 DAYS DISCLOSURES (FOLLOWED BY PAST 7 DAYS) -->
+    <!-- 2. PAST MONTH -->
     <section id="section-week" class="space-y-3 pt-2">
       <div class="flex items-center justify-between border-b border-slate-800 pb-2">
         <div class="flex items-center space-x-2">
           <span class="h-2.5 w-2.5 rounded-full bg-cyan-400"></span>
           <h2 class="text-base font-bold text-white flex items-center space-x-2">
-            <span>Past 7 Days</span>
+            <span>Past month</span>
           </h2>
           <span id="titleWeekCount" class="text-xs font-mono text-cyan-400">(0)</span>
         </div>
-        <span class="text-xs font-mono text-slate-400 hidden sm:inline">Active Weekly Surveillance Window</span>
+        <span class="text-xs font-mono text-slate-400 hidden sm:inline">Re-checked every day</span>
       </div>
 
       <div id="gridWeek" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -227,12 +225,12 @@
       </div>
     </section>
 
-    <!-- 3. EARLIER / HISTORICAL ARCHIVE -->
+    <!-- 3. OLDER -->
     <section id="section-older" class="space-y-3 pt-2">
       <div class="flex items-center justify-between border-b border-slate-800 pb-2">
         <div class="flex items-center space-x-2">
           <span class="h-2.5 w-2.5 rounded-full bg-slate-500"></span>
-          <h2 class="text-base font-bold text-slate-300">Earlier Advisories & Historical Archive</h2>
+          <h2 class="text-base font-bold text-slate-300">Older advisories</h2>
           <span id="titleOlderCount" class="text-xs font-mono text-slate-500">(0)</span>
         </div>
         <span class="text-xs font-mono text-slate-500 hidden sm:inline">Monitored Disclosures</span>
@@ -256,7 +254,7 @@
             <span id="mScopeBadge" class="px-2 py-0.5 rounded font-bold">SCOPE</span>
             <span id="mCategoryBadge" class="px-2 py-0.5 rounded font-bold bg-slate-800 text-cyan-300 border border-slate-700">Category</span>
             <span id="mCveId" class="text-cyan-400 font-bold">CVE-0000-0000</span>
-            <span id="mPublishedDate" class="text-slate-400">📅 Date</span>
+            <span id="mPublishedDate" class="text-slate-400"></span>
             <span id="mSource" class="text-slate-500">Source</span>
             <span id="mCheckedLabel" class="text-slate-500"></span>
           </div>

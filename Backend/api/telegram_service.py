@@ -21,6 +21,7 @@ import requests
 
 from Backend import config  # noqa: F401  (loads .env into os.environ)
 from Backend.ingestion.recheck_policy import age_days
+from Backend.api.novelty import NoveltyChecker, merge_same_flaw
 
 logger = logging.getLogger(__name__)
 
@@ -105,16 +106,28 @@ def send_message(token: str, chat_id: str, text: str) -> Dict[str, Any]:
 # Weekly digest
 # ----------------------------------------------------------------------------
 
-def select_digest_items(candidates: List[Dict[str, Any]], days: int = 7, top_n: int = 10) -> List[Dict[str, Any]]:
-    """In-scope (Web/Mobile) incidents published in the last `days` days, highest priority first."""
+def select_digest_items(candidates: List[Dict[str, Any]], days: int = 7, top_n: int = 10,
+                        novelty: Optional[NoveltyChecker] = None) -> List[Dict[str, Any]]:
+    """
+    In-scope (Web/Mobile) incidents published in the last `days` days, highest
+    priority first. Only items whose card passed the source-verification gate
+    are sent; unverified and quarantined items are left out. The same CVE from
+    several sources is sent once, and with a NoveltyChecker, items sent in an
+    earlier digest are left out unless something new happened.
+    """
     picked = []
     for c in candidates:
         if not (c.get("pre_filter") or {}).get("is_in_scope", False):
+            continue
+        if not c.get("grounded_card"):
             continue
         age = age_days((c.get("envelope") or {}).get("Published_Date"))
         if age is not None and age <= days:
             picked.append(c)
     picked.sort(key=lambda c: float(c.get("priority_score", 0.0)), reverse=True)
+    picked = merge_same_flaw(picked)
+    if novelty is not None:
+        picked = novelty.filter(picked)
     return picked[:top_n]
 
 
@@ -131,7 +144,8 @@ def _display_title(c: Dict[str, Any]) -> str:
 def _summary(c: Dict[str, Any]) -> str:
     in_depth = c.get("in_depth") or {}
     return (
-        in_depth.get("brief_summary")
+        (c.get("grounded_card") or {}).get("mechanism")
+        or in_depth.get("brief_summary")
         or in_depth.get("full_description")
         or (c.get("ai_assessment") or {}).get("reasoning")
         or ""
@@ -148,6 +162,9 @@ def format_digest_item(c: Dict[str, Any], rank: int) -> str:
     heading = env.get("CVE_ID") or "Advisory"
 
     flags = []
+    update = (c.get("novelty") or {})
+    if update.get("status") == "UPDATE" and update.get("reasons"):
+        flags.append("🔁 Update: " + ", ".join(update["reasons"]))
     if env.get("KEV_Status"):
         flags.append("🔥 Actively exploited")
     if env.get("PoC_URLs"):
@@ -192,10 +209,14 @@ def format_digest_header(items: List[Dict[str, Any]], days: int = 7) -> str:
     return "\n".join(lines)
 
 
-def build_weekly_digest(candidates: List[Dict[str, Any]], days: int = 7, top_n: int = 10) -> List[str]:
-    """Header message followed by one message per selected incident."""
-    items = select_digest_items(candidates, days=days, top_n=top_n)
+def compose_digest(items: List[Dict[str, Any]], days: int = 7) -> List[str]:
+    """Header message followed by one message per incident."""
     return [format_digest_header(items, days)] + [format_digest_item(c, i) for i, c in enumerate(items, 1)]
+
+
+def build_weekly_digest(candidates: List[Dict[str, Any]], days: int = 7, top_n: int = 10,
+                        novelty: Optional[NoveltyChecker] = None) -> List[str]:
+    return compose_digest(select_digest_items(candidates, days=days, top_n=top_n, novelty=novelty), days)
 
 
 class TelegramService:

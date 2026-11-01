@@ -9,6 +9,8 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from Backend.ingestion.recheck_policy import FREEZE_NOTICE, age_days, is_frozen, recency_label
+from Backend.summarisation.card_store import load_cards
+from Backend.api.novelty import merge_same_flaw
 from .link_validator import link_validator
 
 logger = logging.getLogger(__name__)
@@ -17,6 +19,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 STAGING_DIR = ROOT_DIR / "Backend" / "data" / "staging"
 TRIAGED_FILE = STAGING_DIR / "triaged_candidates.json"
 ENVELOPES_FILE = STAGING_DIR / "latest_envelopes.json"
+GROUNDED_CARDS_FILE = STAGING_DIR / "grounded_cards.json"
 
 
 def _names_cve(cve_id: Optional[str], text: Optional[str]) -> bool:
@@ -79,6 +82,13 @@ class DataService:
     def __init__(self):
         self._cache: Optional[List[Dict[str, Any]]] = None
         self._last_loaded: Optional[str] = None
+        self._source_stamp: tuple = ()
+
+    @staticmethod
+    def _files_stamp() -> tuple:
+        """Modification times of the files the cache is built from."""
+        return tuple(p.stat().st_mtime_ns if p.exists() else 0
+                     for p in (TRIAGED_FILE, ENVELOPES_FILE, GROUNDED_CARDS_FILE))
 
     def reload(self) -> List[Dict[str, Any]]:
         """Force reloads data from disk."""
@@ -86,9 +96,14 @@ class DataService:
         return self.get_all_candidates()
 
     def get_all_candidates(self) -> List[Dict[str, Any]]:
-        """Returns all candidates from storage, caching in memory."""
-        if self._cache is not None:
+        """
+        Returns all candidates from storage, caching in memory. The cache is
+        rebuilt when the scheduler rewrites triage output or the grounded cards.
+        """
+        stamp = self._files_stamp()
+        if self._cache is not None and stamp == self._source_stamp:
             return self._cache
+        self._source_stamp = stamp
 
         data: List[Dict[str, Any]] = []
         if TRIAGED_FILE.exists():
@@ -124,8 +139,10 @@ class DataService:
                 logger.error(f"Error loading fallback envelopes: {e}")
 
         # Enrich each candidate with direct CVE links, vendor bulletins, and detailed descriptions
+        cards = load_cards(GROUNDED_CARDS_FILE)
         for c in data:
             self._enrich_candidate(c)
+            self._attach_grounded_card(c, cards)
 
         # Ensure sorted by priority score descending by default
         data.sort(key=lambda x: x.get("priority_score", 0.0), reverse=True)
@@ -383,6 +400,34 @@ class DataService:
             "external_references": verified_refs,
         }
         return c
+
+    @staticmethod
+    def _attach_grounded_card(c: Dict[str, Any], cards: Dict[str, Dict[str, Any]]) -> None:
+        """
+        Attach the item's gate-PASSED card (grounded_cards.json only holds passed
+        cards). A card written from an older version of the source is ignored.
+        Items without one get grounded_card = None and are left out of digests.
+        """
+        env = c.get("envelope", {})
+        rec = cards.get(env.get("Item_ID"))
+        if not rec or rec.get("Content_Hash") != env.get("Content_Hash"):
+            c["grounded_card"] = None
+            return
+
+        card = rec["card"]
+        c["grounded_card"] = {
+            **card,
+            "checks_run": (rec.get("verification") or {}).get("checks_run", 0),
+            "attempts": (rec.get("verification") or {}).get("attempts", 1),
+            "chunk_ids": rec.get("chunk_ids", []),
+            "model": rec.get("model"),
+            "generated_at": rec.get("generated_at"),
+        }
+        in_depth = c.setdefault("in_depth", {})
+        brief = card.get("mechanism", "")
+        in_depth["brief_summary"] = brief if len(brief) <= 220 else brief[:217] + "..."
+        in_depth["full_description"] = " ".join(x for x in (card.get("mechanism"), card.get("impact")) if x)
+        in_depth["grounded_card"] = c["grounded_card"]
 
     def get_candidate_by_id(self, item_id: str) -> Optional[Dict[str, Any]]:
         """Lookup a candidate by Item_ID or CVE_ID."""
@@ -660,14 +705,16 @@ class DataService:
         """
         all_items = self.get_all_candidates()
         in_scope = [x for x in all_items if x.get("pre_filter", {}).get("is_in_scope", False)]
-        top_items = in_scope[:top_n]
+        # Only cards that passed the source-verification gate are published
+        verified = merge_same_flaw([x for x in in_scope if x.get("grounded_card")])
+        top_items = verified[:top_n]
 
         now = datetime.now(timezone.utc)
         date_str = now.strftime("%B %d, %Y")
         title = issue_title or f"GroundedCVE Weekly Threat Digest — {now.strftime('Week %U, %Y')}"
 
-        web_top = [x for x in in_scope if x.get("pre_filter", {}).get("category") == "WEB"][:3]
-        mobile_top = [x for x in in_scope if x.get("pre_filter", {}).get("category") == "MOBILE"][:2]
+        web_top = [x for x in verified if x.get("pre_filter", {}).get("category") == "WEB"][:3]
+        mobile_top = [x for x in verified if x.get("pre_filter", {}).get("category") == "MOBILE"][:2]
 
         # Markdown synthesis
         md_lines = [
@@ -680,7 +727,8 @@ class DataService:
             "",
             "## 1. Executive Summary & Weekly Threat Landscape",
             f"During this monitoring cycle, GroundedCVE evaluated **{len(all_items)}** total security advisories across NVD, CISA KEV, PortSwigger, Google Project Zero, and GitHub ecosystems. "
-            f"The Pentest Scope Pre-Filter isolated **{len(in_scope)}** actionable Web & Mobile vulnerabilities, flagging **{len([x for x in in_scope if x.get('envelope', {}).get('KEV_Status')])}** active in-the-wild exploitations cataloged by CISA.",
+            f"The Pentest Scope Pre-Filter isolated **{len(in_scope)}** actionable Web & Mobile vulnerabilities, "
+            f"of which **{len(verified)}** have a write-up that passed source verification, flagging **{len([x for x in in_scope if x.get('envelope', {}).get('KEV_Status')])}** active in-the-wild exploitations cataloged by CISA.",
             "",
             "### Key Weekly Insights",
             f"- **Top Priority Score Recorded**: `{top_items[0].get('priority_score')}/100.0` ({top_items[0].get('envelope', {}).get('CVE_ID', 'N/A')})" if top_items else "- No critical threats scored.",
@@ -707,6 +755,7 @@ class DataService:
             cvss = env.get("CVSS")
             poc_urls = env.get("PoC_URLs") or []
             source_url = env.get("Source_URL", "")
+            card = item["grounded_card"]
 
             curated_threats.append({
                 "rank": idx,
@@ -724,6 +773,7 @@ class DataService:
                 "breakdown": bd,
                 "is_discrepancy": disc.get("is_discrepancy", False),
                 "troubleshoot_note": disc.get("troubleshoot_note"),
+                "grounded_card": card,
             })
 
             md_lines.extend([
@@ -731,8 +781,13 @@ class DataService:
                 f"- **Priority Score**: `{score}/100.0` (KEV: {bd.get('cisa_kev_points', 0)} pts | AI Severity: {bd.get('ai_severity_points', 0)} pts | PoC: {bd.get('poc_points', 0)} pts)",
                 f"- **Domain**: `[{pf.get('category')}]` | **Impact**: **{impact}** | **AI Severity**: `{severity}/10.0` (CVSS: `{cvss if cvss is not None else 'N/A'}`)",
                 f"- **Weaponization**: {'🔥 Active CISA KEV Exploitation' if env.get('KEV_Status') else '⚠️ Monitored Advisory'} | Public PoC: {'✅ Yes' if poc_urls else '❌ None detected'}",
-                f"- **AI Offensive Analysis**: {ai.get('reasoning', pf.get('reason', 'N/A'))}",
+                f"- **What it is**: {card.get('mechanism')}",
+                f"- **Impact**: {card.get('impact')}",
             ])
+            if card.get("remediation"):
+                md_lines.append(f"- **Fix**: {card['remediation']}")
+            if card.get("testing_syntax"):
+                md_lines.append("- **Testing**: " + "; ".join(f"`{cmd}`" for cmd in card["testing_syntax"]))
             if disc.get("is_discrepancy"):
                 md_lines.append(f"- **[!] CVSS Anomaly Alert**: {disc.get('troubleshoot_note')}")
             if poc_urls:
@@ -778,6 +833,7 @@ class DataService:
             "generated_at": date_str,
             "total_evaluated": len(all_items),
             "in_scope_count": len(in_scope),
+            "verified_count": len(verified),
             "curated_count": len(curated_threats),
             "curated_threats": curated_threats,
             "web_highlights": [

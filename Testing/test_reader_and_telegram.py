@@ -27,6 +27,7 @@ def make_candidate(item_id, score, category="WEB", published=None, **env):
         "priority_score": score,
         "recency_label": "Recent",
         "in_depth": {"brief_summary": f"Summary for {item_id}."},
+        "grounded_card": {"mechanism": f"Summary for {item_id}.", "impact": "", "checks_run": 3},
     }
 
 
@@ -98,6 +99,7 @@ class TestDigestFormatting(unittest.TestCase):
     def test_source_text_is_html_escaped(self):
         c = make_candidate("x-1", 50.0, Title="<script>alert(1)</script> & co")
         c["in_depth"] = {"brief_summary": "Use <b>bold</b> & <a href='x'>"}
+        c["grounded_card"]["mechanism"] = c["in_depth"]["brief_summary"]
         msg = tg.format_digest_item(c, 1)
         self.assertNotIn("<script>", msg)
         self.assertIn("&lt;script&gt;", msg)
@@ -107,6 +109,7 @@ class TestDigestFormatting(unittest.TestCase):
     def test_long_text_fits_telegram_limit(self):
         c = make_candidate("x-2", 50.0, Title="T" * 5000)
         c["in_depth"] = {"brief_summary": "<&>" * 5000}
+        c["grounded_card"]["mechanism"] = c["in_depth"]["brief_summary"]
         for msg in [tg.format_digest_item(c, 1), tg.format_digest_header([c])]:
             self.assertLessEqual(len(msg), tg.MAX_MESSAGE_CHARS)
 
@@ -123,6 +126,19 @@ class TestDigestFormatting(unittest.TestCase):
         self.assertIn("1 Web, 1 Mobile", messages[0])
         self.assertIn("/incident/high", messages[1])
         self.assertIn("/incident/low", messages[2])
+
+    def test_digest_leaves_out_items_without_a_verified_card(self):
+        unverified = make_candidate("unverified", 99.0)
+        unverified["grounded_card"] = None
+        messages = tg.build_weekly_digest([unverified, make_candidate("ok", 10.0)], days=7)
+        self.assertEqual(len(messages), 2)
+        self.assertIn("/incident/ok", messages[1])
+        self.assertNotIn("unverified", "".join(messages))
+
+    def test_digest_summary_comes_from_the_verified_card(self):
+        c = make_candidate("x-3", 50.0)
+        c["grounded_card"]["mechanism"] = "Grounded mechanism text."
+        self.assertIn("Grounded mechanism text.", tg.format_digest_item(c, 1))
 
     def test_empty_week_still_sends_header(self):
         messages = tg.build_weekly_digest([make_candidate("old", 99.0, published=days_ago(30))], days=7)
