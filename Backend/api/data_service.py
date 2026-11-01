@@ -81,6 +81,13 @@ class DataService:
     def __init__(self):
         self._cache: Optional[List[Dict[str, Any]]] = None
         self._last_loaded: Optional[str] = None
+        self._source_stamp: tuple = ()
+
+    @staticmethod
+    def _files_stamp() -> tuple:
+        """Modification times of the files the cache is built from."""
+        return tuple(p.stat().st_mtime_ns if p.exists() else 0
+                     for p in (TRIAGED_FILE, ENVELOPES_FILE, GROUNDED_CARDS_FILE))
 
     def reload(self) -> List[Dict[str, Any]]:
         """Force reloads data from disk."""
@@ -88,9 +95,14 @@ class DataService:
         return self.get_all_candidates()
 
     def get_all_candidates(self) -> List[Dict[str, Any]]:
-        """Returns all candidates from storage, caching in memory."""
-        if self._cache is not None:
+        """
+        Returns all candidates from storage, caching in memory. The cache is
+        rebuilt when the scheduler rewrites triage output or the grounded cards.
+        """
+        stamp = self._files_stamp()
+        if self._cache is not None and stamp == self._source_stamp:
             return self._cache
+        self._source_stamp = stamp
 
         data: List[Dict[str, Any]] = []
         if TRIAGED_FILE.exists():
