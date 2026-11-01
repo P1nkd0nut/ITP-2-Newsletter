@@ -59,3 +59,10 @@ QDRANT_COLLECTION_PUBLISHED = "groundedcve_published"  # validated, published ca
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 EMBED_MODEL = "nomic-embed-text"
 EMBED_DIM = 768
+
+# Chunking (Task 2.2 - two-tier heading-aware chunking)
+CHUNK_TIER1_MAX_CHARS = 2500   # Executive Summary Tier cap
+CHUNK_TIER2_MAX_CHARS = 5000   # Technical PoC / Evidence Tier cap
+CHUNK_MIN_MERGE_CHARS = 400    # start a new chunk at a new h1/h2 section once the buffer has this much
+CHUNK_THIN_SOURCE_CHARS = 300  # cleaned text shorter than this is flagged "thin_source"
+CHUNKS_FILE = STAGING_DIR / "latest_chunks.json"
