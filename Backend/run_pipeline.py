@@ -105,7 +105,8 @@ def run_once() -> None:
         print("\n=== Telegram digest ===\nSkipped: TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID not set.", flush=True)
     elif not digest_due(started, interval):
         print(f"\n=== Telegram digest ===\nNot due yet (last sent {last_digest_sent().isoformat()}).", flush=True)
-    elif run_stage("Telegram digest", "run_telegram_digest.py", "--yes", "--days", str(interval)):
+    # --jitter: teammates' schedulers all run at the same time, so stagger the check of the channel's pinned edition
+    elif run_stage("Telegram digest", "run_telegram_digest.py", "--yes", "--days", str(interval), "--jitter", "300"):
         DIGEST_STATE_FILE.write_text(json.dumps({"sent_at": started.isoformat()}), encoding="utf-8")
 
     print(f"\nRun finished in {(datetime.now(timezone.utc) - started).seconds}s", flush=True)
