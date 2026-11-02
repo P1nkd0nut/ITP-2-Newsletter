@@ -623,6 +623,9 @@ function openDetailModal(itemId) {
   if (!item) return;
 
   activeCandidate = item;
+  // Open on the summary and sources; scoring and checks stay folded under More details
+  const more = document.getElementById('mMoreDetails');
+  if (more) more.open = false;
   const env = item.envelope || {};
   const pf = item.pre_filter || {};
   const ai = item.ai_assessment || {};
