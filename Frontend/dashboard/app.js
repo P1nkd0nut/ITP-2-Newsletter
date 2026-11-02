@@ -7,6 +7,8 @@
 let candidatesData = [];
 let currentDesk = 'ALL';
 let currentSearch = '';
+let searchRanks = null; // Item_ID -> rank from /api/search (hybrid search); null = use the plain text filter
+let searchTimer = null;
 let currentDateFilter = 'RECENT'; // 'RECENT' (past week) | 'MONTH' (past month) | 'ALL'
 let currentCategory = 'ALL';
 let currentSort = 'timeline'; // 'timeline' (newest first, then score) | 'score_desc' | 'date_desc' | 'date_asc' | 'ai_desc' | 'score_asc'
@@ -220,7 +222,13 @@ function handleSortChange(sortVal) {
 }
 
 function handleSearch(val) {
+  const startingSearch = !currentSearch;
   currentSearch = val.trim().toLowerCase();
+  // A new search looks through every date; Recent / Past month can still narrow it afterwards
+  if (startingSearch && currentSearch && currentDateFilter !== 'ALL') {
+    currentDateFilter = 'ALL';
+    filterDateWindow('ALL');
+  }
   const clearBtn = document.getElementById('clearSearchBtn');
   if (clearBtn) {
     if (currentSearch) {
@@ -229,11 +237,32 @@ function handleSearch(val) {
       clearBtn.classList.add('hidden');
     }
   }
+  searchRanks = null;
   renderContent();
+  if (currentSearch) {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => runHybridSearch(currentSearch), 250);
+  }
+}
+
+// Ask the hybrid search engine (keyword + meaning) for the best matches across
+// all collected items. If it can't be reached, the plain text filter stays in use.
+async function runHybridSearch(query) {
+  try {
+    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=50`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (query !== currentSearch) return; // the user kept typing
+    searchRanks = new Map((data.results || []).map(r => [r.item_id, r.rank]));
+    renderContent();
+  } catch (err) {
+    console.warn('Hybrid search unavailable, using the text filter:', err);
+  }
 }
 
 function clearSearch() {
   currentSearch = '';
+  searchRanks = null;
   const input = document.getElementById('mainSearchInput');
   if (input) input.value = '';
   const clearBtn = document.getElementById('clearSearchBtn');
@@ -244,6 +273,7 @@ function clearSearch() {
 function resetAllFilters() {
   currentDesk = 'ALL';
   currentSearch = '';
+  searchRanks = null;
   currentDateFilter = 'RECENT';
   currentCategory = 'ALL';
   currentSort = 'timeline';
@@ -364,8 +394,11 @@ function getFilteredCandidates() {
     });
   }
 
-  // 4. Search query
-  if (currentSearch) {
+  // 4. Search query: hybrid search results when available, otherwise plain text match
+  const rankOf = x => searchRanks.get(x.envelope && x.envelope.Item_ID);
+  if (currentSearch && searchRanks) {
+    items = items.filter(x => rankOf(x) !== undefined);
+  } else if (currentSearch) {
     items = items.filter(x => {
       const env = x.envelope || {};
       const ai = x.ai_assessment || {};
@@ -376,8 +409,11 @@ function getFilteredCandidates() {
     });
   }
 
-  // 5. Sorting
+  // 5. Sorting (while searching, the default order is best match first)
   items.sort((a, b) => {
+    if (currentSearch && searchRanks && currentSort === 'timeline') {
+      return rankOf(a) - rankOf(b);
+    }
     if (currentSort === 'timeline') {
       // Timeline default: Newest date first, then highest score
       const da = (a.envelope && a.envelope.Published_Date) || '';
@@ -443,6 +479,24 @@ function renderContent() {
   const secWeek = document.getElementById('section-week');
   const secOlder = document.getElementById('section-older');
   const spotlightBox = document.getElementById('spotlightContainer');
+
+  // While hybrid search results are shown, list them in one section, best match first,
+  // instead of splitting them by recency (a strong older match would otherwise sit last)
+  const todayHeading = secToday.querySelector('h2 span');
+  const todaySubtitle = secToday.querySelector('.sm\\:inline');
+  if (currentSearch && searchRanks) {
+    if (todayHeading) todayHeading.innerText = 'Search results · best match first';
+    if (todaySubtitle) todaySubtitle.innerText = 'Keyword + meaning search';
+    document.getElementById('titleTodayCount').innerText = `(${filtered.length})`;
+    spotlightBox.classList.add('hidden');
+    secWeek.classList.add('hidden');
+    secOlder.classList.add('hidden');
+    secToday.classList.remove('hidden');
+    renderDeskGrid('gridToday', filtered);
+    return;
+  }
+  if (todayHeading) todayHeading.innerText = 'Recent';
+  if (todaySubtitle) todaySubtitle.innerText = 'Priority Zero-Days & Fresh Disclosures';
 
   // Spotlight (only in ALL mode, with no search or category filter, showing today's #1 threat or top threat)
   if (currentDesk === 'ALL' && !currentSearch && currentCategory === 'ALL' && filtered.length > 0) {

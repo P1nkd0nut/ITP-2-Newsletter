@@ -6,6 +6,7 @@ from pathlib import Path
 from flask import Flask, send_from_directory, send_file
 from flask_cors import CORS
 from .routes import api_bp
+from .search_routes import search_bp
 from .data_service import data_service
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
@@ -20,6 +21,7 @@ def create_app():
 
     # Register API routes
     app.register_blueprint(api_bp)
+    app.register_blueprint(search_bp)
 
     # Root route serves the primary Newsletter Dashboard
     @app.route("/")
