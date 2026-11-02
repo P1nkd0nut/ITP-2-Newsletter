@@ -93,5 +93,18 @@ class TestAppleCollector(unittest.TestCase):
             self.assertEqual(AppleSecurityCollector().collect(), [])
 
 
+class TestAdvisoryTextForScoring(unittest.TestCase):
+    def test_ai_scorer_sees_the_advisory_not_the_page_markup(self):
+        from Backend.triage.ai_evaluator import advisory_text
+        html = ("<!DOCTYPE html><html><head><title>x</title>" + "<meta name='a' content='b'>" * 200 +
+                "</head><body><h1>About the security content of iOS 27.2</h1>"
+                "<p>WebKit. Impact: Processing web content may lead to arbitrary code execution.</p></body></html>")
+        with mock.patch.object(ms, "fetch_url", side_effect=lambda url, **kw: INDEX_HTML if url == ms.APPLE_SECURITY_RELEASES_URL else html):
+            env = AppleSecurityCollector().collect(limit=1)[0]
+        text = advisory_text(env, 1500)
+        self.assertNotIn("<meta", text)
+        self.assertIn("arbitrary code execution", text)
+
+
 if __name__ == "__main__":
     unittest.main()
