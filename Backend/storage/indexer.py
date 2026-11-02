@@ -16,15 +16,18 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from qdrant_client.models import (
     FieldCondition,
     Filter,
+    Fusion,
+    FusionQuery,
     HasIdCondition,
     MatchAny,
     MatchValue,
     PayloadSchemaType,
     PointStruct,
+    Prefetch,
 )
 
 from Backend.config import CHUNKS_FILE, QDRANT_COLLECTION_ITEMS
-from Backend.storage.init_qdrant import DENSE_VECTOR_NAME, ensure_collection
+from Backend.storage.init_qdrant import DENSE_VECTOR_NAME, SPARSE_VECTOR_NAME, ensure_collection
 
 logger = logging.getLogger(__name__)
 
@@ -41,11 +44,16 @@ def index_chunks(
     embedder,
     collection: str = QDRANT_COLLECTION_ITEMS,
     force: bool = False,
+    sparse_embedder=None,
 ) -> Dict[str, int]:
     """
     Embed and upsert chunks. Chunks already stored with the same Chunk_Hash are
     skipped unless force=True. Points left over from an item's older, longer
     version are deleted so retrieval never returns stale text.
+
+    When sparse_embedder is given, each point carries both the dense and the
+    "sparse" (BM25) named vector; without it, points are written dense-only so
+    existing callers keep working.
     """
     ensure_collection(client, collection)
     client.create_payload_index(collection, field_name="Item_ID", field_schema=PayloadSchemaType.KEYWORD)
@@ -58,11 +66,15 @@ def index_chunks(
 
     todo = [c for c in chunks if existing.get(c["Point_ID"]) != c["Chunk_Hash"]]
     if todo:
-        vectors = embedder.embed_documents([c["Text"] for c in todo])
-        points = [
-            PointStruct(id=c["Point_ID"], vector={DENSE_VECTOR_NAME: vec}, payload=dict(c))
-            for c, vec in zip(todo, vectors)
-        ]
+        texts = [c["Text"] for c in todo]
+        vectors = embedder.embed_documents(texts)
+        sparse_vectors = sparse_embedder.sparse_documents(texts) if sparse_embedder is not None else None
+        points = []
+        for i, (c, vec) in enumerate(zip(todo, vectors)):
+            vector = {DENSE_VECTOR_NAME: vec}
+            if sparse_vectors is not None:
+                vector[SPARSE_VECTOR_NAME] = sparse_vectors[i]
+            points.append(PointStruct(id=c["Point_ID"], vector=vector, payload=dict(c)))
         client.upsert(collection_name=collection, points=points, wait=True)
 
     item_ids = sorted({c["Item_ID"] for c in chunks})
@@ -87,9 +99,10 @@ class ChunkRetriever:
     """Fetches the chunks a card may be written from. Only the item's own chunks are ever returned."""
 
     def __init__(self, client=None, embedder=None, chunks_file: Path = CHUNKS_FILE,
-                 collection: str = QDRANT_COLLECTION_ITEMS):
+                 collection: str = QDRANT_COLLECTION_ITEMS, sparse_embedder=None):
         self.client = client
         self.embedder = embedder
+        self.sparse_embedder = sparse_embedder
         self.collection = collection
         self._file_chunks: Optional[Dict[str, List[Dict[str, Any]]]] = None
         self.chunks_file = chunks_file
@@ -103,11 +116,31 @@ class ChunkRetriever:
 
     def _from_qdrant(self, item_id: str, query: str, limit: int) -> List[Dict[str, Any]]:
         vec = self.embedder.embed_query(query)
+        item_filter = Filter(must=[FieldCondition(key="Item_ID", match=MatchValue(value=item_id))])
+
+        if self.sparse_embedder is not None:
+            try:
+                sparse_vec = self.sparse_embedder.sparse_query(query)
+                hits = self.client.query_points(
+                    collection_name=self.collection,
+                    prefetch=[
+                        Prefetch(query=vec, using=DENSE_VECTOR_NAME, limit=limit),
+                        Prefetch(query=sparse_vec, using=SPARSE_VECTOR_NAME, limit=limit),
+                    ],
+                    query=FusionQuery(fusion=Fusion.RRF),
+                    query_filter=item_filter,
+                    limit=limit,
+                    with_payload=True,
+                ).points
+                return [h.payload for h in hits if h.payload]
+            except Exception as e:
+                logger.warning(f"Hybrid fusion failed for {item_id} ({e}); using dense-only query")
+
         hits = self.client.query_points(
             collection_name=self.collection,
             query=vec,
             using=DENSE_VECTOR_NAME,
-            query_filter=Filter(must=[FieldCondition(key="Item_ID", match=MatchValue(value=item_id))]),
+            query_filter=item_filter,
             limit=limit,
             with_payload=True,
         ).points

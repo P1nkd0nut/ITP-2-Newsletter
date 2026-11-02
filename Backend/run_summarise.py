@@ -52,12 +52,19 @@ def select_items(candidates: list, top: int, days: int) -> list:
 def make_retriever() -> ChunkRetriever:
     """Qdrant-backed retriever if Qdrant answers, else read chunks straight from the file."""
     try:
-        from Backend.storage.embedder import OllamaEmbedder
+        from Backend.storage.embedder import OllamaEmbedder, SparseEmbedder
         from Backend.storage.vector_db import get_client
 
         client = get_client()
         client.info()
-        return ChunkRetriever(client=client, embedder=OllamaEmbedder())
+        # Sparse (BM25) enables hybrid fusion; if fastembed is unavailable the
+        # retriever falls back to dense-only, so build it best-effort.
+        try:
+            sparse_embedder = SparseEmbedder()
+        except Exception as se:
+            print(f"Sparse embedder unavailable ({se.__class__.__name__}); retrieving dense-only")
+            sparse_embedder = None
+        return ChunkRetriever(client=client, embedder=OllamaEmbedder(), sparse_embedder=sparse_embedder)
     except Exception as e:
         print(f"Qdrant not reachable ({e.__class__.__name__}); reading chunks from {CHUNKS_FILE.name}")
         return ChunkRetriever()

@@ -21,7 +21,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from Backend.config import CHUNKS_FILE, EMBED_MODEL, QDRANT_COLLECTION_ITEMS
-from Backend.storage.embedder import OllamaEmbedder
+from Backend.storage.embedder import OllamaEmbedder, SparseEmbedder
 from Backend.storage.indexer import index_chunks, load_chunks
 from Backend.storage.vector_db import get_client
 
@@ -37,8 +37,17 @@ def main() -> int:
         print(f"No chunks in {args.input}. Run Backend/run_chunking.py first.")
         return 2
 
+    # Sparse (BM25) is best-effort: if fastembed is missing or the model fails to
+    # load, index dense-only rather than hard-failing the pipeline.
     try:
-        stats = index_chunks(chunks, get_client(), OllamaEmbedder(), force=args.force)
+        sparse_embedder = SparseEmbedder()
+    except Exception as e:
+        print(f"Sparse embedder unavailable ({e.__class__.__name__}: {e}); indexing dense-only")
+        sparse_embedder = None
+
+    try:
+        stats = index_chunks(chunks, get_client(), OllamaEmbedder(), force=args.force,
+                             sparse_embedder=sparse_embedder)
     except Exception as e:
         print(f"Indexing failed: {e}\nIs Qdrant up and has Ollama pulled {EMBED_MODEL}?")
         return 1
