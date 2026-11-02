@@ -96,6 +96,13 @@ class TestDigestFormatting(unittest.TestCase):
         self.assertIn("CVE-2026-1", msg)
         self.assertIn("Priority 80/100", msg)
 
+    @mock.patch.dict(os.environ, {"BASE_URL": ""})
+    def test_blank_base_url_uses_current_wifi_address(self):
+        with mock.patch.object(tg, "lan_ip", return_value="192.168.1.65"):
+            self.assertEqual(tg.base_url(), "http://192.168.1.65:5000")
+        with mock.patch.object(tg, "lan_ip", return_value=None):
+            self.assertEqual(tg.base_url(), "http://127.0.0.1:5000")
+
     def test_source_text_is_html_escaped(self):
         c = make_candidate("x-1", 50.0, Title="<script>alert(1)</script> & co")
         c["in_depth"] = {"brief_summary": "Use <b>bold</b> & <a href='x'>"}
@@ -146,6 +153,37 @@ class TestDigestFormatting(unittest.TestCase):
         self.assertIn("No new Web or Mobile incidents", messages[0])
 
 
+class TestEditionMarker(unittest.TestCase):
+    def test_edition_is_iso_week_in_singapore_time(self):
+        # Sunday 23:30 UTC is already Monday in Singapore, i.e. the next ISO week
+        self.assertEqual(tg.edition_label(datetime(2026, 11, 1, 23, 30, tzinfo=timezone.utc)), "2026-W45")
+        self.assertEqual(tg.edition_label(datetime(2026, 11, 1, 10, 0, tzinfo=timezone.utc)), "2026-W44")
+
+    def test_header_carries_edition(self):
+        header = tg.format_digest_header([], edition="2026-W45")
+        self.assertIn("Edition 2026-W45", header)
+        self.assertEqual(tg.EDITION_PATTERN.search(header).group(1), "2026-W45")
+
+    @mock.patch.object(tg.requests, "post")
+    def test_reads_edition_from_pinned_message(self, post):
+        post.return_value = FakeResponse(200, {"ok": True, "result": {
+            "pinned_message": {"text": "🛡️ Grounded Threat News · Weekly Brief\nEdition 2026-W45\n\n3 top incidents"}}})
+        self.assertEqual(tg.pinned_edition("123:SECRET", "-100999"), {"ok": True, "edition": "2026-W45"})
+        self.assertTrue(post.call_args.args[0].endswith("/getChat"))
+
+    @mock.patch.object(tg.requests, "post")
+    def test_no_pinned_message_means_no_edition(self, post):
+        post.return_value = FakeResponse(200, {"ok": True, "result": {"id": -100999}})
+        self.assertEqual(tg.pinned_edition("123:SECRET", "-100999"), {"ok": True, "edition": None})
+
+    @mock.patch.object(tg.requests, "post")
+    def test_pinned_check_error_hides_token(self, post):
+        post.side_effect = requests.ConnectionError("url: /bot123:SECRET/getChat")
+        result = tg.pinned_edition("123:SECRET", "-100999")
+        self.assertFalse(result["ok"])
+        self.assertNotIn("SECRET", result["error"])
+
+
 class TestSending(unittest.TestCase):
     @mock.patch.object(tg.time, "sleep")
     @mock.patch.object(tg.requests, "post")
@@ -179,6 +217,31 @@ class TestSending(unittest.TestCase):
         self.assertIn("boom", result["error"])
         self.assertEqual(post.call_count, 2)
         sleep.assert_called_with(tg.SEND_PAUSE_SECONDS)
+
+    @mock.patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": "123:SECRET", "TELEGRAM_CHAT_ID": "-100999"})
+    @mock.patch.object(tg.time, "sleep")
+    @mock.patch.object(tg.requests, "post")
+    def test_full_digest_pins_its_header(self, post, sleep):
+        post.side_effect = [
+            FakeResponse(200, {"ok": True, "result": {"message_id": 77}}),
+            FakeResponse(200, {"ok": True, "result": {"message_id": 78}}),
+            FakeResponse(200, {"ok": True, "result": True}),
+        ]
+        result = tg.telegram_service.send_digest(["header", "item"], pin=True)
+        self.assertTrue(result["pinned"])
+        pin_call = post.call_args_list[-1]
+        self.assertTrue(pin_call.args[0].endswith("/pinChatMessage"))
+        self.assertEqual(pin_call.kwargs["json"]["message_id"], 77)
+
+    @mock.patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": "123:SECRET", "TELEGRAM_CHAT_ID": "-100999"})
+    @mock.patch.object(tg.time, "sleep")
+    @mock.patch.object(tg.requests, "post")
+    def test_partial_digest_is_not_pinned(self, post, sleep):
+        post.side_effect = [FakeResponse(200, {"ok": True, "result": {"message_id": 77}}),
+                            FakeResponse(400, {"description": "boom"})]
+        result = tg.telegram_service.send_digest(["header", "item"], pin=True)
+        self.assertNotIn("pinned", result)
+        self.assertEqual(post.call_count, 2)
 
     @mock.patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": ""})
     def test_digest_refuses_without_token(self):

@@ -11,11 +11,14 @@ import html
 import json
 import logging
 import os
+import re
+import socket
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -27,7 +30,9 @@ logger = logging.getLogger(__name__)
 
 CONFIG_FILE = Path(__file__).resolve().parent.parent / "data" / "channel_config.json"
 
-DEFAULT_BASE_URL = "http://localhost:5000"
+SERVER_PORT = 5000  # matches run_server.py
+# 127.0.0.1 rather than localhost: Telegram drops localhost links, so they aren't clickable
+DEFAULT_BASE_URL = f"http://127.0.0.1:{SERVER_PORT}"
 TELEGRAM_SEND_URL = "https://api.telegram.org/bot{token}/sendMessage"
 MAX_MESSAGE_CHARS = 4096  # Telegram's hard limit per message
 SEND_PAUSE_SECONDS = 1.0  # stay well under Telegram's ~1 message/second per chat
@@ -43,8 +48,27 @@ def bot_token() -> str:
     return os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 
 
+def lan_ip() -> Optional[str]:
+    """This PC's address on the local network (e.g. its Wi-Fi IP), or None if offline."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            # Connecting a UDP socket sends nothing; it just picks the outgoing interface
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+    except OSError:
+        return None
+
+
 def base_url() -> str:
-    return (os.getenv("BASE_URL", "").strip() or DEFAULT_BASE_URL).rstrip("/")
+    """BASE_URL from .env, or this PC's current Wi-Fi address so phones on the same network can open links."""
+    configured = os.getenv("BASE_URL", "").strip()
+    if configured:
+        return configured.rstrip("/")
+    if Path("/.dockerenv").exists():
+        # Inside a container the detected address is the container's own, which the host's phones can't reach
+        return DEFAULT_BASE_URL
+    ip = lan_ip()
+    return f"http://{ip}:{SERVER_PORT}" if ip else DEFAULT_BASE_URL
 
 
 def incident_url(item_id: str) -> str:
@@ -81,7 +105,14 @@ def send_message(token: str, chat_id: str, text: str) -> Dict[str, Any]:
             return {"ok": False, "error": f"Network error: {str(e).replace(token, '<token>')}"}
 
         if resp.status_code == 200:
-            return {"ok": True}
+            result = {"ok": True}
+            try:
+                message_id = resp.json().get("result", {}).get("message_id")
+            except (ValueError, AttributeError):
+                message_id = None
+            if message_id is not None:
+                result["message_id"] = message_id
+            return result
 
         if resp.status_code == 429 and attempt < MAX_SEND_ATTEMPTS:
             try:
@@ -100,6 +131,55 @@ def send_message(token: str, chat_id: str, text: str) -> Dict[str, Any]:
         return {"ok": False, "error": f"Telegram API error {resp.status_code}: {description}"}
 
     return {"ok": False, "error": "Telegram rate limit: gave up after retries"}
+
+
+def _api_call(token: str, method: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Calls a Bot API method; returns {"ok": True, "result": ...} or {"ok": False, "error": ...}."""
+    try:
+        resp = requests.post(f"https://api.telegram.org/bot{token}/{method}", json=payload, timeout=10)
+        body = resp.json()
+    except requests.RequestException as e:
+        return {"ok": False, "error": f"Network error: {str(e).replace(token, '<token>')}"}
+    except ValueError:
+        return {"ok": False, "error": f"Telegram API error {resp.status_code}"}
+    if body.get("ok"):
+        return {"ok": True, "result": body.get("result")}
+    return {"ok": False, "error": f"Telegram API error {resp.status_code}: {body.get('description', '')}"}
+
+
+# ----------------------------------------------------------------------------
+# Weekly edition marker
+#
+# Every PC with the bot token runs its own scheduler and keeps its own record of
+# what it sent, so two PCs could both post the same week's digest. The channel's
+# pinned message is the one record they all share: the header of each digest
+# carries "Edition <ISO week>", gets pinned after sending, and a digest whose
+# edition is already pinned is skipped.
+# ----------------------------------------------------------------------------
+
+EDITION_PATTERN = re.compile(r"Edition (\d{4}-W\d{2})")
+
+
+def edition_label(now: Optional[datetime] = None) -> str:
+    """ISO week of `now` in the pipeline's timezone, e.g. "2026-W45"."""
+    tz = ZoneInfo(os.getenv("PIPELINE_TIMEZONE", "").strip() or "Asia/Singapore")
+    year, week, _ = (now or datetime.now(timezone.utc)).astimezone(tz).isocalendar()
+    return f"{year}-W{week:02d}"
+
+
+def pinned_edition(token: str, chat_id: str) -> Dict[str, Any]:
+    """The edition named in the chat's pinned message: {"ok": True, "edition": str|None} or an error."""
+    result = _api_call(token, "getChat", {"chat_id": chat_id})
+    if not result["ok"]:
+        return result
+    pinned = (result["result"] or {}).get("pinned_message") or {}
+    match = EDITION_PATTERN.search(pinned.get("text") or pinned.get("caption") or "")
+    return {"ok": True, "edition": match.group(1) if match else None}
+
+
+def pin_message(token: str, chat_id: str, message_id: int) -> Dict[str, Any]:
+    return _api_call(token, "pinChatMessage",
+                     {"chat_id": chat_id, "message_id": message_id, "disable_notification": True})
 
 
 # ----------------------------------------------------------------------------
@@ -192,11 +272,14 @@ def format_digest_item(c: Dict[str, Any], rank: int) -> str:
     return msg
 
 
-def format_digest_header(items: List[Dict[str, Any]], days: int = 7) -> str:
+def format_digest_header(items: List[Dict[str, Any]], days: int = 7, edition: Optional[str] = None) -> str:
     web = sum(1 for c in items if (c.get("pre_filter") or {}).get("category") == "WEB")
     mobile = sum(1 for c in items if (c.get("pre_filter") or {}).get("category") == "MOBILE")
     period = "this week" if days == 7 else f"in the last {days} days"
-    lines = ["🛡️ <b>Grounded Threat News · Weekly Brief</b>", ""]
+    lines = ["🛡️ <b>Grounded Threat News · Weekly Brief</b>"]
+    if edition:
+        lines.append(f"<i>Edition {esc(edition)}</i>")
+    lines.append("")
     if items:
         lines.append(
             f"{len(items)} top incident{'s' if len(items) != 1 else ''} {period}: "
@@ -209,9 +292,9 @@ def format_digest_header(items: List[Dict[str, Any]], days: int = 7) -> str:
     return "\n".join(lines)
 
 
-def compose_digest(items: List[Dict[str, Any]], days: int = 7) -> List[str]:
+def compose_digest(items: List[Dict[str, Any]], days: int = 7, edition: Optional[str] = None) -> List[str]:
     """Header message followed by one message per incident."""
-    return [format_digest_header(items, days)] + [format_digest_item(c, i) for i, c in enumerate(items, 1)]
+    return [format_digest_header(items, days, edition)] + [format_digest_item(c, i) for i, c in enumerate(items, 1)]
 
 
 def build_weekly_digest(candidates: List[Dict[str, Any]], days: int = 7, top_n: int = 10,
@@ -412,8 +495,11 @@ class TelegramService:
             return {"dispatched": True, "mode": "live", "status": "sent"}
         return {"dispatched": False, "mode": "live", "error": result["error"]}
 
-    def send_digest(self, messages: List[str], chat_id: Optional[str] = None) -> Dict[str, Any]:
-        """Sends the digest messages in order, pausing between each; stops at the first failure."""
+    def send_digest(self, messages: List[str], chat_id: Optional[str] = None, pin: bool = False) -> Dict[str, Any]:
+        """
+        Sends the digest messages in order, pausing between each; stops at the first failure.
+        With pin=True, a fully sent digest's header is pinned so other PCs see this edition was posted.
+        """
         token = bot_token()
         cid = chat_id or self.chat_id()
         if not token:
@@ -421,13 +507,22 @@ class TelegramService:
         if not cid:
             return {"sent": 0, "total": len(messages), "error": "No chat id: set TELEGRAM_CHAT_ID in .env"}
 
+        header_id = None
         for i, text in enumerate(messages):
             if i:
                 time.sleep(SEND_PAUSE_SECONDS)
             result = send_message(token, cid, text)
             if not result["ok"]:
                 return {"sent": i, "total": len(messages), "error": result["error"]}
-        return {"sent": len(messages), "total": len(messages), "error": None}
+            if i == 0:
+                header_id = result.get("message_id")
+
+        done = {"sent": len(messages), "total": len(messages), "error": None}
+        if pin:
+            pinned = pin_message(token, cid, header_id) if header_id is not None else {"ok": False, "error": "no message id returned"}
+            done["pinned"] = pinned["ok"]
+            done["pin_error"] = pinned.get("error")
+        return done
 
 
 telegram_service = TelegramService()
