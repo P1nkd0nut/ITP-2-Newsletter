@@ -1,135 +1,141 @@
-# GroundedCVE Demo Guide & Presentation Script
-> **ICT 2114 Integrative Team Project — SIT Team 4**  
-> **Presenter**: Tan De Ye  
-> **Role**: Lead DevOps & Performance Validation Engineer  
+# GroundedCVE Demo Guide
+
+> **ICT 2114 Integrative Team Project, IS 24, Team 4**
+> A 10 to 15 minute live demo of the whole pipeline, in the order the data flows.
+> Each part says what to run, what to point at, and what to say. Numbers in quotes
+> are from our own runs; re-run the commands before the demo and use today's figures.
 
 ---
 
-## 🎯 Executive Talking Points (What to Say at the Start)
+## Before the demo (15 minutes before)
 
-> *"Good morning professors and team. As the Lead DevOps and Performance Validation Engineer for GroundedCVE, my focus is ensuring that our automated threat intelligence pipeline is mathematically sound, factually grounded, and empirically validated against real-world Web and Mobile penetration testing workflows.*
-> 
-> *Today, I am presenting our **Task 1.2 Scope Pre-Filter**, our **Task 2.4 AI Practical Severity Scoring Engine**, and the **Task 4.1 Ground-Truth Benchmark Validation Suite** that I constructed to empirically measure our Fact Extraction Precision, Hallucination Rate, and CVSS Anomaly Gates."*
+1. Start everything: `docker compose up -d --build`, then `docker compose logs -f scheduler` until you see `=== Run metrics ===`.
+2. Open **http://localhost:5000** and check that items show the green **✓ Verified** badge.
+3. In `.env`, set `BASE_URL` to an address the audience can open, or leave it as `http://127.0.0.1:5000`. With 127.0.0.1, Telegram cards carry only public NVD/source/PoC links and no dashboard link.
+4. Make sure the bot is an admin of the channel **with the "Pin Messages" right** (the weekly duplicate guard pins each edition).
+5. Have a terminal open in the repo. Outside Docker, prefix commands with `python`; inside, use `docker compose exec app python ...`.
 
 ---
 
-## 📋 Step-by-Step Live Demo Execution
+## Part 1: The problem (1 minute, slides)
 
-### Part 1: Run the Task 4.1 Ground-Truth Benchmark
-Open PowerShell in the project directory and run:
+> *"Pentesters have to watch NVD, CISA KEV, vendor bulletins, GitHub, PortSwigger, Project Zero and Frida. Feeds are noisy, and general-purpose AI summaries invent CVE IDs, versions and command flags. GroundedCVE collects, ranks, summarises and then checks every fact against the source before anything is published."*
 
-```powershell
-python Backend/run_benchmark.py
+## Part 2: Collection and the staging envelope (1 to 2 minutes)
+
+```bash
+python Backend/run_ingestion.py --limit 3 --poc
 ```
 
-#### 🗣️ What to Say During the Run:
-1. **The Ground-Truth Dataset (Task 4.1)**:
-   > *"To avoid generative memorization and prove pipeline precision, I constructed a ground-truth extraction dataset of 20 historical Web and Mobile vulnerability disclosures ([`Backend/data/ground_truth_20.json`](Backend/data/ground_truth_20.json)) — 10 Web (e.g., Citrix Bleed, MOVEit SQLi, Confluence Auth Bypass) and 10 Mobile (e.g., Android PackageInstaller Run-As, Apple BLASTPASS, WebKit escapes)."*
+Point at: one line per source (NVD, CISA KEV, GitHub Advisory, PortSwigger, Project Zero, Android, Apple, Frida, GitHub PoC). Open an item in the dashboard and show `Raw_Content` and `Content_Hash`.
 
-2. **The Key Benchmark Metrics**:
-   > *"As you can see from our summary report:*
-   > - ***Fact Extraction Precision (FEP %): 100.0%*** *(against our proposal benchmark target of $\ge 95.0\%$). Every extracted CVE ID, version constraint, and URL is verified verbatim against raw source text.*
-   > - ***Hallucination Rate (HR %): 0.0%*** *(against our target of $\le 5.0\%$). Zero fabricated fields reach the candidate pool.*
-   > - ***Pentest Scope Pre-Filter Accuracy: 100.0%***. *Web and Mobile threats are strictly isolated before scoring occurs.*
-   > - ***Average Latency: ~2.9s per disclosure*** *with full LLM evaluation."*
+> *"Every source becomes the same JSON envelope. Raw_Content is never modified, so the verification gate later checks facts against exactly what the source said."*
 
----
+## Part 3: Triage and ranking (2 minutes)
 
-### Part 1B: Run the 'Day in the Life' Case Study Simulation (October 10, 2023)
-Run the single-day case study runner:
-
-```powershell
-python Backend/run_case_study.py
-```
-
-#### 🗣️ What to Say (The Real-World Story):
-> *"To show how GroundedCVE performs under real-world pressure, we created a single-day case study from **October 10, 2023** ([`Backend/data/case_study_day.json`](Backend/data/case_study_day.json)). On this day, security teams were inundated with 10 mixed advisories: critical zero-days, mobile hooking tools, IoT routers, and SCADA firmware.*
->
-> *Watch how GroundedCVE handles the flood:*
-> 1. ***Noise Reduction***: *The Scope Pre-Filter automatically drops the Siemens SCADA PLC and HP Print Spooler (0.0 pts), preventing newsletter pollution.*
-> 2. ***Zero-Day Elevation***: *Active in-the-wild zero-days (**Citrix Bleed**, **Atlassian Confluence**, and Apple **BLASTPASS**) immediately rise to the #1, #2, and #3 spots with 88–96 points due to CISA KEV weaponization + public PoC availability.*
-> 3. ***CVSS Anomaly Intercept***: *It catches `CVE-2026-94138`, where vendor CVSS was rated 2.0 but practical AI severity is 9.0/10 for unauthenticated remote code execution, triggering an automated discrepancy warning."*
-
----
-
-### Part 2: Demonstrate the 100-Point AI Scoring & CVSS Anomaly Gate
-Point out the leaderboard table printed by `run_benchmark.py`:
-
-#### 🗣️ What to Say:
-1. **Why We Replaced Direct CVSS Scoring**:
-   > *"In our initial design, CVSS base score had heavy weight. However, as noted in our project review, CVSS is frequently inflated for Day-0 theoretical bugs (defaulted to 10.0 worst-case) or underestimated for complex chains. We replaced direct CVSS weighting with **AI Practical Severity Assessment** (0–10 scale evaluated via Qwen 2.5 72B / Ollama)."*
-
-2. **The 100-Point Formula**:
-   > *"Our weekly prioritization score is calculated as:*
-   > - ***40 Points***: *CISA KEV catalog (actively weaponized today).*
-   > - ***40 Points***: *AI Practical Severity (evaluating RCE, Auth Bypass vs DoS).*
-   > - ***20 Points***: *Public GitHub PoC availability (actionable exploit scripts).*
-   > - ***Total = 100 Points***."*
-
-3. **The CVSS Discrepancy Gate ($|\Delta| \ge 4.0$)**:
-   > *"Look at `CVE-2026-94138` on the screen. The vendor CVSS was scored at **2.0**, but our AI evaluator identified remote command injection primitives in `/send_order.cgi`, giving it **7.0/10.0**. Because the delta $|\Delta| = 5.0 \ge 4.0$, our discrepancy gate immediately flagged it with an **`[!] ANOMALY`** alert for triage investigation."*
-
----
-
-### Part 3: Show Live Feed Triage & Scraping
-Run the live pipeline triage runner:
-
-```powershell
+```bash
 python Backend/run_triage.py
 ```
 
-#### 🗣️ What to Say:
-> *"Here is the live triage pipeline operating on real threat intelligence feeds collected by our scrapers (CISA KEV, NVD 2.0, PortSwigger, Project Zero, GitHub Advisories, and Frida). Items outside Web and Mobile pentesting scope (such as printer spoolers and industrial SCADA) receive 0 points and bypass the queue, while verified Web and Mobile exploits enter the top ranks."*
+Point at: the 100-point score (KEV 40 + AI severity 40 + PoC 20), an `[!] ANOMALY` line (CVSS vs AI differ by 4 or more), and an item whose score includes KEV/PoC points it got from another source.
 
----
+> *"Items that share a CVE ID are scored as one story: the NVD record, its KEV entry and a GitHub PoC all count together, so the NVD copy isn't under-ranked just because NVD doesn't know about the exploit."*
 
-### Part 4: Open the Visual Cyber Dashboard
-Launch the interactive web dashboard:
+## Part 4: Chunking, hybrid search (2 minutes)
 
-```powershell
-python Frontend/run_dashboard.py
-```
-*(Or open [`Frontend/index.html`](Frontend/index.html) in Chrome/Edge).*
-
-#### 🗣️ What to Say & Click:
-1. Show the KPI summary cards (**Total Disclosures**, **CISA KEV Actives**, **Web Stream**, **Mobile Stream**).
-2. Filter by source tabs: click **CISA KEV**, then **PortSwigger**, then **Frida / Mobile**.
-3. Click **"Inspect Envelope"** on any card to show the modal:
-   > *"Notice that for every single item, we compute a cryptographic SHA-256 `Content_Hash`, and we preserve `Raw_Content` 100% unmodified without stripping, so that Yue Heng's downstream verification gate can perform strict regex auditing without data loss."*
-
----
-
-### Part 5: Prove Quality with the Full Automated Test Suite
-To conclude the presentation, run the complete automated test suite:
-
-```powershell
-python -m unittest discover -s Testing -p "test_*.py" -v
+```bash
+python Backend/run_chunking.py
+python Backend/run_indexing.py
+python Backend/run_search_eval.py
 ```
 
-#### 🗣️ What to Say:
-> *"Every component is backed by automated testing. Across `test_ingestion.py`, `test_triage.py`, and `test_benchmark.py`, all **25 tests pass with a 100% success rate**."*
+In the dashboard, search for an exact token (a CVE ID or `frida`) and then a plain-English description.
+
+> *"Two-tier chunks: a summary tier and a PoC/evidence tier that is never cut mid-command. Search fuses BM25 keyword vectors with nomic-embed-text meaning vectors using Reciprocal Rank Fusion, k=60. The eval script prints recall@1, recall@3 and MRR for keyword-only, meaning-only and hybrid."*
+
+## Part 5: Grounded summaries and the verification gate (3 minutes, the core)
+
+```bash
+python Backend/run_summarise.py --top 5
+python Backend/run_gate_demo.py
+python Backend/run_gate_report.py summary
+python Backend/run_gate_report.py recheck
+```
+
+Point at:
+- `run_gate_demo.py`: eight kinds of planted fault (fake CVE, altered version, invented flag, fake URL, made-up impact, wrong CVSS, wrong CWE, wrong vendor) on 20 ground-truth items. "160/160 caught, 0% false quarantine on clean drafts."
+- `run_gate_report.py summary`: what happened to the real AI-written cards. "On our 4 Nov run, 29 cards were drafted: 27 passed first time, 2 were fixed after one retry, none were quarantined."
+- `run_gate_report.py recheck`: today's gate re-run over every published card. "0 of 27 published cards fail, so the vendor/product check added no false quarantines."
+
+> *"The gate is plain Python with no LLM. Every CVE, version, CVSS, CWE, vendor/product, command, impact claim and URL in the draft must appear in the item's own source. If not, the model gets one retry with the reasons; if it still fails, the card is quarantined and never published."*
+
+## Part 6: Novelty and the weekly Telegram digest (2 minutes)
+
+```bash
+python Backend/run_telegram_digest.py --dry-run
+```
+
+Then show the real channel on a phone.
+
+Point at:
+- The header `Edition 2026-Wnn`, pinned in the channel.
+- Each card: rank, CVE, score, verified summary, the first testing command in a code block, and **NVD · Source · PoC** links that open on any device.
+- Run it again without `--dry-run`: "Edition already pinned, no update."
+
+> *"Each teammate's PC runs the scheduler, so without a guard the channel got the same week twice. Now the header is pinned and any PC that sees this week's edition pinned skips. Items already sent are only re-sent when something changed, like a new KEV listing or a new PoC."*
+
+If asked about the novelty threshold:
+
+```bash
+python Backend/run_novelty_eval.py
+```
+
+> *"The similarity cut-off for write-ups without a CVE ID is tuned on labelled duplicate/distinct pairs and checked on a held-out half, which reports the suppression and false-suppression rates."*
+
+## Part 7: Automation, cost and quality (1 minute)
+
+```bash
+docker compose logs scheduler | tail -20
+python -m pytest -q Testing
+```
+
+Point at the `=== Run metrics ===` block: time per stage, end-to-end time, LLM calls, tokens and cost for the run. Then the test count.
+
+> *"One `docker compose up` runs the whole pipeline daily at 08:00 Singapore time and the digest weekly. CI runs the test suite on every pull request."*
 
 ---
 
-## ⚡ Quick Cheat Sheet (Commands Summary)
+## Cheat sheet
 
-| Step | Command | Purpose |
-| :--- | :--- | :--- |
-| **1. Benchmark** | `python Backend/run_benchmark.py` | Shows 20-sample validation dataset, FEP 100%, HR 0%, CVSS anomaly detection |
-| **2. Triage** | `python Backend/run_triage.py` | Shows live 100-point ranking on live scraped threat feeds |
-| **3. Ingest Live** | `python Backend/run_ingestion.py --limit 3` | Fetches live data from all 8 threat feeds |
-| **4. Web UI** | `python Frontend/run_dashboard.py` | Launches local browser dashboard (`http://localhost:8080`) |
-| **5. Tests** | `python -m unittest discover -s Testing -p "test_*.py" -v` | Runs all 25 unit and integration tests |
+| Step | Command |
+| :--- | :--- |
+| Everything | `docker compose up -d --build` |
+| Run pipeline once now | `docker compose run --rm scheduler python Backend/run_pipeline.py` |
+| Ingest | `python Backend/run_ingestion.py --limit 3 --poc` |
+| Triage | `python Backend/run_triage.py` |
+| Chunk + index | `python Backend/run_chunking.py && python Backend/run_indexing.py` |
+| Search eval | `python Backend/run_search_eval.py` |
+| Summaries + gate | `python Backend/run_summarise.py` |
+| Gate fault injection | `python Backend/run_gate_demo.py` |
+| Gate on real cards | `python Backend/run_gate_report.py summary` / `recheck` |
+| Manual card review | `python Backend/run_gate_report.py worksheet` then `score <csv>` |
+| Novelty threshold | `python Backend/run_novelty_eval.py` |
+| Extraction benchmark | `python Backend/run_benchmark.py` |
+| Digest preview | `python Backend/run_telegram_digest.py --dry-run` |
+| Tests | `python -m pytest -q Testing` |
 
 ---
 
-## 💡 Potential Questions & Ready Answers
+## Likely questions
 
-**Q: Why don't you clean or chunk the text during ingestion?**  
-*A: Cleaning and chunking belong to Phase 3 (assigned to Gavin). Our DevOps and Ingestion requirement (Task 1.3) specifically mandates preserving `Raw_Content` completely unmodified with a SHA-256 hash so that the downstream verification gate can audit claims against ground-truth source text without data loss.*
+**Why not just trust the LLM with a good prompt?** The prompt asks for source-only facts, but models still slip. The gate is the guarantee: it is deterministic, cheap, and its catches are shown in `run_gate_demo.py` and `run_gate_report.py`.
 
-**Q: Where does the AI evaluation run?**  
-*A: We configured a dual-tier gateway. If an `OPENROUTER_API_KEY` is provided in `.env`, it queries `qwen/qwen-2.5-72b-instruct`. If offline or without a key, it falls back seamlessly to our local Ollama container (`qwen2.5:3b`) or our offensive heuristic rules.*
+**What can the gate not catch?** A wrong statement made only of words that are in the source, such as overstating who can exploit a flaw. That's why `run_gate_report.py worksheet` exists: people review a sample of published cards and we report the manual error rate.
 
-**Q: What is the purpose of the 20-item benchmark dataset?**  
-*A: It serves as our static ground-truth testbed for Task 4.1. By benchmarking against known historical disclosures with human-verified facts, we mathematically prove our Fact Extraction Precision (100%) and verify that our CVSS discrepancy gate flags real-world rating anomalies.*
+**Why is the digest weekly but the pipeline daily?** Daily ingestion keeps the dashboard and search fresh; the weekly digest is the curated newsletter the proposal promised.
+
+**Why HTML and not MarkdownV2 in Telegram?** HTML only needs `<`, `>` and `&` escaped, which is safer with raw command text than MarkdownV2's long list of reserved characters.
+
+**How do you avoid sending the same thing twice?** Same-CVE items are merged; sent items are recorded and only re-sent when something new happened; near-identical write-ups are caught by embedding similarity; and the pinned edition stops a second PC posting the same week.
+
+**What does a run cost?** See the `Run metrics` block. OpenRouter reports the cost of every call and the pipeline adds them up per run.

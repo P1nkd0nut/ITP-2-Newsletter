@@ -85,6 +85,9 @@ ITP2/
 │   ├── run_indexing.py                        # Embeds chunks with nomic-embed-text and upserts them into Qdrant
 │   ├── run_summarise.py                       # Writes grounded cards and gates them before publishing
 │   ├── run_pipeline.py                        # All stages in order; the Docker scheduler runs this
+│   ├── run_gate_report.py                     # Gate results on real cards, re-check, manual review sheet
+│   ├── run_novelty_eval.py                    # Tunes the novelty similarity threshold on labelled pairs
+│   ├── llm_usage.py                           # Logs OpenRouter tokens and cost per call
 │   ├── export_triage_dashboard.py             # Generative UI artifact exporter
 │   ├── data/
 │   │   ├── ground_truth_20.json               # 20-sample human-verified Web & Mobile extraction set
@@ -127,20 +130,24 @@ ITP2/
 │   ├── test_ingestion.py                      # Phase 1 test suite (10 unit & integration tests)
 │   ├── test_triage.py                         # Phase 2 test suite (9 pre-filter, scoring, & OpenRouter tests)
 │   ├── test_benchmark.py                      # Task 4.1 benchmark test suite (6 validation tests)
-│   ├── test_verification.py                   # Verification gate test suite (18 grounding & retry tests)
+│   ├── test_verification.py                   # Verification gate test suite (21 grounding & retry tests)
 │   ├── test_dashboard_api.py                  # REST API & channel dispatcher tests (10 tests)
 │   ├── test_link_validator.py                 # Link health validator tests (13 tests)
 │   ├── test_chunking.py                       # Content cleaning & chunking tests (27 tests)
-│   ├── test_change_tracking.py                # Change tracking between runs & AI-score reuse (13 tests)
+│   ├── test_change_tracking.py                # Change tracking between runs & AI-score reuse (14 tests)
 │   ├── test_recheck_policy.py                 # Age-based re-check tiers, 1-year freeze, recency labels (13 tests)
 │   ├── test_poc_provenance.py                 # CVE-specific PoC links & reference provenance (6 tests)
-│   ├── test_reader_and_telegram.py            # Incident reader page & Telegram weekly digest (16 tests)
+│   ├── test_reader_and_telegram.py            # Incident reader page & Telegram weekly digest (29 tests)
 │   ├── test_manual_check.py                   # Manual spot-check sampler & scorer (4 tests)
 │   ├── test_grounded_summaries.py             # Qdrant indexing, grounded cards, publish gate & scheduler (23 tests)
 │   ├── test_novelty.py                        # Digest novelty check: one item per CVE, no repeats (10 tests)
 │   ├── test_apple_collector.py                # One item per Apple advisory with real dates (6 tests)
+│   ├── test_gate_report.py                    # Gate stats on real cards, re-check, manual review sheet (5 tests)
+│   ├── test_novelty_eval.py                   # Novelty threshold tuning and labelled pairs (6 tests)
+│   ├── test_run_metrics.py                    # Per-stage latency and LLM cost reporting (4 tests)
 │   └── MANUAL_CHECKS.md                       # How the team hand-checks the automated results
 ├── DEMO_GUIDE.md                              # Presentation script & step-by-step cheatsheet for demo
+├── HANDOVER.md                                # Setup, configuration, quarantine review, adding a source, limitations
 └── docker-compose.yml                         # app, scheduler, Qdrant (vector DB), Ollama (embeddings)
 ```
 
@@ -216,7 +223,9 @@ python Backend/run_chunking.py
 python Backend/run_indexing.py      # needs Qdrant + Ollama with nomic-embed-text
 python Backend/run_summarise.py     # top 10 in-scope items from the last 7 days
 ```
-Each card is written by the LLM (OpenRouter Qwen 2.5 72B, or `--ollama-model` for a local model) using only that item's own chunks, then checked by the source-verification gate. A failing card is regenerated once with the gate's reasons; if it still fails it is quarantined.
+Each card is written by the LLM (OpenRouter Qwen 2.5 72B, or `--ollama-model` for a local model) using only that item's own chunks, then checked by the source-verification gate: every CVE ID, version, CVSS score, CWE, known vendor/product name, command, impact claim and URL must appear in the source. A failing card is regenerated once with the gate's reasons; if it still fails it is quarantined.
+
+Measure the gate on the cards it actually saw with `python Backend/run_gate_report.py summary` (first-try pass, passed after retry, quarantined, failures by check) and `recheck` (today's gate over every published card). `worksheet` / `score` produce and score a manual review sheet of published cards, for errors token checks can't catch. See [HANDOVER.md](HANDOVER.md).
 
 - Passed cards go to `Backend/data/staging/grounded_cards.json`. The dashboard digest, the newsletter export and the Telegram weekly digest only include items with a passed card.
 - Quarantined cards and generation errors are appended to `Backend/data/staging/quarantine_log.jsonl` with the failing facts.
@@ -226,8 +235,10 @@ Each card is written by the LLM (OpenRouter Qwen 2.5 72B, or `--ollama-model` fo
 **Novelty check (weekly digest).** The newsletter never repeats itself:
 - The same CVE reported by several sources (NVD, CISA KEV, GitHub Advisory) is sent once, as the highest-priority version.
 - Every incident a digest sends is recorded in `Backend/data/staging/published_ledger.json` and in the Qdrant `groundedcve_published` collection. It is only sent again when something new happened (added to CISA KEV, a new public PoC, or a CVSS change), marked "🔁 Update: …".
-- Write-ups with no CVE ID (PortSwigger, Project Zero) are compared with published cards by embedding; a near-identical one (cosine ≥ 0.92, `NOVELTY_SIMILARITY` in `.env`) is skipped. On our cards the same text scores 0.975 or higher, and the closest two different advisories score 0.89.
+- Write-ups with no CVE ID (PortSwigger, Project Zero) are compared with published cards by embedding; a near-identical one is skipped. The cosine threshold is tuned by `python Backend/run_novelty_eval.py` on labelled duplicate/distinct pairs (`Backend/data/novelty_pairs.json`, tuning half + held-out half) and saved to `Backend/data/novelty_threshold.json`; until then it is 0.92. `NOVELTY_SIMILARITY` in `.env` overrides it.
 - `python Backend/run_telegram_digest.py --include-sent` turns this off for one run.
+
+**Run metrics.** Every `run_pipeline.py` run ends with a `Run metrics` block: seconds per stage, end-to-end time, and LLM calls, tokens and cost (as reported by OpenRouter) per stage. Each run is also appended to `Backend/data/staging/run_metrics.jsonl`.
 
 ### 5. Run Task 4.1 Ground-Truth Benchmark & Validation Suite
 Execute empirical validation across the 20-sample ground-truth Web & Mobile dataset:
@@ -254,7 +265,7 @@ python Frontend/run_dashboard.py
 
 #### Channel Architecture
 - **Primary Delivery Channel (Web Dashboard)**: The authoritative home for weekly newsletter digests, 100-point priority rankings, interactive Chart.js analytics, and raw envelope verification.
-- **Secondary Delivery Channel (Telegram Bot)**: Optional, opt-in push notifications for critical zero-days (`priority_score >= 70` or CISA KEV active weaponizations). Configurable live or in simulation mode via the **Channel Config** tab in the dashboard.
+- **Secondary Delivery Channel (Telegram Bot)**: The weekly digest: a pinned header ("Edition 2026-Wnn") and one message per verified incident with its summary, the first testing command in a code block, and links to the NVD record, the source advisory and a public PoC. These open on any device; a "Full details" link to the dashboard is added only when `BASE_URL` is not 127.0.0.1/localhost. The bot needs the "Pin Messages" admin right so other PCs can see the week was already posted.
 
 #### REST API Endpoints Reference
 | Endpoint | Method | Description |
@@ -294,11 +305,11 @@ docker compose run --rm scheduler python Backend/run_pipeline.py   # run the pip
 Keys go in a `.env` file (see `.env.example`); `Backend/data` is mounted so data persists. Outside Docker, `python Backend/run_pipeline.py` runs the same stages once.
 
 ### 7. Run Test Suite
-Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (184 automated tests):
+Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (246 automated tests):
 ```bash
 python -m unittest discover -s Testing -p "test_*.py" -v
 ```
-Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access. CI runs the other 177 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
+Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access. CI runs the other 239 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
 
 ### 8. Presentation & Demo Guide
 For full presentation instructions, talking points, and cheat-sheet commands for project reviews, see:
