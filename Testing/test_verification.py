@@ -128,6 +128,19 @@ class TestVerificationGate(unittest.TestCase):
                                      "https://fake-site.com/exploit"])
         self.assertCaught(card, "URL", "https://fake-site.com/exploit")
 
+    def test_11b_wrong_vendor(self):
+        card = make_card(impact="Unauthenticated remote attackers can extract session tokens from Fortinet devices.")
+        self.assertCaught(card, "VENDOR_PRODUCT", "Fortinet")
+
+    def test_11c_vendor_from_envelope_is_allowed(self):
+        # "Citrix" is only in the envelope title, not the raw text: still grounded
+        card = make_card(mechanism="CVE-2023-4966 (CVSS 9.4, CWE-119): Buffer over-read in Citrix NetScaler ADC.")
+        self.assertEqual(self.check(card).status, "PASSED")
+
+    def test_11d_unknown_word_is_not_treated_as_vendor(self):
+        card = make_card(remediation="Rotate every session token after patching the appliance.")
+        self.assertEqual(self.check(card).status, "PASSED")
+
     def test_12_several_fakes_all_reported(self):
         card = make_card(
             impact="Affects 13.1-49.19. This leads to remote code execution.",

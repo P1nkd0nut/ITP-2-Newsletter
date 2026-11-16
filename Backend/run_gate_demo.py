@@ -3,7 +3,7 @@ Verification Gate Fault-Injection Demo (Task 3.2 test plan).
 
 For each of the 20 ground-truth items:
   1. Build a CLEAN draft card that only uses facts from the source -> should PASS.
-  2. Build 7 SABOTAGED copies, each with one planted fake fact  -> should be QUARANTINED.
+  2. Build 8 SABOTAGED copies, each with one planted fake fact  -> should be QUARANTINED.
 Then report what the gate caught.
 
 Usage:
@@ -21,7 +21,7 @@ from rich.console import Console
 from rich.table import Table
 
 from Backend.run_benchmark import load_ground_truth_dataset, convert_gt_to_envelope
-from Backend.verification.gate import IMPACT_TERMS, VERSION_RE, VerificationGate
+from Backend.verification.gate import IMPACT_TERMS, KNOWN_NAME_PATTERNS, VERSION_RE, VerificationGate
 from Backend.verification.models import DraftCard
 
 console = Console()
@@ -40,7 +40,7 @@ def make_clean_card(item) -> DraftCard:
 
 
 def make_faults(item, clean: DraftCard) -> dict:
-    """Seven copies of the clean card, each with exactly one planted fake fact."""
+    """Eight copies of the clean card, each with exactly one planted fake fact."""
     faults = {}
 
     # 1. Fake CVE: change the last digit of the real ID (a typical AI slip)
@@ -83,6 +83,13 @@ def make_faults(item, clean: DraftCard) -> dict:
     fake_cwe = "CWE-79" if "CWE-79" not in item["cwe"] else "CWE-89"
     faults["Wrong CWE"] = clean.model_copy(
         update={"mechanism": clean.mechanism.replace(item["cwe"][0], fake_cwe)}
+    )
+
+    # 8. Wrong vendor/product: a known vendor the source never mentions
+    env_text = (raw + " " + (item.get("vendor_product") or "")).lower()
+    wrong_vendor = next(name for name, pattern in KNOWN_NAME_PATTERNS if not pattern.search(env_text))
+    faults["Wrong vendor"] = clean.model_copy(
+        update={"impact": clean.impact + f" It also affects {wrong_vendor} products."}
     )
     return faults
 
