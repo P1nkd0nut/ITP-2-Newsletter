@@ -2,8 +2,8 @@
 Deterministic Source-Verification Gate (Task 3.2).
 
 A plain Python checker with no LLM calls. Every CVE ID, version, CVSS score,
-CWE, command, impact claim and URL in an AI-written draft card must be
-traceable to the item's source text, or the card is quarantined.
+CWE, vendor/product name, command, impact claim and URL in an AI-written draft
+card must be traceable to the item's source text, or the card is quarantined.
 """
 import re
 from typing import Callable, List, Optional, Tuple
@@ -27,6 +27,36 @@ IMPACT_TERMS = {
     "sql injection": ["sql injection", "sqli"],
     "denial of service": ["denial of service", "dos"],
 }
+
+# Vendor/product check: any of these names the draft mentions must appear in the
+# source text or in the envelope's Vendor_Product field. The list is the vendors
+# and products that show up across our Web and Mobile sources; a name outside
+# it is not checked (the gate can't tell a product name from an ordinary word),
+# which is also why names that double as ordinary words ("Edge", "Spring") are
+# listed only in their full form.
+KNOWN_VENDOR_PRODUCTS = [
+    # Mobile platforms and chipsets
+    "Apple", "iOS", "iPadOS", "macOS", "watchOS", "tvOS", "visionOS", "Safari", "WebKit",
+    "Google", "Android", "AOSP", "Google Pixel", "Chrome", "Chromium", "Samsung", "Qualcomm", "MediaTek",
+    "Huawei", "Xiaomi", "Frida",
+    # Browsers, OS and big vendors
+    "Microsoft", "Windows", "Microsoft Edge", "Mozilla", "Firefox", "Oracle", "Adobe", "Cisco", "Fortinet",
+    "FortiOS", "Palo Alto", "PAN-OS", "Ivanti", "Citrix", "VMware", "Atlassian", "Confluence", "Jira",
+    "SAP", "IBM", "Juniper", "SonicWall", "F5", "Zyxel", "Linux",
+    # Web frameworks, servers and package ecosystems
+    "Apache", "Tomcat", "Struts", "Log4j", "nginx", "WordPress", "Drupal", "Joomla", "Jenkins",
+    "GitLab", "GitHub", "Spring Framework", "Spring Boot", "Django", "Flask", "Laravel", "Ruby on Rails",
+    "Express.js", "Next.js", "Node.js", "Angular", "Vue.js", "PHP", "OpenSSL", "Kubernetes", "Docker",
+]
+
+
+def _name_pattern(name: str) -> "re.Pattern[str]":
+    # Letters/digits either side end the match, so "php" is found in "...-php-object-injection"
+    # (a URL slug in the source) but "apple" is not found in "pineapple".
+    return re.compile(rf"(?<![a-z0-9]){re.escape(name.lower())}(?![a-z0-9])")
+
+
+KNOWN_NAME_PATTERNS = [(name, _name_pattern(name)) for name in KNOWN_VENDOR_PRODUCTS]
 
 
 def _norm(text: str) -> str:
@@ -64,6 +94,7 @@ class VerificationGate:
             self._check_cvss,
             self._check_cwes,
             self._check_versions,
+            self._check_vendor_products,
             self._check_commands,
             self._check_impact_terms,
             self._check_urls,
@@ -148,6 +179,21 @@ class VerificationGate:
             if not _has_number(source, v)
         ]
         return len(found), failures
+
+    def _check_vendor_products(self, card, env, source, prose, all_text):
+        text = _norm(prose)
+        allowed = source + " " + _norm(env.Vendor_Product or "") + " " + _norm(env.Title or "")
+        checked, failures = 0, []
+        for name, pattern in KNOWN_NAME_PATTERNS:
+            if not pattern.search(text):
+                continue
+            checked += 1
+            if not pattern.search(allowed):
+                failures.append(CheckFailure(
+                    check="VENDOR_PRODUCT", value=name,
+                    reason="Vendor/product named in the draft but not in the source or the envelope's Vendor_Product",
+                ))
+        return checked, failures
 
     def _check_commands(self, card, env, source, prose, all_text):
         failures = []
