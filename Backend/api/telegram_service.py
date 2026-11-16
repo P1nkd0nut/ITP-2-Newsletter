@@ -17,7 +17,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 from zoneinfo import ZoneInfo
 
 import requests
@@ -73,6 +73,54 @@ def base_url() -> str:
 
 def incident_url(item_id: str) -> str:
     return f"{base_url()}/incident/{quote(item_id, safe='')}"
+
+
+NVD_DETAIL_URL = "https://nvd.nist.gov/vuln/detail/{cve}"
+LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
+MAX_SOURCE_LINKS = 4
+
+
+def _public_url(url: Any) -> Optional[str]:
+    """The URL if it is a public http(s) link anyone in the channel can open, else None."""
+    if not isinstance(url, str):
+        return None
+    parsed = urlparse(url.strip())
+    if parsed.scheme not in ("http", "https") or not parsed.hostname or parsed.hostname in LOOPBACK_HOSTS:
+        return None
+    return url.strip()
+
+
+def source_links(c: Dict[str, Any]) -> List[tuple]:
+    """
+    (label, url) pairs for a digest card, all public: the NVD record, the item's
+    own source, other sources reporting the same CVE, and the first public PoC.
+    Only URLs from the staging envelope are used, never model-written ones.
+    """
+    env = c.get("envelope") or {}
+    links: List[tuple] = []
+    seen = set()
+
+    def add(label: str, url: Any) -> None:
+        url = _public_url(url)
+        if url and url not in seen and len(links) < MAX_SOURCE_LINKS:
+            seen.add(url)
+            links.append((label, url))
+
+    cve = (env.get("CVE_ID") or "").upper()
+    if re.fullmatch(r"CVE-\d{4}-\d{4,}", cve):
+        add("NVD", NVD_DETAIL_URL.format(cve=cve))
+    add("Source", env.get("Source_URL"))
+    for url in c.get("also_source_urls") or []:
+        add("Source", url)
+    for url in env.get("PoC_URLs") or []:
+        add("PoC", url)
+        break
+    return links
+
+
+def dashboard_link_is_public() -> bool:
+    """False when BASE_URL points at this PC only (127.0.0.1/localhost), where other readers can't open it."""
+    return urlparse(base_url()).hostname not in LOOPBACK_HOSTS
 
 
 def esc(value: Any) -> str:
@@ -261,7 +309,14 @@ def format_digest_item(c: Dict[str, Any], rank: int) -> str:
             lines += ["", esc(summary)]
         if flags:
             lines += ["", " · ".join(flags)]
-        lines += ["", f'<a href="{esc(incident_url(item_id))}">Read full details →</a>']
+        command = next((x for x in (c.get("grounded_card") or {}).get("testing_syntax") or [] if x), None)
+        if command and summary_limit > 0:
+            lines += ["", "Test:", f"<pre>{esc(_truncate(command, 300))}</pre>"]
+        links = [f'<a href="{esc(url)}">{esc(label)}</a>' for label, url in source_links(c)]
+        if dashboard_link_is_public():
+            links.append(f'<a href="{esc(incident_url(item_id))}">Full details</a>')
+        if links:
+            lines += ["", "🔗 " + " · ".join(links)]
         return "\n".join(lines)
 
     limit = SUMMARY_CHARS
@@ -397,7 +452,6 @@ class TelegramService:
         ai_sev = ai.get("severity_score", 0.0)
         cvss = env.get("CVSS", "N/A")
         is_kev = env.get("KEV_Status", False)
-        poc_urls = env.get("PoC_URLs") or []
 
         msg = (
             f"🚨 <b>[GroundedCVE Secondary Alert]</b>\n\n"
@@ -409,16 +463,17 @@ class TelegramService:
             f"<b>Weaponization:</b> {'🔥 Active CISA KEV Exploitation' if is_kev else '⚠️ Tracked Advisory'}\n"
         )
 
-        if poc_urls:
-            msg += f"<b>PoC Exploit:</b> <a href=\"{esc(poc_urls[0])}\">GitHub PoC Repository</a>\n"
-
         if ai.get("reasoning"):
             msg += f"\n<b>AI Assessment:</b>\n<i>{esc(_truncate(ai['reasoning'], 200))}</i>\n"
 
-        msg += (
-            f"\n📄 <a href=\"{esc(incident_url(env.get('Item_ID', '')))}\">Read full details</a>\n"
-            f"🌐 <b>Primary Channel:</b> <a href=\"{esc(base_url())}/\">Open GroundedCVE Dashboard</a>"
-        )
+        links = [f'<a href="{esc(url)}">{esc(label)}</a>' for label, url in source_links(candidate)]
+        if links:
+            msg += "\n🔗 <b>Sources:</b> " + " · ".join(links)
+        if dashboard_link_is_public():
+            msg += (
+                f"\n📄 <a href=\"{esc(incident_url(env.get('Item_ID', '')))}\">Read full details</a>\n"
+                f"🌐 <b>Primary Channel:</b> <a href=\"{esc(base_url())}/\">Open GroundedCVE Dashboard</a>"
+            )
         return msg
 
     def send_test_message(self, chat_id: Optional[str] = None) -> Dict[str, Any]:
