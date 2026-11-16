@@ -8,6 +8,11 @@ Total = 100 points.
 
 Also implements the CVSS Discrepancy Detector:
 Flags any item where |AI_Severity - CVSS| >= 4.0 for investigation and troubleshooting.
+
+Items are grouped by CVE ID before scoring (plan Task 2.4), so an NVD record,
+its CISA KEV entry, its GitHub advisory and any PoC or write-up are scored as
+one story: each one gets the KEV and PoC points if any item in the story has
+them. Items with no CVE ID are scored on their own.
 """
 from datetime import datetime, timezone
 import logging
@@ -42,7 +47,10 @@ class PriorityScoringEngine:
         self.ai_evaluator = ai_evaluator or AISeverityEvaluator()
 
     def process_envelope(
-        self, envelope: StagingEnvelope, cached_ai: Optional[AISeverityAssessment] = None
+        self,
+        envelope: StagingEnvelope,
+        cached_ai: Optional[AISeverityAssessment] = None,
+        story: Optional[List[StagingEnvelope]] = None,
     ) -> TriagedCandidate:
         """
         Processes a single staging envelope through:
@@ -53,6 +61,8 @@ class PriorityScoringEngine:
 
         A cached_ai assessment (from an earlier run of the same unchanged item)
         skips the AI call; the score is still recomputed with current KEV/PoC data.
+        `story` is every envelope sharing this one's CVE ID (itself included); its
+        KEV and PoC signals count for the whole story.
         """
         triaged_at = datetime.now(timezone.utc).isoformat()
 
@@ -79,7 +89,7 @@ class PriorityScoringEngine:
         ai_assessment = cached_ai or self.ai_evaluator.evaluate(envelope)
 
         # Step 3: Compute 100-Point Priority Score
-        score, breakdown = self._calculate_100pt_score(envelope, ai_assessment)
+        score, breakdown = self._calculate_100pt_score(envelope, ai_assessment, story)
 
         # Step 4: CVSS vs AI Discrepancy Check
         discrepancy = self._detect_cvss_discrepancy(envelope.CVSS, ai_assessment.severity_score)
@@ -92,10 +102,14 @@ class PriorityScoringEngine:
             score_breakdown=breakdown,
             discrepancy=discrepancy,
             triaged_at=triaged_at,
+            story_item_ids=[e.Item_ID for e in story] if story and len(story) > 1 else [],
         )
 
     def _calculate_100pt_score(
-        self, envelope: StagingEnvelope, ai_assessment: AISeverityAssessment
+        self,
+        envelope: StagingEnvelope,
+        ai_assessment: AISeverityAssessment,
+        story: Optional[List[StagingEnvelope]] = None,
     ) -> Tuple[float, Dict[str, float]]:
         """
         100-Point Scoring Breakdown:
@@ -103,8 +117,10 @@ class PriorityScoringEngine:
         2. AI Practical Severity:         40 pts max ((severity / 10.0) * 40.0)
         3. Public PoC Availability:       20 pts
         """
+        members = story or [envelope]
+
         # 1. CISA KEV (40 pts)
-        is_kev = bool(envelope.KEV_Status) or (
+        is_kev = any(bool(e.KEV_Status) for e in members) or (
             envelope.CVE_ID is not None and envelope.CVE_ID.upper() in self.kev_catalog
         )
         kev_points = 40.0 if is_kev else 0.0
@@ -113,7 +129,7 @@ class PriorityScoringEngine:
         ai_points = round((ai_assessment.severity_score / 10.0) * 40.0, 2)
 
         # 3. Public GitHub PoC (20 pts)
-        has_poc = bool(envelope.PoC_URLs) or bool(envelope.PoC_Details)
+        has_poc = any(bool(e.PoC_URLs) or bool(e.PoC_Details) for e in members)
         poc_points = 20.0 if has_poc else 0.0
 
         total_score = round(kev_points + ai_points + poc_points, 2)
@@ -173,9 +189,22 @@ class PriorityScoringEngine:
         cached_ai maps Item_ID to a reusable assessment for items that have not changed.
         """
         cached_ai = cached_ai or {}
-        candidates = [self.process_envelope(env, cached_ai.get(env.Item_ID)) for env in envelopes]
+        stories = group_by_cve(envelopes)
+        candidates = [
+            self.process_envelope(env, cached_ai.get(env.Item_ID), stories.get((env.CVE_ID or "").upper()))
+            for env in envelopes
+        ]
         candidates.sort(key=lambda c: c.priority_score, reverse=True)
         return candidates
+
+
+def group_by_cve(envelopes: List[StagingEnvelope]) -> Dict[str, List[StagingEnvelope]]:
+    """CVE ID (upper case) -> every envelope reporting it. Items with no CVE ID are left out."""
+    stories: Dict[str, List[StagingEnvelope]] = {}
+    for env in envelopes:
+        if env.CVE_ID:
+            stories.setdefault(env.CVE_ID.upper(), []).append(env)
+    return stories
 
 
 def reusable_assessments(

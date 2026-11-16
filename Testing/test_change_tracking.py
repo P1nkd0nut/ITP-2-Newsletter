@@ -190,3 +190,32 @@ class TestTriageReusesScores(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestGroupByCve(unittest.TestCase):
+    """Plan Task 2.4: items sharing a CVE ID are scored as one story."""
+
+    def setUp(self):
+        evaluator = MagicMock()
+        evaluator.evaluate.return_value = AISeverityAssessment(
+            severity_score=5.0, offensive_impact="Remote Code Execution", exploitability="HIGH",
+            reasoning="r", evaluated_by="openrouter/qwen/qwen-2.5-72b-instruct",
+        )
+        self.engine = PriorityScoringEngine(ai_evaluator=evaluator)
+
+    def test_nvd_record_gets_kev_and_poc_points_from_its_siblings(self):
+        nvd = make_env("CVE-2026-7")
+        kev = make_env("CVE-2026-7", Item_ID="kev-cve-2026-7", Source_Type=SourceType.CISA_KEV, KEV_Status=True)
+        poc = make_env("cve-2026-7", Item_ID="ghsa-cve-2026-7", PoC_URLs=["https://github.com/x/poc"])
+        other = make_env("CVE-2026-8")
+        by_id = {c.envelope.Item_ID: c for c in self.engine.triage_batch([nvd, kev, poc, other])}
+
+        story = by_id["nvd-cve-2026-7"]
+        self.assertEqual(story.score_breakdown["cisa_kev_points"], 40.0)
+        self.assertEqual(story.score_breakdown["poc_points"], 20.0)
+        self.assertEqual(sorted(story.story_item_ids), ["ghsa-cve-2026-7", "kev-cve-2026-7", "nvd-cve-2026-7"])
+        self.assertEqual(by_id["kev-cve-2026-7"].priority_score, story.priority_score)
+
+        alone = by_id["nvd-cve-2026-8"]
+        self.assertEqual(alone.score_breakdown["cisa_kev_points"], 0.0)
+        self.assertEqual(alone.story_item_ids, [])
