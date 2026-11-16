@@ -25,7 +25,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from Backend.api.data_service import data_service
-from Backend.api.novelty import DEFAULT_SIMILARITY, NoveltyChecker, PublishedIndex
+from Backend.api.novelty import NoveltyChecker, PublishedIndex, similarity_threshold
 from Backend.api.telegram_service import (
     base_url, bot_token, compose_digest, edition_label, pinned_edition, select_digest_items, telegram_service,
 )
@@ -41,7 +41,7 @@ def make_novelty_checker() -> NoveltyChecker:
 
         client = get_client()
         client.info()
-        threshold = float(os.getenv("NOVELTY_SIMILARITY", DEFAULT_SIMILARITY))
+        threshold = similarity_threshold(os.getenv("NOVELTY_SIMILARITY"))
         index = PublishedIndex(client, OllamaEmbedder(), threshold=threshold)
     except Exception as e:
         print(f"Qdrant not reachable ({e.__class__.__name__}); novelty check uses the sent-items ledger only")
