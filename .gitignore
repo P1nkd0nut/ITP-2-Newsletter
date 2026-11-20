@@ -46,3 +46,7 @@ Backend/data/staging/grounded_cards.json
 Backend/data/staging/quarantine_log.jsonl
 Backend/data/staging/last_digest_sent.json
 Backend/data/staging/published_ledger.json
+
+# Per-run metrics and LLM usage logs (local to each PC)
+Backend/data/staging/llm_usage.jsonl
+Backend/data/staging/run_metrics.jsonl

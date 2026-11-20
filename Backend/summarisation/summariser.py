@@ -14,6 +14,8 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 
 import requests
 
+from Backend import llm_usage
+
 from Backend.config import (
     OLLAMA_HOST,
     OPENROUTER_API_KEY,
@@ -124,12 +126,15 @@ def openrouter_llm(api_key: str = OPENROUTER_API_KEY, model: str = OPENROUTER_MO
                 "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
                 "response_format": {"type": "json_object"},
                 "temperature": 0.1,
+                **llm_usage.OPENROUTER_USAGE_FIELD,
             },
             timeout=timeout,
         )
         if resp.status_code != 200:
             raise RuntimeError(f"OpenRouter returned {resp.status_code}")
-        return resp.json()["choices"][0]["message"]["content"]
+        data = resp.json()
+        llm_usage.record("summaries", model, data)
+        return data["choices"][0]["message"]["content"]
 
     call.model_name = f"openrouter/{model}"
     return call

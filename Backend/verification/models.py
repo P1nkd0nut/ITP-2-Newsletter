@@ -20,7 +20,7 @@ class DraftCard(BaseModel):
 
 class CheckFailure(BaseModel):
     """One fact in the draft that could not be found in the source."""
-    check: str = Field(..., description="CVE_ID, VERSION, CVSS, CWE, COMMAND, IMPACT or URL")
+    check: str = Field(..., description="CVE_ID, VERSION, CVSS, CWE, VENDOR_PRODUCT, COMMAND, IMPACT or URL")
     value: str = Field(..., description="The exact text that failed")
     reason: str = Field(..., description="Why it failed")
 
