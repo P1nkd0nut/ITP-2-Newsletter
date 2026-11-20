@@ -157,6 +157,26 @@ class TestVerificationGate(unittest.TestCase):
         result = self.gate.verify(card, env)
         self.assertIn(("CVSS", "7.0"), [(f.check, f.value) for f in result.failures])
 
+    def test_13b_cve_id_inside_longer_cve_id_is_not_a_match(self):
+        # "CVE-2024-3400" must NOT count as found just because "CVE-2024-34001" is in the source
+        env = make_envelope(raw=RAW + " See also CVE-2024-34001.")
+        card = make_card(mechanism="CVE-2024-3400 (CVSS 9.4, CWE-119): Buffer over-read.")
+        result = self.gate.verify(card, env, evidence=[POC])
+        self.assertIn(("CVE_ID", "CVE-2024-3400"), [(f.check, f.value) for f in result.failures])
+
+    def test_13c_cwe_inside_longer_cwe_is_not_a_match(self):
+        # "CWE-7" must NOT count as found just because "CWE-79" is in the source
+        env = make_envelope(raw=RAW + " Related weakness: CWE-79.")
+        card = make_card(mechanism="CVE-2023-4966 (CVSS 9.4, CWE-7): Buffer over-read.")
+        result = self.gate.verify(card, env, evidence=[POC])
+        self.assertIn(("CWE", "CWE-7"), [(f.check, f.value) for f in result.failures])
+
+    def test_13d_cve_and_cwe_in_source_still_pass(self):
+        env = make_envelope(raw=RAW + " See also CVE-2024-34001 (CWE-79).")
+        card = make_card(mechanism="CVE-2024-34001 (CVSS 9.4, CWE-79): Buffer over-read.")
+        result = self.gate.verify(card, env, evidence=[POC])
+        self.assertEqual(result.status, "PASSED", result.failures)
+
     def test_14_synonym_impact_is_accepted(self):
         # Source says "RCE", card says "remote code execution" -> same claim, should pass
         env = make_envelope(raw=RAW + " This is an unauthenticated RCE.")
