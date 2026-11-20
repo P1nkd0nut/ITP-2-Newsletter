@@ -120,6 +120,7 @@ class TestDigestFormatting(unittest.TestCase):
         for msg in [tg.format_digest_item(c, 1), tg.format_digest_header([c])]:
             self.assertLessEqual(len(msg), tg.MAX_MESSAGE_CHARS)
 
+    @mock.patch.dict(os.environ, {"BASE_URL": "http://192.168.1.20:5000"})
     def test_digest_picks_recent_in_scope_items_by_priority(self):
         candidates = [
             make_candidate("low", 30.0),
@@ -134,6 +135,7 @@ class TestDigestFormatting(unittest.TestCase):
         self.assertIn("/incident/high", messages[1])
         self.assertIn("/incident/low", messages[2])
 
+    @mock.patch.dict(os.environ, {"BASE_URL": "http://192.168.1.20:5000"})
     def test_digest_leaves_out_items_without_a_verified_card(self):
         unverified = make_candidate("unverified", 99.0)
         unverified["grounded_card"] = None
@@ -146,6 +148,34 @@ class TestDigestFormatting(unittest.TestCase):
         c = make_candidate("x-3", 50.0)
         c["grounded_card"]["mechanism"] = "Grounded mechanism text."
         self.assertIn("Grounded mechanism text.", tg.format_digest_item(c, 1))
+
+    @mock.patch.dict(os.environ, {"BASE_URL": "http://127.0.0.1:5000"})
+    def test_card_links_to_public_sources_not_this_pc(self):
+        c = make_candidate("nvd-cve-2026-1234", 80.0, CVE_ID="CVE-2026-1234",
+                           Source_URL="https://github.com/advisories/GHSA-xxxx",
+                           PoC_URLs=["https://github.com/someone/poc", "https://github.com/other/poc"])
+        msg = tg.format_digest_item(c, 1)
+        self.assertIn('href="https://nvd.nist.gov/vuln/detail/CVE-2026-1234"', msg)
+        self.assertIn('href="https://github.com/advisories/GHSA-xxxx"', msg)
+        self.assertIn('href="https://github.com/someone/poc"', msg)
+        self.assertNotIn("other/poc", msg)  # only the first PoC
+        self.assertNotIn("127.0.0.1", msg)  # the dashboard on this PC is useless to other readers
+
+    def test_source_links_skip_local_and_non_http_urls(self):
+        c = make_candidate("x-4", 50.0, Source_URL="http://localhost:5000/x", PoC_URLs=["javascript:alert(1)"])
+        self.assertEqual(tg.source_links(c), [])
+
+    def test_merged_sources_are_linked(self):
+        c = make_candidate("nvd-cve-2026-9", 80.0, CVE_ID="CVE-2026-9999", Source_URL="https://nvd.nist.gov/x")
+        c["also_source_urls"] = ["https://www.cisa.gov/kev"]
+        labels = [url for _, url in tg.source_links(c)]
+        self.assertIn("https://www.cisa.gov/kev", labels)
+
+    def test_card_shows_first_testing_command_in_code_block(self):
+        c = make_candidate("x-5", 50.0)
+        c["grounded_card"]["testing_syntax"] = ["curl -X POST 'http://target/api?q=<x>'"]
+        msg = tg.format_digest_item(c, 1)
+        self.assertIn("<pre>curl -X POST &#x27;http://target/api?q=&lt;x&gt;&#x27;</pre>", msg)
 
     def test_empty_week_still_sends_header(self):
         messages = tg.build_weekly_digest([make_candidate("old", 99.0, published=days_ago(30))], days=7)

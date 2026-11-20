@@ -29,13 +29,14 @@ import sys
 import time
 from datetime import datetime, time as dtime, timedelta, timezone
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+from Backend import llm_usage
 from Backend.config import OPENROUTER_API_KEY, STAGING_DIR
 
 DIGEST_STATE_FILE = STAGING_DIR / "last_digest_sent.json"
@@ -48,13 +49,45 @@ def env_int(name: str, default: int) -> int:
         return default
 
 
+# Per-stage timings of the current run (plan Task 4.1: per-stage and end-to-end latency)
+STAGE_TIMES: List[Dict[str, Any]] = []
+RUN_METRICS_FILE = STAGING_DIR / "run_metrics.jsonl"
+
+
 def run_stage(name: str, script: str, *args: str) -> bool:
     print(f"\n=== {name} ===", flush=True)
     cmd = [sys.executable, str(ROOT_DIR / "Backend" / script), *args]
+    t0 = time.monotonic()
     code = subprocess.run(cmd, cwd=ROOT_DIR).returncode
+    STAGE_TIMES.append({"stage": name, "seconds": round(time.monotonic() - t0, 1), "ok": code == 0})
     if code != 0:
         print(f"[!] {name} exited with code {code}; continuing with existing data", flush=True)
     return code == 0
+
+
+def report_run(started: datetime, finished: datetime, path: Path = RUN_METRICS_FILE) -> Dict[str, Any]:
+    """Print and save this run's stage timings and LLM usage/cost."""
+    usage = llm_usage.totals(since=started)
+    metrics = {
+        "started_at": started.isoformat(),
+        "total_seconds": round((finished - started).total_seconds(), 1),
+        "stages": list(STAGE_TIMES),
+        "llm": usage,
+        "llm_cost_usd": round(sum(u["cost_usd"] for u in usage.values()), 6),
+    }
+    print("\n=== Run metrics ===", flush=True)
+    for st in STAGE_TIMES:
+        print(f"  {st['stage']:<20} {st['seconds']:>8.1f}s  {'ok' if st['ok'] else 'FAILED'}", flush=True)
+    for stage, u in usage.items():
+        print(f"  LLM {stage:<16} {u['calls']:>4} calls  {u['prompt_tokens'] + u['completion_tokens']:>8} tokens  "
+              f"${u['cost_usd']:.4f}", flush=True)
+    print(f"  End to end           {metrics['total_seconds']:>8.1f}s  LLM cost ${metrics['llm_cost_usd']:.4f}", flush=True)
+    try:
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(metrics) + "\n")
+    except OSError:
+        pass
+    return metrics
 
 
 def last_digest_sent(path: Path = DIGEST_STATE_FILE) -> Optional[datetime]:
@@ -83,6 +116,7 @@ def next_run_at(now: datetime, run_time: str, tz_name: str) -> datetime:
 
 def run_once() -> None:
     started = datetime.now(timezone.utc)
+    STAGE_TIMES.clear()
     print(f"GroundedCVE pipeline run started {started.isoformat()}", flush=True)
 
     run_stage("Ingestion", "run_ingestion.py", "--poc", "--limit", str(env_int("INGEST_LIMIT", 5)))
@@ -109,7 +143,9 @@ def run_once() -> None:
     elif run_stage("Telegram digest", "run_telegram_digest.py", "--yes", "--days", str(interval), "--jitter", "300"):
         DIGEST_STATE_FILE.write_text(json.dumps({"sent_at": started.isoformat()}), encoding="utf-8")
 
-    print(f"\nRun finished in {(datetime.now(timezone.utc) - started).seconds}s", flush=True)
+    finished = datetime.now(timezone.utc)
+    report_run(started, finished)
+    print(f"\nRun finished in {(finished - started).seconds}s", flush=True)
 
 
 def main() -> None:

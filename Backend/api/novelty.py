@@ -20,10 +20,24 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from Backend.config import QDRANT_COLLECTION_PUBLISHED, STAGING_DIR
+from Backend.config import DATA_DIR, QDRANT_COLLECTION_PUBLISHED, STAGING_DIR
 
 LEDGER_FILE = STAGING_DIR / "published_ledger.json"
-DEFAULT_SIMILARITY = 0.92
+DEFAULT_SIMILARITY = 0.92  # used until run_novelty_eval.py has tuned one
+TUNED_THRESHOLD_FILE = DATA_DIR / "novelty_threshold.json"
+
+
+def similarity_threshold(env_value: Optional[str] = None, tuned_file: Path = TUNED_THRESHOLD_FILE) -> float:
+    """
+    NOVELTY_SIMILARITY from .env if set, else the threshold tuned by
+    Backend/run_novelty_eval.py on the labelled novelty pairs, else 0.92.
+    """
+    if env_value and env_value.strip():
+        return float(env_value)
+    try:
+        return float(json.loads(tuned_file.read_text(encoding="utf-8"))["threshold"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return DEFAULT_SIMILARITY
 
 
 def novelty_key(c: Dict[str, Any]) -> str:
@@ -55,17 +69,22 @@ def whats_new(old: Dict[str, Any], new: Dict[str, Any]) -> List[str]:
 def merge_same_flaw(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Keep one item per CVE: the first one, so pass items sorted by priority.
-    The kept item lists the other sources under 'also_reported_by'.
+    The kept item lists the other sources under 'also_reported_by' and their
+    links under 'also_source_urls', so the digest can link to every source.
     """
     kept: Dict[str, Dict[str, Any]] = {}
     for c in items:
         key = novelty_key(c)
         if key not in kept:
-            kept[key] = dict(c, also_reported_by=[])
+            kept[key] = dict(c, also_reported_by=[], also_source_urls=[])
         else:
-            src = (c.get("envelope") or {}).get("Source_Type")
+            env = c.get("envelope") or {}
+            src = env.get("Source_Type")
             if src and src not in kept[key]["also_reported_by"]:
                 kept[key]["also_reported_by"].append(src)
+            url = env.get("Source_URL")
+            if url and url not in kept[key]["also_source_urls"]:
+                kept[key]["also_source_urls"].append(url)
     return list(kept.values())
 
 

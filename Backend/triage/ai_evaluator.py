@@ -9,6 +9,8 @@ import logging
 import re
 from typing import Dict, Any, Optional
 import requests
+
+from Backend import llm_usage
 from Backend.config import (
     OLLAMA_HOST,
     OPENROUTER_API_KEY,
@@ -109,11 +111,13 @@ class AISeverityEvaluator:
             ],
             "response_format": {"type": "json_object"},
             "temperature": 0.1,
+            **llm_usage.OPENROUTER_USAGE_FIELD,
         }
 
         resp = requests.post(endpoint, json=payload, headers=headers, timeout=20)
         if resp.status_code == 200:
             data = resp.json()
+            llm_usage.record("triage", self.openrouter_model, data)
             content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
             parsed = json.loads(content)
             score = float(parsed.get("severity_score", 5.0))

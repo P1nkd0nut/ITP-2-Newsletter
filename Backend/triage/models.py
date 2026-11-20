@@ -3,7 +3,7 @@ Pydantic data models for the GroundedCVE Triage & Scoring Architecture.
 Strictly implements the Scope Pre-Filter and AI Severity Scoring specifications.
 """
 from enum import Enum
-from typing import Dict, Optional, Any
+from typing import List, Dict, Optional, Any
 from pydantic import BaseModel, Field
 from Backend.ingestion.models import StagingEnvelope
 
@@ -53,3 +53,7 @@ class TriagedCandidate(BaseModel):
     score_breakdown: Dict[str, float] = Field(default_factory=dict, description="Point allocations: KEV, AI, PoC")
     discrepancy: Optional[CVSSDiscrepancy] = Field(default=None, description="CVSS vs AI sanity check")
     triaged_at: str = Field(..., description="ISO 8601 timestamp of triage completion")
+    story_item_ids: List[str] = Field(
+        default_factory=list,
+        description="Every item sharing this CVE ID (NVD record, KEV entry, advisory, PoC, write-up), scored as one story",
+    )
