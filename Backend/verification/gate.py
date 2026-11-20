@@ -69,6 +69,11 @@ def _has_number(source: str, number: str) -> bool:
     return re.search(rf"(?<![\d.]){re.escape(number.lower())}(?![\d.]*\d)", source) is not None
 
 
+def _has_id(source: str, ident: str) -> bool:
+    """True if a CVE/CWE ID appears whole in source ("CVE-2024-3400" must not match inside "CVE-2024-34001")."""
+    return re.search(rf"(?<![a-z0-9]){re.escape(ident.lower())}(?!\d)", source) is not None
+
+
 class VerificationGate:
     """Audits a DraftCard against its StagingEnvelope's source text."""
 
@@ -141,7 +146,7 @@ class VerificationGate:
         failures = [
             CheckFailure(check="CVE_ID", value=cve, reason="Not the item's own CVE and not in the source")
             for cve in found
-            if cve != own and cve.lower() not in source
+            if cve != own and not _has_id(source, cve)
         ]
         return len(found), failures
 
@@ -165,7 +170,7 @@ class VerificationGate:
         failures = [
             CheckFailure(check="CWE", value=cwe, reason="Not on the envelope and not in the source")
             for cwe in found
-            if cwe not in env_cwes and cwe.lower() not in source
+            if cwe not in env_cwes and not _has_id(source, cwe)
         ]
         return len(found), failures
 
