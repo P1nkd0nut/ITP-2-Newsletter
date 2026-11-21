@@ -432,6 +432,26 @@ class DataService:
 
         c["external_references"] = verified_refs
 
+        # Facts shown beside the verified card: affected versions (from the NVD
+        # record) and the public PoC repositories with their link state. These come
+        # from structured fields, not from the model, so the gate doesn't check them.
+        versions = env.get("Affected_Versions") or []
+        if isinstance(versions, str):
+            versions = [versions]
+        if versions and source_type == "NVD":
+            versions_from = f"NVD record for {cve_id}" if cve_id else "NVD record"
+        elif versions:
+            versions_from = extra_meta.get("affected_versions_from") or f"{source_type} record"
+        else:
+            versions_from = None
+        poc_urls = set(env.get("PoC_URLs") or [])
+        pocs = [
+            {k: r.get(k) for k in ("url", "found_via", "state", "status_label", "archive_url")}
+            for r in verified_refs
+            if r.get("url") in poc_urls and r.get("state") not in ("dead", "moved")
+        ]
+        c["source_facts"] = {"affected_versions": list(versions)[:12], "versions_from": versions_from, "pocs": pocs[:2]}
+
         c["in_depth"] = {
             "brief_summary": brief_summary,
             "vulnerability_name": vuln_name,

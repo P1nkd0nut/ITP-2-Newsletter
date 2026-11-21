@@ -130,7 +130,7 @@ ITP2/
 │   └── run_dashboard.py                       # 1-command local dashboard server
 ├── Testing/
 │   ├── test_ingestion.py                      # Phase 1 test suite (10 unit & integration tests)
-│   ├── test_nvd_collector.py                  # NVD collector: newest CVEs first, CVSS choice (8 tests)
+│   ├── test_nvd_collector.py                  # NVD collector: newest CVEs first, CVSS choice, affected versions (10 tests)
 │   ├── test_triage.py                         # Phase 2 test suite (9 pre-filter, scoring, & OpenRouter tests)
 │   ├── test_benchmark.py                      # Task 4.1 benchmark test suite (8 validation tests)
 │   ├── test_verification.py                   # Verification gate test suite (24 grounding & retry tests)
@@ -311,11 +311,11 @@ docker compose run --rm scheduler python Backend/run_pipeline.py   # run the pip
 Keys go in a `.env` file (see `.env.example`); `Backend/data` is mounted so data persists. Outside Docker, `python Backend/run_pipeline.py` runs the same stages once.
 
 ### 7. Run Test Suite
-Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (266 automated tests in 21 modules):
+Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (268 automated tests in 21 modules):
 ```bash
 python -m unittest discover -s Testing -p "test_*.py" -v
 ```
-Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access; they skip automatically when the feeds can't be reached. CI runs the other 259 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
+Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access; they skip automatically when the feeds can't be reached. CI runs the other 261 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
 
 ### 8. Presentation & Demo Guide
 For full presentation instructions, talking points, and cheat-sheet commands for project reviews, see:

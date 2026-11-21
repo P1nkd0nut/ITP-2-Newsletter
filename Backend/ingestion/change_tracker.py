@@ -119,12 +119,24 @@ def _carry_forward_pocs(old: StagingEnvelope, new: StagingEnvelope) -> None:
     new.PoC_Details = [details[u] for u in kept if u in details] + (new.PoC_Details or [])
 
 
+def _carry_forward_nvd_versions(old: StagingEnvelope, new: StagingEnvelope) -> None:
+    """
+    Keeps affected versions that were looked up on NVD for a CISA KEV item. The
+    KEV feed itself names no versions, so a fresh copy must not read as a change.
+    """
+    looked_up = (old.Extra_Metadata or {}).get("affected_versions_from")
+    if looked_up and old.Affected_Versions and not new.Affected_Versions:
+        new.Affected_Versions = old.Affected_Versions
+        new.Extra_Metadata = {**(new.Extra_Metadata or {}), "affected_versions_from": looked_up}
+
+
 def merge_recheck(old: StagingEnvelope, fresh: StagingEnvelope, now_iso: str) -> StagingEnvelope:
     """Folds a re-fetched version of an older item into its stored record, labelling what changed."""
     fresh.First_Seen = old.First_Seen or old.Ingested_At
     fresh.Last_Seen = old.Last_Seen
     fresh.Last_Checked = now_iso
     _carry_forward_pocs(old, fresh)
+    _carry_forward_nvd_versions(old, fresh)
     changes = describe_changes(old, fresh)
     if changes:
         fresh.Change_Status, fresh.Change_Summary, fresh.Last_Changed = UPDATED, changes, now_iso
@@ -180,6 +192,7 @@ def apply_change_tracking(
         else:
             env.First_Seen = old.First_Seen or old.Ingested_At
             _carry_forward_pocs(old, env)
+            _carry_forward_nvd_versions(old, env)
             changes = describe_changes(old, env)
             if changes:
                 env.Change_Status = UPDATED

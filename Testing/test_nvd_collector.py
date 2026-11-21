@@ -95,5 +95,53 @@ class TestCvssChoice(unittest.TestCase):
         self.assertEqual(self.collector._extract_cvss({}), (None, None))
 
 
+class TestAffectedVersions(unittest.TestCase):
+    def test_ranges_and_exact_versions_are_readable(self):
+        from Backend.ingestion.collectors.nvd import affected_versions
+        configs = [{"nodes": [{"cpeMatch": [
+            {"vulnerable": True, "criteria": "cpe:2.3:a:apache:roller:*:*:*:*:*:*:*:*",
+             "versionStartIncluding": "5.0.0", "versionEndExcluding": "6.1.5"},
+            {"vulnerable": True, "criteria": "cpe:2.3:a:ivanti:connect_secure:22.7:r2:*:*:*:*:*:*"},
+            {"vulnerable": False, "criteria": "cpe:2.3:o:linux:linux_kernel:-:*:*:*:*:*:*:*"},
+        ]}]}]
+        self.assertEqual(affected_versions(configs), ["Apache Roller from 5.0.0 before 6.1.5", "Ivanti Connect Secure 22.7"])
+        self.assertEqual(affected_versions([]), [])
+
+    def test_kev_items_get_versions_from_the_nvd_record(self):
+        from Backend.ingestion.models import SourceType, StagingEnvelope
+        from Backend.ingestion.pipeline import IngestionPipeline
+
+        def env(item_id, source, versions=None):
+            return StagingEnvelope(
+                Item_ID=item_id, Source_Type=source, Title="t", Source_URL="https://example.com",
+                Published_Date="2026-11-20T00:00:00+00:00", Ingested_At="2026-11-21T00:00:00+00:00",
+                Content_Hash="h" + item_id, Raw_Content="{}", CVE_ID="CVE-2026-1", Affected_Versions=versions,
+            )
+
+        pipeline = IngestionPipeline()
+        kev = env("kev-1", SourceType.CISA_KEV)
+        with mock.patch.object(pipeline.registry["nvd"], "versions_for", return_value=["Apache Roller before 6.1.5"]) as lookup, \
+                mock.patch("Backend.ingestion.pipeline.time.sleep"):
+            self.assertEqual(pipeline.add_nvd_versions([kev]), 1)
+        lookup.assert_called_once_with("CVE-2026-1")
+        self.assertEqual(kev.Affected_Versions, ["Apache Roller before 6.1.5"])
+        self.assertEqual(kev.Extra_Metadata["affected_versions_from"], "NVD record for CVE-2026-1")
+
+        # An NVD item for the same CVE in the batch is used without a lookup
+        kev2 = env("kev-2", SourceType.CISA_KEV)
+        nvd = env("nvd-1", SourceType.NVD, ["Apache Roller up to 6.1.4"])
+        with mock.patch.object(pipeline.registry["nvd"], "versions_for") as lookup:
+            pipeline.add_nvd_versions([kev2, nvd])
+        lookup.assert_not_called()
+        self.assertEqual(kev2.Affected_Versions, ["Apache Roller up to 6.1.4"])
+
+        # A fresh copy from the KEV feed keeps the looked-up versions, so it doesn't read as a change
+        from Backend.ingestion.change_tracker import apply_change_tracking
+        fresh = env("kev-1", SourceType.CISA_KEV)
+        merged, counts = apply_change_tracking([fresh], [kev])
+        self.assertEqual(merged[0].Affected_Versions, ["Apache Roller before 6.1.5"])
+        self.assertEqual(counts["UNCHANGED"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

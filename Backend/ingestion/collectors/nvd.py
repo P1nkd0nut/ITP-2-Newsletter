@@ -22,6 +22,44 @@ from Backend.ingestion.utils import (
 logger = logging.getLogger(__name__)
 
 
+def affected_versions(configurations: List[Dict[str, Any]], limit: int = 12) -> List[str]:
+    """
+    Readable affected-version ranges from NVD's CPE configurations, e.g.
+    "Apache Roller before 6.1.5" or "Ivanti Connect Secure 22.7". Only entries
+    NVD marks as vulnerable are used; nothing is inferred.
+    """
+    out: List[str] = []
+    for conf in configurations or []:
+        for node in conf.get("nodes", []):
+            for match in node.get("cpeMatch", []):
+                if match.get("vulnerable") is False:
+                    continue
+                parts = match.get("criteria", "").split(":")
+                if len(parts) < 6:
+                    continue
+                name = f"{parts[3]} {parts[4]}".replace("_", " ").title()
+                bounds = []
+                if match.get("versionStartIncluding"):
+                    bounds.append(f"from {match['versionStartIncluding']}")
+                if match.get("versionStartExcluding"):
+                    bounds.append(f"after {match['versionStartExcluding']}")
+                if match.get("versionEndIncluding"):
+                    bounds.append(f"up to {match['versionEndIncluding']}")
+                if match.get("versionEndExcluding"):
+                    bounds.append(f"before {match['versionEndExcluding']}")
+                if bounds:
+                    text = f"{name} {' '.join(bounds)}"
+                elif parts[5] not in ("*", "-", ""):
+                    text = f"{name} {parts[5]}"
+                else:
+                    text = f"{name} (all versions)"
+                if text not in out:
+                    out.append(text)
+                if len(out) >= limit:
+                    return out
+    return out
+
+
 class NvdCollector(BaseCollector):
     """Client for NIST National Vulnerability Database (NVD) 2.0 REST API."""
 
@@ -178,6 +216,7 @@ class NvdCollector(BaseCollector):
             Raw_Content=raw_content_str,
             CVE_ID=cve_id,
             Vendor_Product=vendor_product,
+            Affected_Versions=affected_versions(cve.get("configurations", [])) or None,
             CVSS=cvss_score,
             CVSS_Version=cvss_version,
             CWE=cwes if cwes else None,
@@ -196,6 +235,12 @@ class NvdCollector(BaseCollector):
     # published number (2.1 where the same CNA's v3.1 base score is 6.3) and would
     # make the CVSS-vs-AI discrepancy check fire on scores that aren't comparable.
     _CVSS_VERSIONS = (("cvssMetricV31", "3.1"), ("cvssMetricV30", "3.0"), ("cvssMetricV40", "4.0"))
+
+    def versions_for(self, cve_id: str) -> List[str]:
+        """Affected versions from NVD's record for one CVE ([] if NVD has none or can't be reached)."""
+        env = self.fetch_by_cve_id(cve_id)
+        versions = (env.Affected_Versions if env else None) or []
+        return [versions] if isinstance(versions, str) else list(versions)
 
     def _extract_cvss(self, metrics: Dict[str, Any]) -> Tuple[Optional[float], Optional[str]]:
         candidates = []
