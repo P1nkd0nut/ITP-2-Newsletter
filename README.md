@@ -34,9 +34,9 @@ The pipeline only runs while Docker Desktop is running. Turn on **Start Docker D
 
 ---
 
-## Phase 1: Source Collection & Knowledge Ingestion (Task 1.3)
+## Source collection and ingestion
 
-This repository contains the completed **Stage 1 (Knowledge Ingestion & Staging Standardization)** pipeline. It collects unstructured vulnerability disclosures, proof-of-concept repositories, and offensive security research across Web and Mobile ecosystems, outputting to a standardized JSON staging envelope without data corruption.
+The first stage collects unstructured vulnerability disclosures, proof-of-concept repositories, and offensive security research across Web and Mobile ecosystems, outputting to a standardized JSON staging envelope without data corruption.
 
 ### Monitored Threat Intelligence Feeds
 - **CISA KEV**: Actively exploited vulnerabilities catalog (flagged with `KEV_Status = True`).
@@ -82,7 +82,7 @@ ITP2/
 │   ├── config.py                              # Central configuration & API endpoints
 │   ├── run_ingestion.py                       # CLI runner with rich summary tables & envelope previews
 │   ├── run_triage.py                          # CLI runner for Scope Pre-Filter, AI Scoring, & Anomaly Gate
-│   ├── run_benchmark.py                       # Empirical Performance & Fact Extraction Benchmark (Task 4.1)
+│   ├── run_benchmark.py                       # Fact extraction benchmark on the 20 ground-truth items
 │   ├── run_chunking.py                        # CLI runner that cleans envelopes and writes chunked output
 │   ├── run_indexing.py                        # Embeds chunks with nomic-embed-text and upserts them into Qdrant
 │   ├── run_summarise.py                       # Writes grounded cards and gates them before publishing
@@ -90,7 +90,6 @@ ITP2/
 │   ├── run_gate_report.py                     # Gate results on real cards, re-check, manual review sheet
 │   ├── run_novelty_eval.py                    # Tunes the novelty similarity threshold on labelled pairs
 │   ├── llm_usage.py                           # Logs OpenRouter tokens and cost per call
-│   ├── export_triage_dashboard.py             # Generative UI artifact exporter
 │   ├── data/
 │   │   ├── ground_truth_20.json               # 20-sample human-verified Web & Mobile extraction set
 │   │   └── staging/
@@ -121,7 +120,7 @@ ITP2/
 │   │   └── card_store.py                      # Passed cards (grounded_cards.json) & quarantine log
 │   └── storage/
 │       ├── vector_db.py                       # Qdrant client helper
-│       ├── init_qdrant.py                     # Creates the Qdrant collections (Task 2.1)
+│       ├── init_qdrant.py                     # Creates the Qdrant collections
 │       ├── embedder.py                        # Ollama nomic-embed-text client
 │       └── indexer.py                         # Chunk upsert & per-item retrieval (Qdrant, file fallback)
 ├── Frontend/
@@ -131,10 +130,10 @@ ITP2/
 │   ├── data.js                                # Auto-synced envelopes data for instant loading
 │   └── run_dashboard.py                       # 1-command local dashboard server
 ├── Testing/
-│   ├── test_ingestion.py                      # Phase 1 test suite (10 unit & integration tests)
+│   ├── test_ingestion.py                      # Envelope schema and live collectors (10 tests)
 │   ├── test_nvd_collector.py                  # NVD collector: newest CVEs first, CVSS choice, affected versions, NVD record text (11 tests)
-│   ├── test_triage.py                         # Phase 2 test suite (9 pre-filter, scoring, & OpenRouter tests)
-│   ├── test_benchmark.py                      # Task 4.1 benchmark test suite (8 validation tests)
+│   ├── test_triage.py                         # Pre-filter, scoring and OpenRouter client (9 tests)
+│   ├── test_benchmark.py                      # Ground-truth benchmark metrics (8 tests)
 │   ├── test_verification.py                   # Verification gate test suite (24 grounding & retry tests)
 │   ├── test_dashboard_api.py                  # REST API, channel dispatcher & score explanation tests (13 tests)
 │   ├── test_link_validator.py                 # Link health validator tests (13 tests)
@@ -151,7 +150,6 @@ ITP2/
 │   ├── test_novelty_eval.py                   # Novelty threshold tuning and labelled pairs (6 tests)
 │   ├── test_run_metrics.py                    # Per-stage latency and LLM cost reporting (4 tests)
 │   └── MANUAL_CHECKS.md                       # How the team hand-checks the automated results
-├── DEMO_GUIDE.md                              # Presentation script & step-by-step cheatsheet for demo
 ├── HANDOVER.md                                # Setup, configuration, quarantine review, adding a source, limitations
 └── docker-compose.yml                         # app, scheduler, Qdrant (vector DB), Ollama (embeddings)
 ```
@@ -168,7 +166,7 @@ cd ITP-2-Newsletter
 pip install -r requirements.txt  # (pydantic, feedparser, rich, qdrant-client)
 ```
 
-### 2. Start the Vector Database Infrastructure (Task 2.1)
+### 2. Start the vector database
 Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
 
 Start the self-hosted Qdrant vector database and local Ollama embedding server:
@@ -207,13 +205,13 @@ python Backend/run_ingestion.py --sources cisa_kev,portswigger --limit 2
 python Backend/run_ingestion.py --sources cisa_kev --poc --limit 2
 ```
 
-### 4. Run Pentest Scope Pre-Filter & AI Priority Scoring (Phase 2, Task 1.2 & 2.4)
+### 4. Run the scope pre-filter and priority scoring
 Execute the Pre-Filter Gate and 100-point AI practical severity ranking:
 ```bash
 python Backend/run_triage.py
 ```
 This runs:
-1. **Scope Pre-Filter Gate**: Isolates `[WEB]` and `[MOBILE]` threats via feed origin, Task 1.2 CWE taxonomy, and technical keywords. Non-web/mobile items (print spoolers, firmwares) bypass the weekly scoring queue.
+1. **Scope Pre-Filter Gate**: Isolates `[WEB]` and `[MOBILE]` threats via feed origin, a CWE taxonomy, and technical keywords. Non-web/mobile items (print spoolers, firmwares) bypass the weekly scoring queue.
 2. **AI Practical Severity Assessment (Qwen 2.5)**: Evaluates real-world offensive impact (RCE vs DoS) with Qwen 2.5 72B on OpenRouter, falling back to a local Ollama model and then to keyword rules.
 3. **100-Point Scoring Engine**:
    - Active exploitation (in CISA KEV): **40 pts**
@@ -223,7 +221,7 @@ This runs:
 
 **Why 40 / 40 / 20.** The weights follow SSVC's three exploitation states: none, public PoC, active. Active exploitation (a CISA KEV listing) carries the most weight because it is confirmed evidence that attackers use the flaw. A public PoC carries half as much: it lowers the barrier but does not prove use. Practical severity carries the remaining 40, so within each exploitation state items are ordered by what an attacker gains. As a result KEV works almost as a tier: a KEV item with severity above 5 outranks every non-KEV item (at most 60 with a PoC, 40 without). This is intended, since exploited issues should come first. Official CVSS is left out of the score because new records often have none or a worst-case default; it is kept for the discrepancy flag. The weights are round numbers so each card can explain its score in one line; they were not fitted to data. Items sharing a CVE ID are scored as one story (`group_by_cve`).
 
-### 4b. Write Grounded Summaries (Task 2.3, 3.1 & 3.2)
+### 4b. Write grounded summaries
 Chunk the staged items, embed the chunks into Qdrant, then write and gate the cards:
 ```bash
 python Backend/run_chunking.py
@@ -247,7 +245,7 @@ Measure the gate on the cards it actually saw with `python Backend/run_gate_repo
 
 **Run metrics.** Every `run_pipeline.py` run ends with a `Run metrics` block: seconds per stage, end-to-end time, and LLM calls, tokens and cost (as reported by OpenRouter) per stage. Each run is also appended to `Backend/data/staging/run_metrics.jsonl`.
 
-### 5. Run Task 4.1 Ground-Truth Benchmark & Validation Suite
+### 5. Run the ground-truth benchmark
 Execute empirical validation across the 20-sample ground-truth Web & Mobile dataset:
 ```bash
 python Backend/run_benchmark.py
@@ -321,7 +319,3 @@ Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, 
 python -m unittest discover -s Testing -p "test_*.py" -v
 ```
 Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access; they skip automatically when the feeds can't be reached. CI runs the other 263 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
-
-### 8. Presentation & Demo Guide
-For full presentation instructions, talking points, and cheat-sheet commands for project reviews, see:
-[`DEMO_GUIDE.md`](DEMO_GUIDE.md)
