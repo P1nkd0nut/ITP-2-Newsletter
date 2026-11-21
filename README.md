@@ -123,7 +123,7 @@ ITP2/
 │       ├── embedder.py                        # Ollama nomic-embed-text client
 │       └── indexer.py                         # Chunk upsert & per-item retrieval (Qdrant, file fallback)
 ├── Frontend/
-│   ├── dashboard/                             # Dashboard served at / (index.html, app.js, styles.css, prebuilt tailwind.css)
+│   ├── dashboard/                             # Dashboard served at / (index.html, app.js, reader.js for reader mode, styles.css, prebuilt tailwind.css)
 │   ├── reader/                                # Reader page for one item (/incident/<id>)
 │   ├── index.html                             # Fallback page, served only if dashboard/ is missing
 │   ├── data.js                                # Auto-synced envelopes data for instant loading
@@ -270,7 +270,7 @@ python Frontend/run_dashboard.py
 ```
 
 #### Channel Architecture
-- **Primary Delivery Channel (Web Dashboard)**: The authoritative home for weekly newsletter digests, 100-point priority rankings with a per-item score explanation, gate-verified cards, hybrid search, and raw envelope verification.
+- **Primary Delivery Channel (Web Dashboard)**: The authoritative home for weekly newsletter digests, 100-point priority rankings with a per-item score explanation, gate-verified cards, hybrid search, and raw envelope verification. The **Reader mode** button in the header switches to a newsletter layout of the top 12 verified cards (masthead, contents, and per item: what it is, why it matters, affected versions, how to test, how to fix, PoC and sources). Open `http://localhost:5000/#reader` to start in it; the dashboard stays the home page.
 - **Secondary Delivery Channel (Telegram Bot)**: The weekly digest: a pinned header ("Edition 2026-Wnn") and one message per verified incident with its summary, the first testing command in a code block, and links to the NVD record, the source advisory and a public PoC. Each link is written out in full on its own line, so it shows and opens on any device, including phones. Telegram cards never link to the dashboard, because it runs on a team PC most readers can't reach. The bot needs the "Pin Messages" admin right so other PCs can see the week was already posted.
 
 #### REST API Endpoints Reference
