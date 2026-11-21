@@ -241,8 +241,8 @@
     "CVE_ID": "CVE-2026-129247",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 5.1,
-    "CVSS_Version": "4.0",
+    "CVSS": 4.7,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-22"
     ],
@@ -277,8 +277,8 @@
     "CVE_ID": "CVE-2026-129248",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 5.3,
-    "CVSS_Version": "4.0",
+    "CVSS": 4.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-118",
       "CWE-839"
@@ -1099,8 +1099,8 @@
     "CVE_ID": "CVE-2026-129181",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 5.5,
-    "CVSS_Version": "4.0",
+    "CVSS": 7.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-74",
       "CWE-89"
@@ -1625,8 +1625,8 @@
     "CVE_ID": "CVE-2026-109582",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 5.1,
-    "CVSS_Version": "4.0",
+    "CVSS": 4.0,
+    "CVSS_Version": "3.0",
     "CWE": [
       "CWE-922"
     ],
@@ -1659,8 +1659,8 @@
     "CVE_ID": "CVE-2026-113437",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 6.9,
-    "CVSS_Version": "4.0",
+    "CVSS": 5.3,
+    "CVSS_Version": "3.0",
     "CWE": [
       "CWE-22"
     ],
@@ -1694,8 +1694,8 @@
     "CVE_ID": "CVE-2026-120386",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 5.1,
-    "CVSS_Version": "4.0",
+    "CVSS": 4.3,
+    "CVSS_Version": "3.0",
     "CWE": [
       "CWE-237"
     ],
@@ -1729,8 +1729,8 @@
     "CVE_ID": "CVE-2026-124577",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 8.9,
-    "CVSS_Version": "4.0",
+    "CVSS": 9.8,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-287"
     ],
@@ -1765,8 +1765,8 @@
     "CVE_ID": "CVE-2026-124578",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 6.9,
-    "CVSS_Version": "4.0",
+    "CVSS": 5.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-287",
       "CWE-306"
@@ -3445,8 +3445,8 @@
     "CVE_ID": "CVE-2026-116229",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 2.0,
-    "CVSS_Version": "4.0",
+    "CVSS": 3.5,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-79",
       "CWE-94"
@@ -3485,8 +3485,8 @@
     "CVE_ID": "CVE-2026-116230",
     "Vendor_Product": "Ndemiccreations Plague Inc Evolved",
     "Affected_Versions": null,
-    "CVSS": 2.1,
-    "CVSS_Version": "4.0",
+    "CVSS": 7.8,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-20",
       "CWE-502"
@@ -3536,8 +3536,8 @@
     "CVE_ID": "CVE-2026-116231",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 8.6,
-    "CVSS_Version": "4.0",
+    "CVSS": 9.9,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-74",
       "CWE-93"
@@ -3574,8 +3574,8 @@
     "CVE_ID": "CVE-2026-116232",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 8.6,
-    "CVSS_Version": "4.0",
+    "CVSS": 9.9,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-74",
       "CWE-93"
@@ -3860,8 +3860,8 @@
     "CVE_ID": "CVE-2026-116056",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 5.3,
-    "CVSS_Version": "4.0",
+    "CVSS": 6.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-918"
     ],
@@ -3896,8 +3896,8 @@
     "CVE_ID": "CVE-2026-116057",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 2.1,
-    "CVSS_Version": "4.0",
+    "CVSS": 6.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-284",
       "CWE-434"
@@ -3933,8 +3933,8 @@
     "CVE_ID": "CVE-2026-116058",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 5.3,
-    "CVSS_Version": "4.0",
+    "CVSS": 6.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-74",
       "CWE-94"
@@ -4039,8 +4039,8 @@
     "CVE_ID": "CVE-2026-116054",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 1.2,
-    "CVSS_Version": "4.0",
+    "CVSS": 2.2,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-326",
       "CWE-916"
@@ -4077,8 +4077,8 @@
     "CVE_ID": "CVE-2026-116055",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 2.1,
-    "CVSS_Version": "4.0",
+    "CVSS": 6.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-74",
       "CWE-89"
@@ -4963,8 +4963,8 @@
     "CVE_ID": "CVE-2026-108769",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 2.1,
-    "CVSS_Version": "4.0",
+    "CVSS": 4.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-404"
     ],
@@ -5062,8 +5062,8 @@
     "CVE_ID": "CVE-2026-108770",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 6.9,
-    "CVSS_Version": "4.0",
+    "CVSS": 5.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-918"
     ],
@@ -5104,8 +5104,8 @@
     "CVE_ID": "CVE-2026-108772",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 5.5,
-    "CVSS_Version": "4.0",
+    "CVSS": 5.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-22"
     ],
@@ -5141,8 +5141,8 @@
     "CVE_ID": "CVE-2026-108773",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 2.1,
-    "CVSS_Version": "4.0",
+    "CVSS": 6.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-74",
       "CWE-89"
@@ -5178,8 +5178,8 @@
     "CVE_ID": "CVE-2026-108774",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 2.1,
-    "CVSS_Version": "4.0",
+    "CVSS": 6.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-74",
       "CWE-89"
@@ -5215,8 +5215,8 @@
     "CVE_ID": "CVE-2026-108775",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 2.1,
-    "CVSS_Version": "4.0",
+    "CVSS": 6.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-74",
       "CWE-89"
@@ -5253,8 +5253,8 @@
     "CVE_ID": "CVE-2026-108777",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 2.1,
-    "CVSS_Version": "4.0",
+    "CVSS": 6.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-74",
       "CWE-89"
@@ -5290,8 +5290,8 @@
     "CVE_ID": "CVE-2026-108778",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 2.1,
-    "CVSS_Version": "4.0",
+    "CVSS": 6.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-74",
       "CWE-89"
@@ -5327,8 +5327,8 @@
     "CVE_ID": "CVE-2026-108779",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 2.1,
-    "CVSS_Version": "4.0",
+    "CVSS": 6.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-74",
       "CWE-89"
@@ -5364,8 +5364,8 @@
     "CVE_ID": "CVE-2026-108781",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 2.1,
-    "CVSS_Version": "4.0",
+    "CVSS": 6.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-74",
       "CWE-89"
@@ -5402,8 +5402,8 @@
     "CVE_ID": "CVE-2026-108782",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 2.1,
-    "CVSS_Version": "4.0",
+    "CVSS": 6.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-74",
       "CWE-89"
@@ -5439,8 +5439,8 @@
     "CVE_ID": "CVE-2026-108783",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 5.5,
-    "CVSS_Version": "4.0",
+    "CVSS": 7.3,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-1392"
     ],
@@ -5476,8 +5476,8 @@
     "CVE_ID": "CVE-2026-108784",
     "Vendor_Product": null,
     "Affected_Versions": null,
-    "CVSS": 5.5,
-    "CVSS_Version": "4.0",
+    "CVSS": 6.5,
+    "CVSS_Version": "3.1",
     "CWE": [
       "CWE-840"
     ],

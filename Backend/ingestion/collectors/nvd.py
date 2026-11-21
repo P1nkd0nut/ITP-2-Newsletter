@@ -190,26 +190,26 @@ class NvdCollector(BaseCollector):
         )
         return envelope
 
+    # Preference order for the official score. NVD's own (Primary) assessment comes
+    # first. Among CNA scores, v3.1/v3.0 come before v4.0: some CNAs (VulDB, for
+    # example) fill in v4.0 threat metrics such as Exploit Maturity, which lowers the
+    # published number (2.1 where the same CNA's v3.1 base score is 6.3) and would
+    # make the CVSS-vs-AI discrepancy check fire on scores that aren't comparable.
+    _CVSS_VERSIONS = (("cvssMetricV31", "3.1"), ("cvssMetricV30", "3.0"), ("cvssMetricV40", "4.0"))
+
     def _extract_cvss(self, metrics: Dict[str, Any]) -> Tuple[Optional[float], Optional[str]]:
-        # Check CVSS v4.0 first
-        if "cvssMetricV40" in metrics and metrics["cvssMetricV40"]:
-            data = metrics["cvssMetricV40"][0].get("cvssData", {})
-            score = data.get("baseScore")
-            return float(score) if score is not None else None, "4.0"
-
-        # Check CVSS v3.1
-        if "cvssMetricV31" in metrics and metrics["cvssMetricV31"]:
-            data = metrics["cvssMetricV31"][0].get("cvssData", {})
-            score = data.get("baseScore")
-            return float(score) if score is not None else None, "3.1"
-
-        # Check CVSS v3.0
-        if "cvssMetricV30" in metrics and metrics["cvssMetricV30"]:
-            data = metrics["cvssMetricV30"][0].get("cvssData", {})
-            score = data.get("baseScore")
-            return float(score) if score is not None else None, "3.0"
-
-        return None, None
+        candidates = []
+        for rank, (key, version) in enumerate(self._CVSS_VERSIONS):
+            for entry in metrics.get(key) or []:
+                score = (entry.get("cvssData") or {}).get("baseScore")
+                if score is None:
+                    continue
+                primary = entry.get("type") == "Primary"
+                candidates.append((0 if primary else 1, rank, float(score), version))
+        if not candidates:
+            return None, None
+        _, _, score, version = min(candidates, key=lambda c: (c[0], c[1]))
+        return score, version
 
     def _extract_cwes(self, weaknesses: List[Dict[str, Any]]) -> List[str]:
         cwes = []
