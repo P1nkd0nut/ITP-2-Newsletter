@@ -5,7 +5,8 @@ as the primary authoritative delivery platform per supervisor specifications.
 
 The bot token is read from TELEGRAM_BOT_TOKEN in .env and is never written to
 channel_config.json (which is committed to git) or returned by the API.
-Each message links to that incident's reader page at BASE_URL/incident/<Item_ID>.
+Messages carry only public links (NVD, the source, the first live PoC); they never
+link to the dashboard, which runs on a team PC most readers can't reach.
 """
 import html
 import json

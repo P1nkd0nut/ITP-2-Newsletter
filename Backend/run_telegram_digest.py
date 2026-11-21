@@ -96,7 +96,7 @@ def main():
         print(text)
         print()
 
-    print(f"Links point to: {base_url()}")
+    print(f"Dashboard address (not linked from Telegram): {base_url()}")
     if args.dry_run:
         print(f"Dry run: {len(messages)} messages built, nothing sent.")
         return
