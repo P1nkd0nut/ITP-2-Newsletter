@@ -162,13 +162,15 @@ class PriorityScoringEngine:
         if is_discrepancy:
             if cvss > ai_severity:
                 note = (
-                    f"CVSS is significantly higher than AI severity (CVSS: {cvss} vs AI: {ai_severity}, delta={delta}). "
-                    "Likely an inflated Day-0 worst-case default score by vendor; AI identified restricted operational attack conditions."
+                    f"CVSS is much higher than the AI severity (CVSS: {cvss} vs AI: {ai_severity}, delta={delta}). "
+                    "Possible reasons: a worst-case default score on a new record, or attack conditions the AI judged "
+                    "restrictive. Review the advisory before relying on either score."
                 )
             else:
                 note = (
-                    f"AI severity is significantly higher than CVSS (AI: {ai_severity} vs CVSS: {cvss}, delta={delta}). "
-                    "NVD score appears underestimated; AI identified practical unauthenticated RCE or Auth Bypass exploit primitives."
+                    f"AI severity is much higher than CVSS (AI: {ai_severity} vs CVSS: {cvss}, delta={delta}). "
+                    "Possible reasons: the official score understates the practical impact, or the AI overrated it. "
+                    "Review the advisory before relying on either score."
                 )
 
         return CVSSDiscrepancy(

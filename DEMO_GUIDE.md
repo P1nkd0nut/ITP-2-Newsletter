@@ -11,7 +11,7 @@
 
 1. Start everything: `docker compose up -d --build`, then `docker compose logs -f scheduler` until you see `=== Run metrics ===`.
 2. Open **http://localhost:5000** and check that items show the green **✓ Verified** badge.
-3. In `.env`, set `BASE_URL` to an address the audience can open, or leave it as `http://127.0.0.1:5000`. With 127.0.0.1, Telegram cards carry only public NVD/source/PoC links and no dashboard link.
+3. Telegram cards carry only public NVD/source/PoC links (written out in full), so they open on any phone. The dashboard itself is reachable from a phone on the same Wi-Fi at `http://<PC IP>:5000` if Windows Firewall allows port 5000.
 4. Make sure the bot is an admin of the channel **with the "Pin Messages" right** (the weekly duplicate guard pins each edition).
 5. Have a terminal open in the repo. Outside Docker, prefix commands with `python`; inside, use `docker compose exec app python ...`.
 
@@ -37,7 +37,7 @@ Point at: one line per source (NVD, CISA KEV, GitHub Advisory, PortSwigger, Proj
 python Backend/run_triage.py
 ```
 
-Point at: the 100-point score (KEV 40 + AI severity 40 + PoC 20), an `[!] ANOMALY` line (CVSS vs AI differ by 4 or more), and an item whose score includes KEV/PoC points it got from another source.
+Point at: the 100-point score (KEV 40 + AI severity 40 + PoC 20), an `[!] ANOMALY` line (CVSS vs AI differ by 4 or more), and the "How items are ranked" popup (📘 in the header), which explains why KEV carries 40 points. Story scoring only shows when the same CVE arrives from two feeds in one run; if none does, show `test_change_tracking.py` (`TestGroupByCve`).
 
 > *"Items that share a CVE ID are scored as one story: the NVD record, its KEV entry and a GitHub PoC all count together, so the NVD copy isn't under-ranked just because NVD doesn't know about the exploit."*
 
@@ -79,7 +79,7 @@ Then show the real channel on a phone.
 
 Point at:
 - The header `Edition 2026-Wnn`, pinned in the channel.
-- Each card: rank, CVE, score, verified summary, the first testing command in a code block, and **NVD · Source · PoC** links that open on any device.
+- Each card: rank, CVE, score, verified summary, the first testing command in a code block, and the NVD, Source and PoC links written out in full, which open on any device.
 - Run it again without `--dry-run`: "Edition already pinned, no update."
 
 > *"Each teammate's PC runs the scheduler, so without a guard the channel got the same week twice. Now the header is pinned and any PC that sees this week's edition pinned skips. Items already sent are only re-sent when something changed, like a new KEV listing or a new PoC."*

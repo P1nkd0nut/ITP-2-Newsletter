@@ -78,6 +78,53 @@ def date_windows(today: Optional[date] = None) -> Dict[str, str]:
     return {"today": today.isoformat(), "week_start": (today - timedelta(days=7)).isoformat()}
 
 
+def severity_band(score: float) -> str:
+    """Words for an AI practical severity rating, using the bands in the scoring prompt."""
+    if score >= 9.0:
+        return "critical"
+    if score >= 7.0:
+        return "high"
+    if score >= 4.0:
+        return "medium"
+    return "low"
+
+
+def explain_score(in_scope: bool, kev_pts: float, ai_pts: float, poc_pts: float, total: float,
+                  ai_sev: float, reasoning: Optional[str], scope_reason: Optional[str]):
+    """
+    One line per factor of the 100-point score, plus a verdict. The verdict is
+    based on the factors, not on the total: an item that is not in CISA KEV and
+    has no public PoC can score at most 40, however severe it is, so labelling
+    by total alone would call a critical RCE "low risk".
+    """
+    if kev_pts > 0:
+        kev_eval = ("+40 pts: listed in CISA's Known Exploited Vulnerabilities catalogue, "
+                    "so attackers have been seen using it.")
+    else:
+        kev_eval = ("0 pts: not in CISA KEV. This does not rule out exploitation; "
+                    "none has been confirmed.")
+    if poc_pts > 0:
+        poc_eval = ("+20 pts: a public GitHub repository names this CVE as a proof of concept "
+                    "(linked below; not run or verified by us).")
+    else:
+        poc_eval = "0 pts: no public proof-of-concept repository found for this CVE."
+    ai_eval = (f"+{ai_pts:.1f} of 40 pts (rated {ai_sev:.1f}/10, {severity_band(ai_sev)}): "
+               f"{reasoning or 'Practical attack impact assessed from the advisory text.'}")
+
+    band = f"practical severity {ai_sev:.1f}/10 ({severity_band(ai_sev)})"
+    if not in_scope:
+        verdict = f"OUT OF SCOPE (0/100): {scope_reason or 'Not a web or mobile testing target.'}"
+    elif kev_pts > 0:
+        verdict = (f"EXPLOITED IN THE WILD ({total:.1f}/100): in CISA KEV, so it ranks above every item "
+                   f"that is not. Among KEV items it is ordered by {band} and public PoC availability.")
+    elif poc_pts > 0:
+        verdict = (f"PUBLIC POC AVAILABLE ({total:.1f}/100): not in CISA KEV, but public exploit code exists. "
+                   f"Ranked by {band}.")
+    else:
+        verdict = (f"NO KNOWN EXPLOITATION ({total:.1f}/100): not in CISA KEV and no public PoC found, "
+                   f"so it is ranked on {band} alone (at most 40 points).")
+    return kev_eval, poc_eval, ai_eval, verdict
+
 class DataService:
     def __init__(self):
         self._cache: Optional[List[Dict[str, Any]]] = None
@@ -261,26 +308,10 @@ class DataService:
         total_score = float(c.get("priority_score", 0.0))
         ai_sev = float(ai.get("severity_score", 0.0))
 
-        if kev_pts > 0:
-            kev_eval = "Awarded +40.0 pts (MAX): Confirmed active in-the-wild exploitation cataloged in CISA KEV. Threat actors are actively weaponizing this flaw."
-        else:
-            kev_eval = "Awarded 0.0 pts: No active exploitation in the wild currently verified in CISA KEV. Threat is actively monitored but unweaponized."
-
-        if poc_pts > 0:
-            poc_eval = "Awarded +20.0 pts (MAX): Public weaponized Proof-of-Concept repository exists on GitHub/Exploit-DB, dramatically lowering attacker barrier to entry."
-        else:
-            poc_eval = "Awarded 0.0 pts: No public exploit script cataloged. Attackers must reverse-engineer the flaw independently."
-
-        ai_eval = f"Awarded +{ai_pts:.1f} / 40.0 pts (Rating {ai_sev:.1f}/10): {ai.get('reasoning') or 'Evaluated practical attack vector and privilege hurdles.'}"
-
-        if total_score >= 80.0:
-            ai_verdict = f"CRITICAL EMERGENCY PRIORITY ({total_score:.1f}/100): Severe threat combining high AI practical exploitability with confirmed in-the-wild weaponization or public PoC availability."
-        elif total_score >= 60.0:
-            ai_verdict = f"HIGH PRIORITY THREAT ({total_score:.1f}/100): High practical attacker utility against perimeter web interfaces or mobile components. Prioritize for upcoming remediation cycle."
-        elif total_score >= 40.0:
-            ai_verdict = f"MEDIUM RISK ({total_score:.1f}/100): Actionable offensive primitive, but exploitation is bounded by prerequisites, internal network access, or lack of public weaponization."
-        else:
-            ai_verdict = f"LOW RISK / MONITORED ({total_score:.1f}/100): Minimal immediate risk. Exploitation requires physical access, excessive credentials, or causes only transient service disruption."
+        kev_eval, poc_eval, ai_eval, ai_verdict = explain_score(
+            pf.get("is_in_scope", False), kev_pts, ai_pts, poc_pts, total_score, ai_sev,
+            ai.get("reasoning"), pf.get("reason"),
+        )
 
         c["ai_evaluation_breakdown"] = {
             "total_score": total_score,
