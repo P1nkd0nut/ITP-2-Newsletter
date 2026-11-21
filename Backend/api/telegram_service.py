@@ -321,9 +321,11 @@ def format_digest_item(c: Dict[str, Any], rank: int) -> str:
     update = (c.get("novelty") or {})
     if update.get("status") == "UPDATE" and update.get("reasons"):
         flags.append("🔁 Update: " + ", ".join(update["reasons"]))
-    if env.get("KEV_Status"):
+    points = c.get("score_breakdown") or {}
+    # Story scoring: the kept copy may be the NVD record while the KEV entry or PoC came from a sibling
+    if env.get("KEV_Status") or points.get("cisa_kev_points"):
         flags.append("🔥 Actively exploited")
-    if env.get("PoC_URLs"):
+    if env.get("PoC_URLs") or points.get("poc_points"):
         flags.append("🧪 Public PoC")
 
     def build(summary_limit: int) -> str:
