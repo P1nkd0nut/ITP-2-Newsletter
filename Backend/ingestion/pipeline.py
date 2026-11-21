@@ -8,7 +8,7 @@ import json
 import logging
 from pathlib import Path
 from typing import List, Dict, Optional, Any
-from Backend.config import STAGING_DIR
+from Backend.config import NVD_LIMIT, STAGING_DIR
 from Backend.ingestion.collectors import (
     BaseCollector,
     CisaKevCollector,
@@ -136,7 +136,10 @@ class IngestionPipeline:
 
             try:
                 logger.info(f"Running collector: {collector.name}")
-                items = collector.collect(limit=limit_per_source)
+                limit = limit_per_source
+                if key == "nvd" and NVD_LIMIT and limit_per_source:
+                    limit = max(limit_per_source, NVD_LIMIT)
+                items = collector.collect(limit=limit)
                 
                 # Optional PoC detection enrichment
                 if self.enable_poc_detection and self.poc_detector:
