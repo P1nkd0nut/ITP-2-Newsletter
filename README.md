@@ -257,7 +257,7 @@ This computes and reports:
 - **CVSS Discrepancy Flag Accuracy** (Observed: **100%** with the model). Only 1 of the 20 items is labelled as a real discrepancy, so this is a small check.
 - **AI Severity Error**: mean absolute difference between the AI rating and the labelled `expected_ai_severity`, in points out of 10.
 
-### 6. Launch Executive Threat Intelligence & Newsletter Hub (Primary Delivery Channel)
+### 6. Launch the GroundedCVE dashboard (Primary Delivery Channel)
 Start the unified Flask REST API and Executive Web Dashboard:
 ```bash
 python run_server.py

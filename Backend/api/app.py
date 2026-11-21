@@ -23,7 +23,7 @@ def create_app():
     app.register_blueprint(api_bp)
     app.register_blueprint(search_bp)
 
-    # Root route serves the primary Newsletter Dashboard
+    # Root route serves the primary GroundedCVE dashboard
     @app.route("/")
     def index():
         dashboard_index = DASHBOARD_DIR / "index.html"

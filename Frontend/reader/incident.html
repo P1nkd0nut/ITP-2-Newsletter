@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Incident · Grounded Threat News</title>
+  <title>Incident · GroundedCVE</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
   <!-- Tailwind, prebuilt so the page works offline (rebuild: see HANDOVER.md) -->
   <link rel="stylesheet" href="/tailwind.css">
@@ -26,7 +26,7 @@
     <div class="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
       <a href="/" class="flex items-center space-x-2.5">
         <span class="h-8 w-8 rounded-lg bg-cyan-600 flex items-center justify-center font-bold text-white font-mono text-sm">GT</span>
-        <span class="font-bold text-white tracking-tight">Grounded Threat News</span>
+        <span class="font-bold text-white tracking-tight">GroundedCVE</span>
       </a>
       <a href="/" class="text-xs text-slate-400 hover:text-white">All incidents →</a>
     </div>
@@ -119,7 +119,7 @@
       const pocs = pocEntries(c);
       const article = document.getElementById('incident');
 
-      document.title = `${cve || title} · Grounded Threat News`;
+      document.title = `${cve || title} · GroundedCVE`;
 
       // Header: tags, CVE, title, priority
       const tags = el('div', 'flex flex-wrap items-center gap-2',

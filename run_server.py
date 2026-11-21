@@ -1,6 +1,6 @@
 """
 Unified Application Launcher for GroundedCVE Threat Intelligence Platform.
-Starts the Flask REST API and serves the Executive Newsletter Dashboard.
+Starts the Flask REST API and serves the GroundedCVE dashboard.
 """
 import sys
 import webbrowser

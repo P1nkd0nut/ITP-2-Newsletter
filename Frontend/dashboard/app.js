@@ -1,5 +1,5 @@
 /**
- * Grounded Threat News — Modern Tech News Application Logic
+ * GroundedCVE dashboard application logic
  * Short, sweet, skimmable cybersecurity intelligence
  */
 

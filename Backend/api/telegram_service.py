@@ -360,7 +360,7 @@ def format_digest_header(items: List[Dict[str, Any]], days: int = 7, edition: Op
     web = sum(1 for c in items if (c.get("pre_filter") or {}).get("category") == "WEB")
     mobile = sum(1 for c in items if (c.get("pre_filter") or {}).get("category") == "MOBILE")
     period = "this week" if days == 7 else f"in the last {days} days"
-    lines = ["🛡️ <b>Grounded Threat News · Weekly Brief</b>"]
+    lines = ["🛡️ <b>GroundedCVE · Weekly Brief</b>"]
     if edition:
         lines.append(f"<i>Edition {esc(edition)}</i>")
     lines.append("")
