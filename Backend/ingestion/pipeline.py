@@ -6,6 +6,7 @@ standardization, optionally enriches with PoC repositories, and saves to staging
 from datetime import datetime, timezone
 import json
 import logging
+import time
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 from Backend.config import NVD_LIMIT, STAGING_DIR
@@ -93,6 +94,37 @@ class IngestionPipeline:
             result.append(updated)
         return result, counts
 
+    def add_nvd_versions(self, envelopes: List[StagingEnvelope], max_lookups: int = 10) -> int:
+        """
+        CISA KEV entries name no versions, so take the affected versions from the
+        same CVE's NVD record: from an NVD item in this batch when there is one,
+        otherwise by looking the CVE up on NVD (at most `max_lookups` per run, to
+        stay inside NVD's rate limit; the rest are filled on later runs).
+        Returns how many items were filled.
+        """
+        nvd_versions = {
+            e.CVE_ID: e.Affected_Versions
+            for e in envelopes
+            if e.Source_Type == SourceType.NVD and e.CVE_ID and e.Affected_Versions
+        }
+        nvd = self.registry.get("nvd")
+        filled = lookups = 0
+        for env in envelopes:
+            if env.Source_Type != SourceType.CISA_KEV or not env.CVE_ID or env.Affected_Versions:
+                continue
+            versions = nvd_versions.get(env.CVE_ID)
+            if not versions and nvd is not None and lookups < max_lookups:
+                lookups += 1
+                versions = nvd.versions_for(env.CVE_ID)
+                time.sleep(1 if getattr(nvd, "api_key", None) else 6)
+            if versions:
+                env.Affected_Versions = versions
+                env.Extra_Metadata = {**(env.Extra_Metadata or {}), "affected_versions_from": f"NVD record for {env.CVE_ID}"}
+                filled += 1
+        if filled:
+            logger.info(f"Added affected versions from NVD to {filled} CISA KEV items ({lookups} NVD lookups)")
+        return filled
+
     def run(
         self,
         sources: Optional[List[str]] = None,
@@ -173,6 +205,9 @@ class IngestionPipeline:
         if recheck_older and unique_envelopes:
             unique_envelopes, rechecked = self._recheck_due_items(unique_envelopes, start_time)
             change_counts.update(rechecked)
+
+        if unique_envelopes and (sources is None or "nvd" in target_keys or "cisa_kev" in target_keys):
+            self.add_nvd_versions(unique_envelopes)
 
         end_time = datetime.now(timezone.utc)
         duration_seconds = round((end_time - start_time).total_seconds(), 2)

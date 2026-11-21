@@ -850,6 +850,7 @@ function openDetailModal(itemId) {
   const fullDesc = (card && card.mechanism) || indepth.full_description || ai.reasoning || env.Title || 'No description available.';
   document.getElementById('mFullDescription').innerText = fullDesc;
   renderCardSections(card);
+  renderSourceFacts(item.source_facts || {});
 
   document.getElementById('mImpact').innerText = item.standard_category || ai.offensive_impact || 'Security Vulnerability';
   document.getElementById('mProduct').innerText = `${env.Vendor_Product || 'Generic Target'} (Scope: ${pf.category || 'PENTEST'})`;
@@ -972,6 +973,21 @@ function renderCardSections(card) {
     .map(url => `<li><a href="${escapeAttr(url)}" target="_blank" rel="noopener" class="text-cyan-400 hover:underline">${escapeHtml(url)}</a></li>`)
     .join('');
   show('mCardRefsBox', refs.length > 0);
+}
+
+function renderSourceFacts(facts) {
+  const versions = (facts.affected_versions || []).filter(Boolean);
+  const pocs = (facts.pocs || []).filter(p => p && p.url);
+  document.getElementById('mVersions').innerHTML = versions.map(v => `<li>${escapeHtml(v)}</li>`).join('');
+  document.getElementById('mVersionsFrom').innerText = facts.versions_from ? `From the ${facts.versions_from}.` : '';
+  document.getElementById('mVersionsBox').classList.toggle('hidden', versions.length === 0);
+  document.getElementById('mPocs').innerHTML = pocs.map(p => {
+    const st = linkStatusStyle(p);
+    return `<li class="flex flex-wrap items-center gap-2"><a href="${escapeAttr(p.url)}" target="_blank" rel="noopener" class="text-cyan-400 hover:underline">${escapeHtml(p.url)}</a>` +
+      `<span class="px-1.5 py-0.5 rounded border ${st.pill} text-[10px]">${escapeHtml(st.label)}</span></li>`;
+  }).join('');
+  document.getElementById('mPocBox').classList.toggle('hidden', pocs.length === 0);
+  document.getElementById('mFactsBox').classList.toggle('hidden', versions.length === 0 && pocs.length === 0);
 }
 
 function closeDetailModal() {

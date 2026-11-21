@@ -309,6 +309,20 @@
             </div>
           </div>
 
+          <!-- Affected versions (NVD record) and public PoC links: structured fields, shown beside the card -->
+          <div id="mFactsBox" class="hidden bg-slate-900 p-3 rounded border border-slate-800 space-y-2">
+            <div id="mVersionsBox" class="space-y-1">
+              <span class="text-slate-400 font-mono text-[10px] uppercase font-bold block">Affected versions</span>
+              <ul id="mVersions" class="space-y-0.5 text-slate-200 text-xs font-mono"></ul>
+              <p id="mVersionsFrom" class="text-[10px] text-slate-500 font-sans"></p>
+            </div>
+            <div id="mPocBox" class="space-y-1">
+              <span class="text-slate-400 font-mono text-[10px] uppercase font-bold block">Public proof of concept</span>
+              <ul id="mPocs" class="space-y-1 font-mono text-[11px] break-all"></ul>
+              <p class="text-[10px] text-slate-500 font-sans">Found by the GitHub PoC search for this CVE. Not run or verified.</p>
+            </div>
+          </div>
+
           <!-- Required Action / Remediation (if available) -->
           <div id="mActionBox" class="hidden bg-slate-900 p-3 rounded border border-slate-800 space-y-1">
             <span class="text-amber-400 font-mono text-[10px] uppercase font-bold block">Required Mitigation & Remediation Action</span>

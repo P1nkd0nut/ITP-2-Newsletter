@@ -23,6 +23,8 @@ docker compose up -d --build
 | `qdrant` | Vector database, data in `qdrant_storage/` |
 | `ollama` | `nomic-embed-text` embeddings, data in `ollama_data/` |
 
+CISA KEV items get their affected versions from the same CVE's NVD record (up to 10 NVD lookups per run). To fill existing items at once: `docker compose exec app python Backend/run_nvd_versions.py`.
+
 Run the pipeline once now: `docker compose run --rm scheduler python Backend/run_pipeline.py`.
 Outside Docker: `pip install -r requirements.txt`, start Qdrant and Ollama yourself, then `python run_server.py` and `python Backend/run_pipeline.py`.
 
