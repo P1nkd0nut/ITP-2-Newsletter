@@ -171,7 +171,8 @@ class TestPriorityScorerAndAnomaly(unittest.TestCase):
         self.assertIsNotNone(candidate.discrepancy)
         self.assertTrue(candidate.discrepancy.is_discrepancy)
         self.assertGreaterEqual(candidate.discrepancy.delta, 4.0)
-        self.assertIn("significantly higher than AI severity", candidate.discrepancy.troubleshoot_note)
+        self.assertIn("much higher than the AI severity", candidate.discrepancy.troubleshoot_note)
+        self.assertIn("Possible reasons", candidate.discrepancy.troubleshoot_note)
 
 
 

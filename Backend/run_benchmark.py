@@ -102,6 +102,23 @@ def audit_fact_extraction(envelope: StagingEnvelope, item: Dict[str, Any]) -> Di
     }
 
 
+def severity_agreement(pairs):
+    """
+    How close the AI severity is to the labelled severity.
+    pairs: (ai_severity, expected_severity). Returns the mean absolute error
+    (points out of 10) and the share of items within 1.0 point.
+    """
+    pairs = [(a, e) for a, e in pairs if e is not None]
+    if not pairs:
+        return {"mae": None, "within_1_pct": None, "n": 0}
+    errors = [abs(a - e) for a, e in pairs]
+    return {
+        "mae": round(sum(errors) / len(errors), 2),
+        "within_1_pct": round(100.0 * sum(1 for x in errors if x <= 1.0) / len(errors), 1),
+        "n": len(errors),
+    }
+
+
 def run_benchmark():
     start_all = time.time()
     raw_items = load_ground_truth_dataset()
@@ -162,6 +179,8 @@ def run_benchmark():
             "title": item["title"],
             "cvss": item["cvss"],
             "ai_severity": candidate.ai_assessment.severity_score if candidate.ai_assessment else 0.0,
+            "expected_ai_severity": item.get("expected_ai_severity"),
+            "evaluated_by": candidate.ai_assessment.evaluated_by if candidate.ai_assessment else None,
             "priority_score": candidate.priority_score,
             "scope_correct": is_scope_correct,
             "audit": audit,
@@ -179,6 +198,8 @@ def run_benchmark():
     hallucination_rate = round(100.0 - fep_percent, 2)
     scope_accuracy = round((scope_matches / len(raw_items)) * 100, 2)
     anomaly_accuracy = round((anomaly_matches / len(raw_items)) * 100, 2)
+    severity = severity_agreement((r["ai_severity"], r["expected_ai_severity"]) for r in results)
+    scorers = sorted({r["evaluated_by"] or "none" for r in results})
 
     # Presentation Output
     if HAVE_RICH:
@@ -200,7 +221,8 @@ def run_benchmark():
         table_kpi.add_row("Fact Extraction Precision (FEP %)", f"{fep_percent}%", "Target >= 95.0%")
         table_kpi.add_row("Hallucination Rate (HR %)", f"{hallucination_rate}%", "Target <= 5.0%")
         table_kpi.add_row("Pentest Scope Pre-Filter Accuracy", f"{scope_accuracy}%", "Target 100% (Web/Mobile isolation)")
-        table_kpi.add_row("CVSS Anomaly Gate Accuracy (|d| >= 4.0)", f"{anomaly_accuracy}%", "100% precision on Day-0 discrepancies")
+        table_kpi.add_row("CVSS Discrepancy Flag Accuracy (|d| >= 4.0)", f"{anomaly_accuracy}%", f"{expected_anomalies_count} labelled discrepancy in the set")
+        table_kpi.add_row("AI Severity Error vs labels (MAE)", f"{severity['mae']} / 10", f"{severity['within_1_pct']}% within 1.0 pt; scored by {', '.join(scorers)}")
         table_kpi.add_row("End-to-End Pipeline Latency", f"{avg_latency}s / item", "Target < 2.0s per item")
 
         console.print(table_kpi)
@@ -245,12 +267,19 @@ def run_benchmark():
         console.print(table_res)
 
         console.print("\n[bold green][+] STATUS: Empirical benchmark completed with 100% verified ground truth.[/bold green]\n")
+    else:
+        print(f"Scope accuracy {scope_accuracy}% | FEP {fep_percent}% | discrepancy flag {anomaly_accuracy}% | "
+              f"AI severity MAE {severity['mae']}/10 ({severity['within_1_pct']}% within 1.0, scored by {', '.join(scorers)}) | "
+              f"avg latency {avg_latency}s")
 
     return {
         "fep_percent": fep_percent,
         "hallucination_rate": hallucination_rate,
         "scope_accuracy": scope_accuracy,
         "anomaly_accuracy": anomaly_accuracy,
+        "severity_mae": severity["mae"],
+        "severity_within_1_pct": severity["within_1_pct"],
+        "severity_scored_by": scorers,
         "avg_latency": avg_latency,
         "total_items": len(raw_items),
         "results": results,

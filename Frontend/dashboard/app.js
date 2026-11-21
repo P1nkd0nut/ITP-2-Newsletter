@@ -791,22 +791,22 @@ function openDetailModal(itemId) {
     `Evaluated practical rating: ${(ai.severity_score || 0).toFixed(1)} / 10. Formula: (${(ai.severity_score || 0).toFixed(1)} / 10) * 40.`;
 
   document.getElementById('mPocReason').innerText = pocPts > 0
-    ? 'Verified public GitHub exploit code / PoC repository available.'
+    ? 'Public GitHub PoC repository found for this CVE (not run or verified).'
     : 'No public exploit repository cataloged.';
 
   // AI Evaluation Breakdown: Why is this rated this high / low?
   document.getElementById('mAiRatingScore').innerText = totalScore;
   document.getElementById('mAiVerdict').innerText = aiEval.ai_verdict ||
-    `Priority score ${totalScore}/100 calculated from CISA KEV weaponization (+${kevPts} pts), AI practical severity (+${aiPts} pts), and public PoC code (+${pocPts} pts).`;
+    `Priority score ${totalScore}/100 calculated from CISA KEV listing (+${kevPts} pts), AI practical severity (+${aiPts} pts), and public PoC code (+${pocPts} pts).`;
 
   document.getElementById('mAiKevEval').innerText = aiEval.cisa_kev_evaluation ||
-    (kevPts > 0 ? 'Awarded +40.0 pts: Actively weaponized zero-day / N-day in CISA KEV.' : '0.0 pts: No active exploitation reported in CISA KEV.');
+    (kevPts > 0 ? '+40 pts: listed in CISA KEV, so attackers have been seen using it.' : '0 pts: not in CISA KEV; no exploitation confirmed.');
 
   document.getElementById('mAiSevEval').innerText = aiEval.ai_severity_evaluation ||
-    `Awarded +${aiPts.toFixed(1)} pts: Qwen 2.5 assessed practical severity at ${(ai.severity_score || 0).toFixed(1)}/10 based on network attack surface.`;
+    `Awarded +${aiPts.toFixed(1)} pts: Qwen 2.5 assessed practical severity at ${(ai.severity_score || 0).toFixed(1)}/10 from the advisory text.`;
 
   document.getElementById('mAiPocEval').innerText = aiEval.poc_evaluation ||
-    (pocPts > 0 ? 'Awarded +20.0 pts: Public GitHub exploit script readily available.' : '0.0 pts: No public PoC repository discovered.');
+    (pocPts > 0 ? '+20 pts: a public GitHub repository names this CVE as a PoC (not run or verified).' : '0.0 pts: No public PoC repository discovered.');
 
   // In-Depth Vulnerability Explanation
   document.getElementById('mAiModel').innerText = ai.evaluated_by || 'Qwen 2.5 72B';
@@ -816,7 +816,7 @@ function openDetailModal(itemId) {
 
   document.getElementById('mImpact').innerText = item.standard_category || ai.offensive_impact || 'Security Vulnerability';
   document.getElementById('mProduct').innerText = `${env.Vendor_Product || 'Generic Target'} (Scope: ${pf.category || 'PENTEST'})`;
-  document.getElementById('mScopeReason').innerText = pf.reason || 'Isolated via Task 1.2 scope classifier.';
+  document.getElementById('mScopeReason').innerText = pf.reason || 'Placed by the web/mobile scope filter.';
 
   // Mitigation & Required Action
   const actionBox = document.getElementById('mActionBox');

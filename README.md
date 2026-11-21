@@ -211,10 +211,12 @@ This runs:
 1. **Scope Pre-Filter Gate**: Isolates `[WEB]` and `[MOBILE]` threats via feed origin, Task 1.2 CWE taxonomy, and technical keywords. Non-web/mobile items (print spoolers, firmwares) bypass the weekly scoring queue.
 2. **AI Practical Severity Assessment (Qwen 2.5)**: Evaluates real-world offensive impact (RCE vs DoS) using local Ollama.
 3. **100-Point Scoring Engine**:
-   - Active Weaponization (CISA KEV): **40 pts**
-   - AI Practical Severity: **40 pts**
-   - Public PoC Availability: **20 pts**
-4. **CVSS Anomaly Discrepancy Gate**: Flags any item where `|AI_Severity - CVSS| >= 4.0` for automated diagnosis of inflated Day-0 ratings or underestimated flaws.
+   - Active exploitation (in CISA KEV): **40 pts**
+   - AI practical severity (0-10 × 4): **up to 40 pts**
+   - Public PoC available: **20 pts**
+4. **CVSS Discrepancy Flag**: Flags any item where `|AI_Severity - CVSS| >= 4.0` for a person to review. It does not change the score.
+
+**Why 40 / 40 / 20.** The weights follow SSVC's three exploitation states: none, public PoC, active. Active exploitation (a CISA KEV listing) carries the most weight because it is confirmed evidence that attackers use the flaw. A public PoC carries half as much: it lowers the barrier but does not prove use. Practical severity carries the remaining 40, so within each exploitation state items are ordered by what an attacker gains. As a result KEV works almost as a tier: a KEV item with severity above 5 outranks every non-KEV item (at most 60 with a PoC, 40 without). This is intended, since exploited issues should come first. Official CVSS is left out of the score because new records often have none or a worst-case default; it is kept for the discrepancy flag. The weights are round numbers so each card can explain its score in one line; they were not fitted to data. Items sharing a CVE ID are scored as one story (`group_by_cve`).
 
 ### 4b. Write Grounded Summaries (Task 2.3, 3.1 & 3.2)
 Chunk the staged items, embed the chunks into Qdrant, then write and gate the cards:
@@ -248,8 +250,9 @@ python Backend/run_benchmark.py
 This computes and reports:
 - **Fact Extraction Precision (FEP %)** (Target $\ge 95.0\%$, Observed: **100.0%**)
 - **Hallucination Rate (HR %)** (Target $\le 5.0\%$, Observed: **0.0%**)
-- **Scope Pre-Filter Accuracy** (Observed: **100.0%**)
-- **CVSS Discrepancy Gate Accuracy** (100% anomaly alert trigger on real-world Day-0 gaps)
+- **Scope Pre-Filter Accuracy** (Observed: **100.0%**). The 20 items are all web or mobile, so this measures Web vs Mobile labelling, not rejection of out-of-scope items.
+- **CVSS Discrepancy Flag Accuracy** (Observed: **100%** with the model). Only 1 of the 20 items is labelled as a real discrepancy, so this is a small check.
+- **AI Severity Error**: mean absolute difference between the AI rating and the labelled `expected_ai_severity`, in points out of 10.
 
 ### 6. Launch Executive Threat Intelligence & Newsletter Hub (Primary Delivery Channel)
 Start the unified Flask REST API and Executive Web Dashboard:
@@ -265,7 +268,7 @@ python Frontend/run_dashboard.py
 
 #### Channel Architecture
 - **Primary Delivery Channel (Web Dashboard)**: The authoritative home for weekly newsletter digests, 100-point priority rankings, interactive Chart.js analytics, and raw envelope verification.
-- **Secondary Delivery Channel (Telegram Bot)**: The weekly digest: a pinned header ("Edition 2026-Wnn") and one message per verified incident with its summary, the first testing command in a code block, and links to the NVD record, the source advisory and a public PoC. These open on any device; a "Full details" link to the dashboard is added only when `BASE_URL` is not 127.0.0.1/localhost. The bot needs the "Pin Messages" admin right so other PCs can see the week was already posted.
+- **Secondary Delivery Channel (Telegram Bot)**: The weekly digest: a pinned header ("Edition 2026-Wnn") and one message per verified incident with its summary, the first testing command in a code block, and links to the NVD record, the source advisory and a public PoC. Each link is written out in full on its own line, so it shows and opens on any device, including phones. Telegram cards never link to the dashboard, because it runs on a team PC most readers can't reach. The bot needs the "Pin Messages" admin right so other PCs can see the week was already posted.
 
 #### REST API Endpoints Reference
 | Endpoint | Method | Description |

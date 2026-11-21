@@ -91,5 +91,18 @@ class TestGroundTruthBenchmark(unittest.TestCase):
         self.assertGreaterEqual(record.discrepancy.delta, 4.0)
 
 
+class TestSeverityAgreement(unittest.TestCase):
+    def test_mean_absolute_error_and_within_one(self):
+        from Backend.run_benchmark import severity_agreement
+        result = severity_agreement([(9.5, 9.8), (7.0, 9.0), (3.5, 3.5), (6.0, None)])
+        self.assertEqual(result["n"], 3)
+        self.assertAlmostEqual(result["mae"], round((0.3 + 2.0 + 0.0) / 3, 2))
+        self.assertAlmostEqual(result["within_1_pct"], 66.7)
+
+    def test_no_labels(self):
+        from Backend.run_benchmark import severity_agreement
+        self.assertIsNone(severity_agreement([(5.0, None)])["mae"])
+
+
 if __name__ == "__main__":
     unittest.main()
