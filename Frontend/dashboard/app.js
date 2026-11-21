@@ -11,7 +11,9 @@ let searchRanks = null; // Item_ID -> rank from /api/search (hybrid search); nul
 let searchTimer = null;
 let currentDateFilter = 'RECENT'; // 'RECENT' (past week) | 'MONTH' (past month) | 'ALL'
 let currentCategory = 'ALL';
-let currentSort = 'timeline'; // 'timeline' (newest first, then score) | 'score_desc' | 'date_desc' | 'date_asc' | 'ai_desc' | 'score_asc'
+// Default: highest priority first, since ranking is the point of the dashboard
+const DEFAULT_SORT = 'score_desc';
+let currentSort = DEFAULT_SORT; // 'score_desc' | 'timeline' (newest first, then score) | 'date_desc' | 'date_asc' | 'ai_desc' | 'score_asc'
 let activeCandidate = null;
 
 // Users see how recent an item is, never its date. Buckets match recencyLabel().
@@ -276,7 +278,7 @@ function resetAllFilters() {
   searchRanks = null;
   currentDateFilter = 'RECENT';
   currentCategory = 'ALL';
-  currentSort = 'timeline';
+  currentSort = DEFAULT_SORT;
 
   const searchInput = document.getElementById('mainSearchInput');
   if (searchInput) searchInput.value = '';
@@ -284,7 +286,7 @@ function resetAllFilters() {
   if (clearBtn) clearBtn.classList.add('hidden');
 
   const sortSelect = document.getElementById('sortSelect');
-  if (sortSelect) sortSelect.value = 'timeline';
+  if (sortSelect) sortSelect.value = DEFAULT_SORT;
 
   filterDesk('ALL');
   filterDateWindow('RECENT');
@@ -411,7 +413,7 @@ function getFilteredCandidates() {
 
   // 5. Sorting (while searching, the default order is best match first)
   items.sort((a, b) => {
-    if (currentSearch && searchRanks && currentSort === 'timeline') {
+    if (currentSearch && searchRanks && currentSort === DEFAULT_SORT) {
       return rankOf(a) - rankOf(b);
     }
     if (currentSort === 'timeline') {
@@ -547,8 +549,8 @@ function renderSpotlight(topItem) {
   const ai = topItem.ai_assessment || {};
   const pf = topItem.pre_filter || {};
   const disc = topItem.discrepancy || {};
-  const isKev = Boolean(env.KEV_Status);
-  const hasPoc = Boolean(env.PoC_URLs && env.PoC_URLs.length > 0);
+  const isKev = Boolean(env.KEV_Status) || ((topItem.score_breakdown || {}).cisa_kev_points || 0) > 0;
+  const hasPoc = Boolean(env.PoC_URLs && env.PoC_URLs.length > 0) || ((topItem.score_breakdown || {}).poc_points || 0) > 0;
   const pubDateFmt = topItem.published_date_formatted || recencyLabel(env.Published_Date);
   const catPill = getCategoryPill(topItem.standard_category || ai.offensive_impact);
 
@@ -614,8 +616,8 @@ function renderDeskGrid(containerId, items, desk) {
     const ai = item.ai_assessment || {};
     const disc = item.discrepancy || {};
     const indepth = item.in_depth || {};
-    const isKev = Boolean(env.KEV_Status);
-    const hasPoc = Boolean(env.PoC_URLs && env.PoC_URLs.length > 0);
+    const isKev = Boolean(env.KEV_Status) || ((item.score_breakdown || {}).cisa_kev_points || 0) > 0;
+    const hasPoc = Boolean(env.PoC_URLs && env.PoC_URLs.length > 0) || ((item.score_breakdown || {}).poc_points || 0) > 0;
     const pubDateFmt = item.published_date_formatted || recencyLabel(env.Published_Date);
     const catPill = getCategoryPill(item.standard_category || ai.offensive_impact);
 
@@ -624,7 +626,7 @@ function renderDeskGrid(containerId, items, desk) {
     const briefText = indepth.brief_summary || ai.reasoning || env.Title || 'Triaged candidate for pentesting analysis.';
 
     return `
-      <div class="news-card p-4 rounded-xl flex flex-col justify-between cursor-pointer space-y-3" onclick="openDetailModal('${env.Item_ID}')">
+      <div class="news-card p-4 rounded-xl flex flex-col justify-between cursor-pointer space-y-3 ${(ai.severity_score || 0) === 0 ? 'opacity-60' : ''}" title="${(ai.severity_score || 0) === 0 ? 'Research or release note, not a specific vulnerability' : ''}" onclick="openDetailModal('${env.Item_ID}')">
         <div class="space-y-2">
           
           <!-- Top Row: CVE ID & Category & Score -->

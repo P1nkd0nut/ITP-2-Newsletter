@@ -78,6 +78,47 @@ def date_windows(today: Optional[date] = None) -> Dict[str, str]:
     return {"today": today.isoformat(), "week_start": (today - timedelta(days=7)).isoformat()}
 
 
+def standard_category_for(ai: Dict[str, Any], title: str) -> str:
+    """
+    Maps the AI's free-text offensive_impact onto the dashboard's fixed category
+    list, so cards never show raw model text such as "File Upload with
+    Attacker-Controlled Content | Potential for Chaining...".
+    """
+    impact = (ai.get("offensive_impact") or "").lower()
+    title_low = title.lower()
+
+    def has(text: str, *terms: str) -> bool:
+        return any(re.search(rf"\b{re.escape(t)}\b", text) for t in terms)
+
+    if float(ai.get("severity_score") or 0.0) == 0.0 or impact.strip() in ("", "none", "n/a", "not applicable"):
+        return "Not a specific vulnerability"
+    if has(impact, "remote code execution", "rce", "code execution", "code injection") or has(title_low, "remote code execution"):
+        return "Remote Code Execution (RCE)"
+    if has(impact, "authentication", "auth bypass", "session", "account takeover") or has(title_low, "auth bypass", "authentication bypass"):
+        return "Authentication & Session Bypass"
+    if has(impact, "ssrf", "server-side request forgery") or has(title_low, "ssrf"):
+        return "Server-Side Request Forgery (SSRF)"
+    if has(impact, "sql injection", "sqli", "command injection", "os command") or has(title_low, "sql injection", "command injection"):
+        return "Command & SQL Injection"
+    if has(impact, "ipc", "intent", "intent hijacking", "component hijacking", "exported component"):
+        return "Mobile Component Hijacking"
+    if has(impact, "buffer overflow", "memory corruption", "use-after-free", "heap overflow", "out-of-bounds") or has(title_low, "buffer overflow"):
+        return "Memory Corruption"
+    if has(impact, "desync", "smuggling") or has(title_low, "request smuggling"):
+        return "Protocol Desync & Smuggling"
+    if has(impact, "frida", "hooking", "crypto", "cryptographic", "certificate pinning") or has(title_low, "cryptographic"):
+        return "Mobile Security & Cryptography"
+    if has(impact, "privilege escalation"):
+        return "Privilege Escalation"
+    if has(impact, "denial of service", "dos", "resource exhaustion"):
+        return "Denial of Service (DoS)"
+    if has(impact, "xss", "cross-site scripting", "path traversal", "directory traversal", "traversal", "file upload", "csrf", "open redirect"):
+        return "Web Injection & Traversal"
+    if has(impact, "information disclosure", "data exposure", "sensitive information", "data exfiltration"):
+        return "Information Disclosure"
+    return "Other"
+
+
 def severity_band(score: float) -> str:
     """Words for an AI practical severity rating, using the bands in the scoring prompt."""
     if score >= 9.0:
@@ -252,30 +293,7 @@ class DataService:
         pf = c.get("pre_filter") or {}
 
         # Standardize category
-        impact = (ai.get("offensive_impact") or "").lower()
-        title_low = (env.get("Title") or "").lower()
-        if "remote code execution" in impact or "rce" in impact or "remote code execution" in title_low:
-            standard_category = "Remote Code Execution (RCE)"
-        elif "authentication" in impact or "session" in impact or "bypass" in impact or "auth bypass" in title_low:
-            standard_category = "Authentication & Session Bypass"
-        elif "ssrf" in impact or "server-side request forgery" in impact or "ssrf" in title_low:
-            standard_category = "Server-Side Request Forgery (SSRF)"
-        elif "sql" in impact or "command injection" in impact or "injection" in title_low:
-            standard_category = "Command & SQL Injection"
-        elif "ipc" in impact or "intent" in impact or "component hijacking" in impact or "intent hijacking" in title_low:
-            standard_category = "Mobile Component Hijacking"
-        elif "buffer overflow" in impact or "memory corruption" in impact or "buffer overflow" in title_low:
-            standard_category = "Memory Corruption"
-        elif "desync" in impact or "smuggling" in impact or "protocol desync" in title_low:
-            standard_category = "Protocol Desync & Smuggling"
-        elif "frida" in impact or "hooking" in impact or "crypto" in impact or "cryptographic" in title_low:
-            standard_category = "Mobile Security & Cryptography"
-        elif "denial of service" in impact or "dos" in impact:
-            standard_category = "Denial of Service (DoS)"
-        elif "xss" in impact or "traversal" in impact:
-            standard_category = "Web Injection & Traversal"
-        else:
-            standard_category = ai.get("offensive_impact") or "Vulnerability Advisory"
+        standard_category = standard_category_for(ai, env.get("Title") or "")
 
         c["standard_category"] = standard_category
 
