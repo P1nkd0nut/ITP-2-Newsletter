@@ -50,7 +50,7 @@ class TestReaderPage(unittest.TestCase):
         item_id = data_service.get_all_candidates()[0]["envelope"]["Item_ID"]
         res = self.client.get(f"/incident/{item_id}")
         self.assertEqual(res.status_code, 200)
-        self.assertIn(b"Grounded Threat News", res.data)
+        self.assertIn(b"GroundedCVE", res.data)
         self.assertIn(b"/api/newsletters/", res.data)
 
     def test_unknown_incident_returns_404(self):
@@ -203,7 +203,7 @@ class TestEditionMarker(unittest.TestCase):
     @mock.patch.object(tg.requests, "post")
     def test_reads_edition_from_pinned_message(self, post):
         post.return_value = FakeResponse(200, {"ok": True, "result": {
-            "pinned_message": {"text": "🛡️ Grounded Threat News · Weekly Brief\nEdition 2026-W45\n\n3 top incidents"}}})
+            "pinned_message": {"text": "🛡️ GroundedCVE · Weekly Brief\nEdition 2026-W45\n\n3 top incidents"}}})
         self.assertEqual(tg.pinned_edition("123:SECRET", "-100999"), {"ok": True, "edition": "2026-W45"})
         self.assertTrue(post.call_args.args[0].endswith("/getChat"))
 

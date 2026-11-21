@@ -1,6 +1,6 @@
 """
 Launcher for GroundedCVE Threat Intelligence & Newsletter Web Dashboard.
-Starts the Flask server hosting the Executive Newsletter Dashboard on port 8080.
+Starts the Flask server hosting the GroundedCVE dashboard on port 8080.
 """
 import sys
 import webbrowser
@@ -26,7 +26,7 @@ HOST = "0.0.0.0"
 def open_browser():
     time.sleep(1.0)
     dashboard_url = f"http://localhost:{PORT}"
-    print(f"[*] Opening browser to Executive Newsletter Dashboard: {dashboard_url}\n")
+    print(f"[*] Opening browser to GroundedCVE dashboard: {dashboard_url}\n")
     try:
         webbrowser.open(dashboard_url)
     except Exception as e:
@@ -35,7 +35,7 @@ def open_browser():
 
 def main():
     print("=" * 70)
-    print("     GroundedCVE — Threat Intelligence & Newsletter Dashboard")
+    print("     GroundedCVE dashboard")
     print("     Primary Delivery Channel: Web Dashboard (Port 8080)")
     print("=" * 70)
 
