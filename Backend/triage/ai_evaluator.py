@@ -17,6 +17,7 @@ from Backend.config import (
     OPENROUTER_BASE_URL,
     OPENROUTER_MODEL,
 )
+from Backend.chunking.cleaner import clean_content
 from Backend.ingestion.models import StagingEnvelope
 from Backend.triage.models import AISeverityAssessment
 
@@ -38,6 +39,18 @@ You MUST respond ONLY with a valid JSON object matching this schema:
   "exploitability": "<CRITICAL | HIGH | MEDIUM | LOW>",
   "reasoning": "<1-2 sentence technical offensive rationale>"
 }"""
+
+
+def advisory_text(envelope: StagingEnvelope, limit: int) -> str:
+    """
+    Readable advisory text for the prompt. HTML pages (Apple, Android bulletins)
+    start with kilobytes of markup and navigation, so they are cleaned first.
+    """
+    try:
+        text, _ = clean_content(envelope.Source_Type.value, envelope.Raw_Content)
+    except Exception:
+        text = envelope.Raw_Content
+    return (text or envelope.Raw_Content)[:limit].strip()
 
 
 class AISeverityEvaluator:
@@ -86,7 +99,7 @@ class AISeverityEvaluator:
 
     def _evaluate_with_openrouter(self, envelope: StagingEnvelope) -> Optional[AISeverityAssessment]:
         endpoint = f"{OPENROUTER_BASE_URL.rstrip('/')}/chat/completions"
-        snippet = envelope.Raw_Content[:1500].strip()
+        snippet = advisory_text(envelope, 3000)
 
         user_content = (
             f"Title: {envelope.Title}\n"
@@ -136,7 +149,7 @@ class AISeverityEvaluator:
 
     def _evaluate_with_ollama(self, envelope: StagingEnvelope) -> Optional[AISeverityAssessment]:
         endpoint = f"{self.ollama_host}/api/generate"
-        snippet = envelope.Raw_Content[:1200].strip()
+        snippet = advisory_text(envelope, 1200)
 
         user_content = (
             f"Title: {envelope.Title}\n"
