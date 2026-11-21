@@ -12,7 +12,7 @@ TELEGRAM_CHAT_ID are set.
 Settings (all optional, from .env):
   INGEST_LIMIT              items per source per run          (default 5)
   NVD_LIMIT                 newest NVD CVEs per run, if more than INGEST_LIMIT (default: INGEST_LIMIT)
-  SUMMARY_TOP               cards to write per run            (default 10)
+  SUMMARY_TOP               most new cards written per run    (default 50; the rest follow next run)
   SUMMARY_OLLAMA_MODEL      local model to use if OPENROUTER_API_KEY is empty
   PIPELINE_RUN_TIME         daily run time with --loop, HH:MM  (default 08:00)
   PIPELINE_TIMEZONE         timezone for PIPELINE_RUN_TIME    (default Asia/Singapore)
@@ -125,7 +125,7 @@ def run_once() -> None:
     run_stage("Chunking", "run_chunking.py")
     run_stage("Indexing", "run_indexing.py")
 
-    summary_args: List[str] = ["--top", str(env_int("SUMMARY_TOP", 10))]
+    summary_args: List[str] = ["--top", str(env_int("SUMMARY_TOP", 50))]
     ollama_model = os.getenv("SUMMARY_OLLAMA_MODEL", "").strip()
     if OPENROUTER_API_KEY or ollama_model:
         if not OPENROUTER_API_KEY:

@@ -313,6 +313,102 @@ class TestSelectItems(unittest.TestCase):
         items = [cand("a", 10), cand("b", 90), cand("c", 99, in_scope=False), cand("d", 95, age=30)]
         self.assertEqual([c["envelope"]["Item_ID"] for c in select_items(items, 5, 7)], ["b", "a"])
         self.assertEqual([c["envelope"]["Item_ID"] for c in select_items(items, 5, 0)], ["d", "b", "a"])
+        self.assertEqual([c["envelope"]["Item_ID"] for c in select_items(items, 1, 0)], ["d"])
+        self.assertEqual(len(select_items(items, 0, 0)), 3)  # 0 = no limit
+
+    def test_item_first_seen_or_changed_this_week_counts_as_new(self):
+        # An advisory dated a month ago that GroundedCVE only picked up (or saw change) this week
+        now = datetime.now(timezone.utc)
+        old = (now - timedelta(days=30)).isoformat()
+        recent = (now - timedelta(days=1)).isoformat()
+        def cand(i, **env):
+            return {"envelope": {"Item_ID": i, "Published_Date": old, **env},
+                    "pre_filter": {"is_in_scope": True}, "priority_score": 50}
+        items = [cand("seen", First_Seen=recent), cand("changed", First_Seen=old, Last_Changed=recent),
+                 cand("stale", First_Seen=old, Last_Changed=old)]
+        self.assertEqual(sorted(c["envelope"]["Item_ID"] for c in select_items(items, 0, 7)), ["changed", "seen"])
+
+
+class TestOpenRouterRateLimit(unittest.TestCase):
+    def test_429_is_retried_once_after_waiting(self):
+        from Backend.summarisation import summariser as sm
+        limited = mock.Mock(status_code=429, headers={"Retry-After": "3"})
+        ok = mock.Mock(status_code=200, headers={})
+        ok.json.return_value = {"choices": [{"message": {"content": "{}"}}], "usage": {}}
+        with mock.patch.object(sm.requests, "post", side_effect=[limited, ok]) as post, \
+                mock.patch.object(sm.time, "sleep") as sleep, mock.patch.object(sm.llm_usage, "record"):
+            self.assertEqual(sm.openrouter_llm(api_key="k")("s", "u"), "{}")
+        self.assertEqual(post.call_count, 2)
+        sleep.assert_called_once_with(3.0)
+
+        with mock.patch.object(sm.requests, "post", return_value=limited), mock.patch.object(sm.time, "sleep"):
+            with self.assertRaises(RuntimeError):
+                sm.openrouter_llm(api_key="k")("s", "u")
+
+class TestSummariseRunPolicy(unittest.TestCase):
+    """run_summarise.main: unchanged cards are reused, quarantined sources not retried, the cap defers the rest."""
+
+    def setUp(self):
+        import Backend.run_summarise as rs
+        self.rs = rs
+        self.tmp = tempfile.TemporaryDirectory()
+        tmp = Path(self.tmp.name)
+        now = datetime.now(timezone.utc).isoformat()
+        self.envs = {i: make_envelope(item_id=i, raw=SUMMARY + "\n" + POC + f"\n{i}") for i in ("a", "b", "c", "d")}
+        for e in self.envs.values():
+            e.Published_Date = now
+        cands = [{"envelope": e.model_dump(), "pre_filter": {"is_in_scope": True}, "priority_score": 90 - n}
+                 for n, e in enumerate(self.envs.values())]
+        self.triaged = tmp / "triaged.json"
+        self.triaged.write_text(json.dumps(cands), encoding="utf-8")
+        self.cards_file = tmp / "cards.json"
+        self.log_file = tmp / "quarantine.jsonl"
+        # "a" already has a card for its current source; "b" was quarantined for its current source
+        self.cards_file.write_text(json.dumps([{"Item_ID": "a", "status": "PASSED", "card": {"mechanism": "x"},
+                                                "Content_Hash": self.envs["a"].Content_Hash, "nvd_record_hash": None}]),
+                                   encoding="utf-8")
+        self.log_file.write_text(json.dumps({"Item_ID": "b", "status": "QUARANTINED",
+                                             "Content_Hash": self.envs["b"].Content_Hash, "nvd_record_hash": None}) + "\n",
+                                 encoding="utf-8")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def run_main(self, *argv):
+        written = []
+        real_load = self.rs.load_quarantined
+
+        class FakeSummariser:
+            def __init__(self, *a, **k):
+                pass
+
+            def summarise(self, env):
+                written.append(env.Item_ID)
+                return {"Item_ID": env.Item_ID, "status": "PASSED", "card": {"mechanism": "m"},
+                        "Content_Hash": env.Content_Hash, "nvd_record_hash": None, "verification": None}
+
+        from Backend.summarisation import card_store
+        with mock.patch.object(self.rs, "TRIAGED_FILE", self.triaged), \
+                mock.patch.object(self.rs, "GroundedSummariser", FakeSummariser), \
+                mock.patch.object(self.rs, "default_llm", return_value=object()), \
+                mock.patch.object(self.rs, "make_retriever", return_value=None), \
+                mock.patch.object(self.rs, "load_cards", lambda: card_store.load_cards(self.cards_file)), \
+                mock.patch.object(self.rs, "save_cards", lambda cards: card_store.save_cards(cards, self.cards_file)), \
+                mock.patch.object(self.rs, "log_rejected", lambda recs: card_store.log_rejected(recs, self.log_file)), \
+                mock.patch.object(self.rs, "load_quarantined", lambda: real_load(self.log_file)), \
+                mock.patch.object(self.rs.time, "sleep"), \
+                mock.patch("sys.argv", ["run_summarise.py", *argv]), \
+                mock.patch("builtins.print"):
+            self.assertEqual(self.rs.main(), 0)
+        return written
+
+    def test_only_items_needing_a_card_are_written_and_the_cap_defers_the_rest(self):
+        # a: unchanged card, b: still quarantined, c and d need cards; a cap of 1 writes c now
+        self.assertEqual(self.run_main("--top", "1"), ["c"])
+        # next run writes the deferred d; c now has a card
+        self.assertEqual(self.run_main("--top", "1"), ["d"])
+        # --force rewrites everything, quarantined included
+        self.assertEqual(self.run_main("--top", "0", "--force"), ["a", "b", "c", "d"])
 
 
 # ---------------------------------------------------------------------------

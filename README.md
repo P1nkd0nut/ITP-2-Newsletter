@@ -142,7 +142,7 @@ ITP2/
 │   ├── test_poc_provenance.py                 # CVE-specific PoC links & reference provenance (6 tests)
 │   ├── test_reader_and_telegram.py            # Incident reader page, Telegram weekly digest & dead-link handling (32 tests)
 │   ├── test_manual_check.py                   # Manual spot-check sampler & scorer (4 tests)
-│   ├── test_grounded_summaries.py             # Qdrant indexing, grounded cards, publish gate & scheduler (23 tests)
+│   ├── test_grounded_summaries.py             # Qdrant indexing, grounded cards, publish gate, run policy & scheduler (26 tests)
 │   ├── test_novelty.py                        # Digest novelty check: one item per CVE, no repeats (10 tests)
 │   ├── test_apple_collector.py                # One item per Apple advisory with real dates (7 tests)
 │   ├── test_gate_report.py                    # Gate stats on real cards, re-check, manual review sheet (5 tests)
@@ -225,7 +225,7 @@ Chunk the staged items, embed the chunks into Qdrant, then write and gate the ca
 ```bash
 python Backend/run_chunking.py
 python Backend/run_indexing.py      # needs Qdrant + Ollama with nomic-embed-text
-python Backend/run_summarise.py     # top 10 in-scope items from the last 7 days
+python Backend/run_summarise.py     # every in-scope item published, first seen or changed in the last 7 days
 ```
 Each card is written by the LLM (OpenRouter Qwen 2.5 72B, or `--ollama-model` for a local model) using only that item's own chunks (for a CISA KEV item, whose entry is a sentence or two, also the same CVE's NVD record, attached at ingestion), then checked by the source-verification gate: every CVE ID, version, CVSS score, CWE, known vendor/product name, command, impact claim and URL must appear in the source. A failing card is regenerated once with the gate's reasons; if it still fails it is quarantined.
 
@@ -234,7 +234,9 @@ Measure the gate on the cards it actually saw with `python Backend/run_gate_repo
 - Passed cards go to `Backend/data/staging/grounded_cards.json`. The dashboard digest, the newsletter export and the Telegram weekly digest only include items with a passed card.
 - Quarantined cards and generation errors are appended to `Backend/data/staging/quarantine_log.jsonl` with the failing facts.
 - If Qdrant is not running, chunks are read straight from `latest_chunks.json`.
-- Cards are only rewritten when the item's source changes (`--force` to rewrite all).
+- Every in-scope item that is new or changed this week gets a card, highest priority first; "this week" counts from when GroundedCVE first saw or last saw a change in the item, not only its publish date. Up to `SUMMARY_TOP` (default 50) new cards are written per run, about $0.0005 and 10 seconds each; any left over are written on the next run.
+- Cards are only rewritten when the item's source changes (`--force` to rewrite all). A card the gate quarantined is not retried until its source changes.
+- A rate-limited (429) OpenRouter call is retried once after the wait OpenRouter asks for; a short pause between cards (`--pause`, default 1 s) keeps runs under the limit.
 
 **Novelty check (weekly digest).** The newsletter never repeats itself:
 - The same CVE reported by several sources (NVD, CISA KEV, GitHub Advisory) is sent once, as the highest-priority version.
@@ -313,8 +315,8 @@ docker compose run --rm scheduler python Backend/run_pipeline.py   # run the pip
 Keys go in a `.env` file (see `.env.example`); `Backend/data` is mounted so data persists. Outside Docker, `python Backend/run_pipeline.py` runs the same stages once.
 
 ### 7. Run Test Suite
-Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (270 automated tests in 21 modules):
+Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (273 automated tests in 21 modules):
 ```bash
 python -m unittest discover -s Testing -p "test_*.py" -v
 ```
-Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access; they skip automatically when the feeds can't be reached. CI runs the other 263 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
+Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access; they skip automatically when the feeds can't be reached. CI runs the other 266 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.

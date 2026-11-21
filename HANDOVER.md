@@ -62,7 +62,7 @@ All settings live in `.env` (template: `.env.example`). Secrets never go in the 
 | `NVD_API_KEY`, `GITHUB_TOKEN` | (none) | Higher API rate limits |
 | `INGEST_LIMIT` | 5 | Items per source per run |
 | `NVD_LIMIT` | `INGEST_LIMIT` | Newest NVD CVEs per run, if more than `INGEST_LIMIT` (`.env.example` sets 20) |
-| `SUMMARY_TOP` | 10 | Cards written per run |
+| `SUMMARY_TOP` | 50 | Most new cards written per run. Every in-scope item published, first seen or changed in the last 7 days gets a card; unchanged cards are reused and any left over are written next run. 0 = no cap |
 | `PIPELINE_RUN_TIME`, `PIPELINE_TIMEZONE` | 08:00, Asia/Singapore | Daily run time |
 | `DIGEST_INTERVAL_DAYS` | 7 | Days between digests |
 | `NOVELTY_SIMILARITY` | blank | Override the tuned near-duplicate threshold (section 5) |
@@ -100,6 +100,8 @@ For each quarantined item, open its source (`Source_URL`) and decide:
 1. **The model got a fact wrong.** Nothing to do; the gate worked. Note it for the gate-effectiveness figures.
 2. **The fact is in the source but the gate missed it** (a false quarantine). Usually a formatting difference. Fix the matching in `gate.py`, add a test to `Testing/test_verification.py`, then `python Backend/run_summarise.py --force` to rewrite the card.
 3. **Generation error.** Re-run `python Backend/run_summarise.py`; it retries items without a passed card.
+
+A quarantined item is not retried on later runs until its source (or its attached NVD record) changes, so the daily run does not pay for the same rejection again. After fixing the gate (case 2), use `--force` to retry it.
 
 **Manual review of published cards** (catches errors the gate can't, like an overstated impact):
 

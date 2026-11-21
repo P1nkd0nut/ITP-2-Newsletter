@@ -11,6 +11,7 @@ import hashlib
 import json
 import logging
 import re
+import time
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
@@ -35,6 +36,9 @@ logger = logging.getLogger(__name__)
 LLM = Callable[[str, str], str]
 
 MAX_EXCERPT_CHARS = 12000
+
+# Seconds to wait before retrying a rate-limited (429) OpenRouter call without a Retry-After header
+RATE_LIMIT_WAIT_S = 15.0
 
 SYSTEM_PROMPT = """You write short newsletter cards about security vulnerabilities for penetration testers.
 Use ONLY the numbered source excerpts you are given. Do not use outside knowledge.
@@ -133,8 +137,8 @@ def parse_card(raw: str) -> DraftCard:
 
 def openrouter_llm(api_key: str = OPENROUTER_API_KEY, model: str = OPENROUTER_MODEL,
                    base_url: str = OPENROUTER_BASE_URL, timeout: int = 60) -> LLM:
-    def call(system: str, user: str) -> str:
-        resp = requests.post(
+    def post(system: str, user: str) -> requests.Response:
+        return requests.post(
             f"{base_url.rstrip('/')}/chat/completions",
             headers={
                 "Authorization": f"Bearer {api_key}",
@@ -151,6 +155,18 @@ def openrouter_llm(api_key: str = OPENROUTER_API_KEY, model: str = OPENROUTER_MO
             },
             timeout=timeout,
         )
+
+    def call(system: str, user: str) -> str:
+        resp = post(system, user)
+        if resp.status_code == 429:
+            # Rate limited: wait as asked (capped) and try once more; a second 429 is an ERROR
+            # record, and the item is retried on the next run
+            try:
+                wait = float(resp.headers.get("Retry-After", RATE_LIMIT_WAIT_S))
+            except ValueError:
+                wait = RATE_LIMIT_WAIT_S
+            time.sleep(min(max(wait, 1.0), 60.0))
+            resp = post(system, user)
         if resp.status_code != 200:
             raise RuntimeError(f"OpenRouter returned {resp.status_code}")
         data = resp.json()
