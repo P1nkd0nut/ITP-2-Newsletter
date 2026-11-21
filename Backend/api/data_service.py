@@ -20,6 +20,9 @@ STAGING_DIR = ROOT_DIR / "Backend" / "data" / "staging"
 TRIAGED_FILE = STAGING_DIR / "triaged_candidates.json"
 ENVELOPES_FILE = STAGING_DIR / "latest_envelopes.json"
 GROUNDED_CARDS_FILE = STAGING_DIR / "grounded_cards.json"
+# Cards from a real run, committed so a fresh clone (no OpenRouter key yet) still
+# shows verified summaries. Used only when the live file does not exist.
+DEMO_CARDS_FILE = STAGING_DIR.parent / "demo" / "grounded_cards.json"
 
 
 def _names_cve(cve_id: Optional[str], text: Optional[str]) -> bool:
@@ -227,7 +230,7 @@ class DataService:
                 logger.error(f"Error loading fallback envelopes: {e}")
 
         # Enrich each candidate with direct CVE links, vendor bulletins, and detailed descriptions
-        cards = load_cards(GROUNDED_CARDS_FILE)
+        cards = load_cards(GROUNDED_CARDS_FILE if GROUNDED_CARDS_FILE.exists() else DEMO_CARDS_FILE)
         for c in data:
             self._enrich_candidate(c)
             self._attach_grounded_card(c, cards)
