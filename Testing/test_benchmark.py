@@ -1,6 +1,5 @@
 """
-Unit and Integration Tests for GroundedCVE Task 4.1 Ground-Truth Benchmark.
-Lead DevOps & Performance Validation Engineer: Tan De Ye (SIT Team 4).
+Unit and integration tests for the GroundedCVE ground-truth benchmark.
 """
 import unittest
 from Backend.run_benchmark import (

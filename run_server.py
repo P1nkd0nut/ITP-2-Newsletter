@@ -33,7 +33,6 @@ def open_browser():
 def main():
     print("\n" + "=" * 70)
     print("      GroundedCVE: Threat Intelligence & Newsletter Hub")
-    print("      ICT 2114 Integrative Team Project — IS 24 | Team 4 (SIT)")
     print("=" * 70)
     print(f"[*] Primary Delivery Channel:  http://localhost:{PORT}")
     print(f"[*] Secondary Channel:         Telegram Alerts (Opt-in push notifications)")

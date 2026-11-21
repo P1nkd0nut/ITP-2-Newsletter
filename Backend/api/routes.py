@@ -192,7 +192,7 @@ def export_newsletter():
 """
         html += """
   <hr>
-  <p style="font-size:12px; color:#64748b;">Generated automatically by GroundedCVE Threat Intelligence Platform &bull; SIT Team 4</p>
+  <p style="font-size:12px; color:#64748b;">Generated automatically by GroundedCVE Threat Intelligence Platform</p>
 </body>
 </html>"""
         return Response(html, mimetype="text/html")

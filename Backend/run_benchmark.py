@@ -1,6 +1,5 @@
 """
-GroundedCVE Performance & Empirical Benchmarking Suite (Task 4.1).
-Lead DevOps & Performance Validation Engineer: Tan De Ye (SIT Team 4).
+GroundedCVE ground-truth benchmark.
 
 Evaluates the 20 Ground-Truth Web & Mobile disclosures across:
 1. Pentest Scope Pre-Filter Accuracy (Web vs Mobile isolation)
@@ -205,8 +204,7 @@ def run_benchmark():
     if HAVE_RICH:
         console = Console()
         console.print("\n[bold cyan]========================================================================================[/bold cyan]")
-        console.print("[bold yellow]       GroundedCVE: Task 4.1 Empirical Benchmarking & Validation Report                 [/bold yellow]")
-        console.print("[bold cyan]       Lead DevOps & Performance Validation Engineer: Tan De Ye (SIT Team 4)           [/bold cyan]")
+        console.print("[bold yellow]       GroundedCVE: Ground-Truth Benchmark & Validation Report                          [/bold yellow]")
         console.print("[bold cyan]========================================================================================[/bold cyan]\n")
 
         # Summary KPIs

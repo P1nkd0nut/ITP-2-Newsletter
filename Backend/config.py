@@ -13,7 +13,7 @@ STAGING_DIR = DATA_DIR / "staging"
 STAGING_DIR.mkdir(parents=True, exist_ok=True)
 
 # User-Agent string for polite threat intelligence scraping
-DEFAULT_USER_AGENT = "GroundedCVE-Bot/1.0 (Penetration Testing Threat Intelligence; SIT Team 4)"
+DEFAULT_USER_AGENT = "GroundedCVE-Bot/1.0 (Penetration Testing Threat Intelligence)"
 
 # Auto-load .env file if present in project root
 ENV_FILE = BASE_DIR.parent / ".env"

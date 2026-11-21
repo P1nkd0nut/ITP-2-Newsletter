@@ -792,7 +792,7 @@ class DataService:
         md_lines = [
             f"# {title}",
             f"**Published**: {date_str}  ",
-            f"**Platform**: GroundedCVE Automated Threat Curation | SIT Team 4  ",
+            f"**Platform**: GroundedCVE Automated Threat Curation  ",
             "**Primary Channel**: Web Executive Dashboard",
             "",
             "---",
@@ -895,7 +895,7 @@ class DataService:
         md_lines.extend([
             "",
             "---",
-            f"*Generated automatically by GroundedCVE Threat Intelligence Platform. Lead DevOps: Tan De Ye (SIT Team 4)*"
+            f"*Generated automatically by GroundedCVE Threat Intelligence Platform.*"
         ])
 
         markdown_content = "\n".join(md_lines)
