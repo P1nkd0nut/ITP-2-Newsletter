@@ -121,13 +121,21 @@ def _carry_forward_pocs(old: StagingEnvelope, new: StagingEnvelope) -> None:
 
 def _carry_forward_nvd_versions(old: StagingEnvelope, new: StagingEnvelope) -> None:
     """
-    Keeps affected versions that were looked up on NVD for a CISA KEV item. The
-    KEV feed itself names no versions, so a fresh copy must not read as a change.
+    Keeps what was taken from NVD for a CISA KEV item (the NVD record text and
+    the affected versions). The KEV feed itself has neither, so a fresh copy
+    must not read as a change or lose them.
     """
-    looked_up = (old.Extra_Metadata or {}).get("affected_versions_from")
+    old_meta = old.Extra_Metadata or {}
+    new_meta = dict(new.Extra_Metadata or {})
+    for key in ("nvd_record", "nvd_record_from"):
+        if old_meta.get(key) and not new_meta.get(key):
+            new_meta[key] = old_meta[key]
+    looked_up = old_meta.get("affected_versions_from")
     if looked_up and old.Affected_Versions and not new.Affected_Versions:
         new.Affected_Versions = old.Affected_Versions
-        new.Extra_Metadata = {**(new.Extra_Metadata or {}), "affected_versions_from": looked_up}
+        new_meta["affected_versions_from"] = looked_up
+    if new_meta != (new.Extra_Metadata or {}):
+        new.Extra_Metadata = new_meta
 
 
 def merge_recheck(old: StagingEnvelope, fresh: StagingEnvelope, now_iso: str) -> StagingEnvelope:

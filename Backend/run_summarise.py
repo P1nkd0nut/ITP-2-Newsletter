@@ -30,6 +30,7 @@ from Backend.ingestion.models import StagingEnvelope
 from Backend.ingestion.recheck_policy import age_days
 from Backend.storage.indexer import ChunkRetriever
 from Backend.summarisation import GroundedSummariser, default_llm, load_cards, log_rejected, save_cards
+from Backend.summarisation.summariser import nvd_excerpt_hash
 
 TRIAGED_FILE = STAGING_DIR / "triaged_candidates.json"
 
@@ -97,7 +98,12 @@ def main() -> int:
     for c in items:
         env = StagingEnvelope.model_validate(c["envelope"])
         prev = cards.get(env.Item_ID)
-        if prev and prev.get("Content_Hash") == env.Content_Hash and not args.force:
+        unchanged = (
+            prev
+            and prev.get("Content_Hash") == env.Content_Hash
+            and prev.get("nvd_record_hash") == nvd_excerpt_hash(env)
+        )
+        if unchanged and not args.force:
             counts["UNCHANGED"] += 1
             continue
 

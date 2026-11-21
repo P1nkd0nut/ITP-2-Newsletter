@@ -1,7 +1,8 @@
 """
-Fills affected versions on the staged items without a full pipeline run:
-NVD items from their stored NVD JSON (no network), and CISA KEV items from
-the same CVE's NVD record (one NVD lookup each; use --max-lookups to pace).
+Adds NVD data to the staged items without a full pipeline run: affected
+versions for NVD items from their stored NVD JSON (no network), and for CISA
+KEV items the same CVE's NVD record (its text, which the next card run writes
+from, and its affected versions; one NVD lookup each, use --max-lookups to pace).
 The daily pipeline does the same for new items; this is for existing data.
 
     python Backend/run_nvd_versions.py               # NVD items + up to 40 KEV lookups
@@ -23,7 +24,7 @@ from Backend.ingestion.pipeline import IngestionPipeline
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Fill affected versions from NVD on staged items")
+    parser = argparse.ArgumentParser(description="Add NVD data (record text, affected versions) to staged items")
     parser.add_argument("--offline", action="store_true", help="Only use stored NVD JSON; no NVD lookups")
     parser.add_argument("--max-lookups", type=int, default=40, help="NVD lookups for CISA KEV items")
     args = parser.parse_args()
@@ -55,7 +56,8 @@ def main() -> None:
                 c["envelope"]["Extra_Metadata"] = env.Extra_Metadata
         cand_file.write_text(json.dumps(candidates, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    print(f"Affected versions added: {from_json} NVD items (from stored JSON), {looked_up} CISA KEV items (NVD lookups)")
+    print(f"Affected versions added to {from_json} NVD items (from stored JSON); "
+          f"NVD record added to {looked_up} CISA KEV items. Their cards are rewritten on the next card run.")
 
 
 if __name__ == "__main__":
