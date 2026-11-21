@@ -20,6 +20,9 @@ STAGING_DIR = ROOT_DIR / "Backend" / "data" / "staging"
 TRIAGED_FILE = STAGING_DIR / "triaged_candidates.json"
 ENVELOPES_FILE = STAGING_DIR / "latest_envelopes.json"
 GROUNDED_CARDS_FILE = STAGING_DIR / "grounded_cards.json"
+# Cards from a real run, committed so a fresh clone (no OpenRouter key yet) still
+# shows verified summaries. Used only when the live file does not exist.
+DEMO_CARDS_FILE = STAGING_DIR.parent / "demo" / "grounded_cards.json"
 
 
 def _names_cve(cve_id: Optional[str], text: Optional[str]) -> bool:
@@ -77,6 +80,94 @@ def date_windows(today: Optional[date] = None) -> Dict[str, str]:
     today = today or date.today()
     return {"today": today.isoformat(), "week_start": (today - timedelta(days=7)).isoformat()}
 
+
+def standard_category_for(ai: Dict[str, Any], title: str) -> str:
+    """
+    Maps the AI's free-text offensive_impact onto the dashboard's fixed category
+    list, so cards never show raw model text such as "File Upload with
+    Attacker-Controlled Content | Potential for Chaining...".
+    """
+    impact = (ai.get("offensive_impact") or "").lower()
+    title_low = title.lower()
+
+    def has(text: str, *terms: str) -> bool:
+        return any(re.search(rf"\b{re.escape(t)}\b", text) for t in terms)
+
+    if float(ai.get("severity_score") or 0.0) == 0.0 or impact.strip() in ("", "none", "n/a", "not applicable"):
+        return "Not a specific vulnerability"
+    if has(impact, "remote code execution", "rce", "code execution", "code injection") or has(title_low, "remote code execution"):
+        return "Remote Code Execution (RCE)"
+    if has(impact, "authentication", "auth bypass", "session", "account takeover") or has(title_low, "auth bypass", "authentication bypass"):
+        return "Authentication & Session Bypass"
+    if has(impact, "ssrf", "server-side request forgery") or has(title_low, "ssrf"):
+        return "Server-Side Request Forgery (SSRF)"
+    if has(impact, "sql injection", "sqli", "command injection", "os command") or has(title_low, "sql injection", "command injection"):
+        return "Command & SQL Injection"
+    if has(impact, "ipc", "intent", "intent hijacking", "component hijacking", "exported component"):
+        return "Mobile Component Hijacking"
+    if has(impact, "buffer overflow", "memory corruption", "use-after-free", "heap overflow", "out-of-bounds") or has(title_low, "buffer overflow"):
+        return "Memory Corruption"
+    if has(impact, "desync", "smuggling") or has(title_low, "request smuggling"):
+        return "Protocol Desync & Smuggling"
+    if has(impact, "frida", "hooking", "crypto", "cryptographic", "certificate pinning") or has(title_low, "cryptographic"):
+        return "Mobile Security & Cryptography"
+    if has(impact, "privilege escalation"):
+        return "Privilege Escalation"
+    if has(impact, "denial of service", "dos", "resource exhaustion"):
+        return "Denial of Service (DoS)"
+    if has(impact, "xss", "cross-site scripting", "path traversal", "directory traversal", "traversal", "file upload", "csrf", "open redirect"):
+        return "Web Injection & Traversal"
+    if has(impact, "information disclosure", "data exposure", "sensitive information", "data exfiltration"):
+        return "Information Disclosure"
+    return "Other"
+
+
+def severity_band(score: float) -> str:
+    """Words for an AI practical severity rating, using the bands in the scoring prompt."""
+    if score >= 9.0:
+        return "critical"
+    if score >= 7.0:
+        return "high"
+    if score >= 4.0:
+        return "medium"
+    return "low"
+
+
+def explain_score(in_scope: bool, kev_pts: float, ai_pts: float, poc_pts: float, total: float,
+                  ai_sev: float, reasoning: Optional[str], scope_reason: Optional[str]):
+    """
+    One line per factor of the 100-point score, plus a verdict. The verdict is
+    based on the factors, not on the total: an item that is not in CISA KEV and
+    has no public PoC can score at most 40, however severe it is, so labelling
+    by total alone would call a critical RCE "low risk".
+    """
+    if kev_pts > 0:
+        kev_eval = ("+40 pts: listed in CISA's Known Exploited Vulnerabilities catalogue, "
+                    "so attackers have been seen using it.")
+    else:
+        kev_eval = ("0 pts: not in CISA KEV. This does not rule out exploitation; "
+                    "none has been confirmed.")
+    if poc_pts > 0:
+        poc_eval = ("+20 pts: a public GitHub repository names this CVE as a proof of concept "
+                    "(linked below; not run or verified by us).")
+    else:
+        poc_eval = "0 pts: no public proof-of-concept repository found for this CVE."
+    ai_eval = (f"+{ai_pts:.1f} of 40 pts (rated {ai_sev:.1f}/10, {severity_band(ai_sev)}): "
+               f"{reasoning or 'Practical attack impact assessed from the advisory text.'}")
+
+    band = f"practical severity {ai_sev:.1f}/10 ({severity_band(ai_sev)})"
+    if not in_scope:
+        verdict = f"OUT OF SCOPE (0/100): {scope_reason or 'Not a web or mobile testing target.'}"
+    elif kev_pts > 0:
+        verdict = (f"EXPLOITED IN THE WILD ({total:.1f}/100): in CISA KEV, so it ranks above every item "
+                   f"that is not. Among KEV items it is ordered by {band} and public PoC availability.")
+    elif poc_pts > 0:
+        verdict = (f"PUBLIC POC AVAILABLE ({total:.1f}/100): not in CISA KEV, but public exploit code exists. "
+                   f"Ranked by {band}.")
+    else:
+        verdict = (f"NO KNOWN EXPLOITATION ({total:.1f}/100): not in CISA KEV and no public PoC found, "
+                   f"so it is ranked on {band} alone (at most 40 points).")
+    return kev_eval, poc_eval, ai_eval, verdict
 
 class DataService:
     def __init__(self):
@@ -139,7 +230,7 @@ class DataService:
                 logger.error(f"Error loading fallback envelopes: {e}")
 
         # Enrich each candidate with direct CVE links, vendor bulletins, and detailed descriptions
-        cards = load_cards(GROUNDED_CARDS_FILE)
+        cards = load_cards(GROUNDED_CARDS_FILE if GROUNDED_CARDS_FILE.exists() else DEMO_CARDS_FILE)
         for c in data:
             self._enrich_candidate(c)
             self._attach_grounded_card(c, cards)
@@ -205,30 +296,7 @@ class DataService:
         pf = c.get("pre_filter") or {}
 
         # Standardize category
-        impact = (ai.get("offensive_impact") or "").lower()
-        title_low = (env.get("Title") or "").lower()
-        if "remote code execution" in impact or "rce" in impact or "remote code execution" in title_low:
-            standard_category = "Remote Code Execution (RCE)"
-        elif "authentication" in impact or "session" in impact or "bypass" in impact or "auth bypass" in title_low:
-            standard_category = "Authentication & Session Bypass"
-        elif "ssrf" in impact or "server-side request forgery" in impact or "ssrf" in title_low:
-            standard_category = "Server-Side Request Forgery (SSRF)"
-        elif "sql" in impact or "command injection" in impact or "injection" in title_low:
-            standard_category = "Command & SQL Injection"
-        elif "ipc" in impact or "intent" in impact or "component hijacking" in impact or "intent hijacking" in title_low:
-            standard_category = "Mobile Component Hijacking"
-        elif "buffer overflow" in impact or "memory corruption" in impact or "buffer overflow" in title_low:
-            standard_category = "Memory Corruption"
-        elif "desync" in impact or "smuggling" in impact or "protocol desync" in title_low:
-            standard_category = "Protocol Desync & Smuggling"
-        elif "frida" in impact or "hooking" in impact or "crypto" in impact or "cryptographic" in title_low:
-            standard_category = "Mobile Security & Cryptography"
-        elif "denial of service" in impact or "dos" in impact:
-            standard_category = "Denial of Service (DoS)"
-        elif "xss" in impact or "traversal" in impact:
-            standard_category = "Web Injection & Traversal"
-        else:
-            standard_category = ai.get("offensive_impact") or "Vulnerability Advisory"
+        standard_category = standard_category_for(ai, env.get("Title") or "")
 
         c["standard_category"] = standard_category
 
@@ -261,26 +329,10 @@ class DataService:
         total_score = float(c.get("priority_score", 0.0))
         ai_sev = float(ai.get("severity_score", 0.0))
 
-        if kev_pts > 0:
-            kev_eval = "Awarded +40.0 pts (MAX): Confirmed active in-the-wild exploitation cataloged in CISA KEV. Threat actors are actively weaponizing this flaw."
-        else:
-            kev_eval = "Awarded 0.0 pts: No active exploitation in the wild currently verified in CISA KEV. Threat is actively monitored but unweaponized."
-
-        if poc_pts > 0:
-            poc_eval = "Awarded +20.0 pts (MAX): Public weaponized Proof-of-Concept repository exists on GitHub/Exploit-DB, dramatically lowering attacker barrier to entry."
-        else:
-            poc_eval = "Awarded 0.0 pts: No public exploit script cataloged. Attackers must reverse-engineer the flaw independently."
-
-        ai_eval = f"Awarded +{ai_pts:.1f} / 40.0 pts (Rating {ai_sev:.1f}/10): {ai.get('reasoning') or 'Evaluated practical attack vector and privilege hurdles.'}"
-
-        if total_score >= 80.0:
-            ai_verdict = f"CRITICAL EMERGENCY PRIORITY ({total_score:.1f}/100): Severe threat combining high AI practical exploitability with confirmed in-the-wild weaponization or public PoC availability."
-        elif total_score >= 60.0:
-            ai_verdict = f"HIGH PRIORITY THREAT ({total_score:.1f}/100): High practical attacker utility against perimeter web interfaces or mobile components. Prioritize for upcoming remediation cycle."
-        elif total_score >= 40.0:
-            ai_verdict = f"MEDIUM RISK ({total_score:.1f}/100): Actionable offensive primitive, but exploitation is bounded by prerequisites, internal network access, or lack of public weaponization."
-        else:
-            ai_verdict = f"LOW RISK / MONITORED ({total_score:.1f}/100): Minimal immediate risk. Exploitation requires physical access, excessive credentials, or causes only transient service disruption."
+        kev_eval, poc_eval, ai_eval, ai_verdict = explain_score(
+            pf.get("is_in_scope", False), kev_pts, ai_pts, poc_pts, total_score, ai_sev,
+            ai.get("reasoning"), pf.get("reason"),
+        )
 
         c["ai_evaluation_breakdown"] = {
             "total_score": total_score,

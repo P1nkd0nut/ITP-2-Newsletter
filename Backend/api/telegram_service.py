@@ -90,21 +90,40 @@ def _public_url(url: Any) -> Optional[str]:
     return url.strip()
 
 
+def live_or_archived(url: str) -> Optional[str]:
+    """
+    The URL to post. If the link checker found it dead or redirected to a
+    homepage, its archive.org copy is used instead, or the link is dropped.
+    Links never checked are posted as they are.
+    """
+    from Backend.api.link_validator import DEAD, MOVED, link_validator
+
+    record = link_validator.cached_record(url)
+    if record and record.get("state") in (DEAD, MOVED):
+        return record.get("archive_url") or None
+    return url
+
+
 def source_links(c: Dict[str, Any]) -> List[tuple]:
     """
     (label, url) pairs for a digest card, all public: the NVD record, the item's
     own source, other sources reporting the same CVE, and the first public PoC.
-    Only URLs from the staging envelope are used, never model-written ones.
+    Only URLs from the staging envelope are used, never model-written ones, and
+    links the link checker found dead are swapped for an archived copy or left out.
     """
     env = c.get("envelope") or {}
     links: List[tuple] = []
     seen = set()
 
-    def add(label: str, url: Any) -> None:
+    def add(label: str, url: Any) -> bool:
         url = _public_url(url)
+        if url:
+            url = live_or_archived(url)
         if url and url not in seen and len(links) < MAX_SOURCE_LINKS:
             seen.add(url)
             links.append((label, url))
+            return True
+        return False
 
     cve = (env.get("CVE_ID") or "").upper()
     if re.fullmatch(r"CVE-\d{4}-\d{4,}", cve):
@@ -113,9 +132,19 @@ def source_links(c: Dict[str, Any]) -> List[tuple]:
     for url in c.get("also_source_urls") or []:
         add("Source", url)
     for url in env.get("PoC_URLs") or []:
-        add("PoC", url)
-        break
+        if add("PoC", url):
+            break  # the first PoC that is not known to be dead
     return links
+
+
+def link_lines(c: Dict[str, Any]) -> List[str]:
+    """
+    One line per public link with the full URL written out ("🔗 NVD: https://..."),
+    so the link is visible and tappable on every Telegram client, including mobile,
+    instead of being hidden behind a short label. No dashboard links: the dashboard
+    runs on a team PC that most readers can't reach.
+    """
+    return [f'🔗 {esc(label)}: <a href="{esc(url)}">{esc(url)}</a>' for label, url in source_links(c)]
 
 
 def dashboard_link_is_public() -> bool:
@@ -283,7 +312,6 @@ def _summary(c: Dict[str, Any]) -> str:
 def format_digest_item(c: Dict[str, Any], rank: int) -> str:
     """One short message per incident: title, tag, score, 1-2 line summary, link to its page."""
     env = c.get("envelope") or {}
-    item_id = env.get("Item_ID", "")
     category = (c.get("pre_filter") or {}).get("category", "")
     tag = {"WEB": "🌐 Web", "MOBILE": "📱 Mobile"}.get(category, category.title())
     score = float(c.get("priority_score", 0.0))
@@ -293,9 +321,11 @@ def format_digest_item(c: Dict[str, Any], rank: int) -> str:
     update = (c.get("novelty") or {})
     if update.get("status") == "UPDATE" and update.get("reasons"):
         flags.append("🔁 Update: " + ", ".join(update["reasons"]))
-    if env.get("KEV_Status"):
+    points = c.get("score_breakdown") or {}
+    # Story scoring: the kept copy may be the NVD record while the KEV entry or PoC came from a sibling
+    if env.get("KEV_Status") or points.get("cisa_kev_points"):
         flags.append("🔥 Actively exploited")
-    if env.get("PoC_URLs"):
+    if env.get("PoC_URLs") or points.get("poc_points"):
         flags.append("🧪 Public PoC")
 
     def build(summary_limit: int) -> str:
@@ -312,11 +342,9 @@ def format_digest_item(c: Dict[str, Any], rank: int) -> str:
         command = next((x for x in (c.get("grounded_card") or {}).get("testing_syntax") or [] if x), None)
         if command and summary_limit > 0:
             lines += ["", "Test:", f"<pre>{esc(_truncate(command, 300))}</pre>"]
-        links = [f'<a href="{esc(url)}">{esc(label)}</a>' for label, url in source_links(c)]
-        if dashboard_link_is_public():
-            links.append(f'<a href="{esc(incident_url(item_id))}">Full details</a>')
+        links = link_lines(c)
         if links:
-            lines += ["", "🔗 " + " · ".join(links)]
+            lines += [""] + links
         return "\n".join(lines)
 
     limit = SUMMARY_CHARS
@@ -340,10 +368,9 @@ def format_digest_header(items: List[Dict[str, Any]], days: int = 7, edition: Op
             f"{len(items)} top incident{'s' if len(items) != 1 else ''} {period}: "
             f"{web} Web, {mobile} Mobile."
         )
-        lines.append("Tap <i>Read full details</i> under each one for the full write-up.")
+        lines.append("Each card lists its NVD, source and PoC links.")
     else:
         lines.append(f"No new Web or Mobile incidents {period}.")
-    lines += ["", f'<a href="{esc(base_url())}/">Open the dashboard</a>']
     return "\n".join(lines)
 
 
@@ -466,14 +493,9 @@ class TelegramService:
         if ai.get("reasoning"):
             msg += f"\n<b>AI Assessment:</b>\n<i>{esc(_truncate(ai['reasoning'], 200))}</i>\n"
 
-        links = [f'<a href="{esc(url)}">{esc(label)}</a>' for label, url in source_links(candidate)]
+        links = link_lines(candidate)
         if links:
-            msg += "\n🔗 <b>Sources:</b> " + " · ".join(links)
-        if dashboard_link_is_public():
-            msg += (
-                f"\n📄 <a href=\"{esc(incident_url(env.get('Item_ID', '')))}\">Read full details</a>\n"
-                f"🌐 <b>Primary Channel:</b> <a href=\"{esc(base_url())}/\">Open GroundedCVE Dashboard</a>"
-            )
+            msg += "\n" + "\n".join(links)
         return msg
 
     def send_test_message(self, chat_id: Optional[str] = None) -> Dict[str, Any]:

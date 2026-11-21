@@ -11,7 +11,9 @@ let searchRanks = null; // Item_ID -> rank from /api/search (hybrid search); nul
 let searchTimer = null;
 let currentDateFilter = 'RECENT'; // 'RECENT' (past week) | 'MONTH' (past month) | 'ALL'
 let currentCategory = 'ALL';
-let currentSort = 'timeline'; // 'timeline' (newest first, then score) | 'score_desc' | 'date_desc' | 'date_asc' | 'ai_desc' | 'score_asc'
+// Default: highest priority first, since ranking is the point of the dashboard
+const DEFAULT_SORT = 'score_desc';
+let currentSort = DEFAULT_SORT; // 'score_desc' | 'timeline' (newest first, then score) | 'date_desc' | 'date_asc' | 'ai_desc' | 'score_asc'
 let activeCandidate = null;
 
 // Users see how recent an item is, never its date. Buckets match recencyLabel().
@@ -276,7 +278,7 @@ function resetAllFilters() {
   searchRanks = null;
   currentDateFilter = 'RECENT';
   currentCategory = 'ALL';
-  currentSort = 'timeline';
+  currentSort = DEFAULT_SORT;
 
   const searchInput = document.getElementById('mainSearchInput');
   if (searchInput) searchInput.value = '';
@@ -284,7 +286,7 @@ function resetAllFilters() {
   if (clearBtn) clearBtn.classList.add('hidden');
 
   const sortSelect = document.getElementById('sortSelect');
-  if (sortSelect) sortSelect.value = 'timeline';
+  if (sortSelect) sortSelect.value = DEFAULT_SORT;
 
   filterDesk('ALL');
   filterDateWindow('RECENT');
@@ -411,7 +413,7 @@ function getFilteredCandidates() {
 
   // 5. Sorting (while searching, the default order is best match first)
   items.sort((a, b) => {
-    if (currentSearch && searchRanks && currentSort === 'timeline') {
+    if (currentSearch && searchRanks && currentSort === DEFAULT_SORT) {
       return rankOf(a) - rankOf(b);
     }
     if (currentSort === 'timeline') {
@@ -547,8 +549,8 @@ function renderSpotlight(topItem) {
   const ai = topItem.ai_assessment || {};
   const pf = topItem.pre_filter || {};
   const disc = topItem.discrepancy || {};
-  const isKev = Boolean(env.KEV_Status);
-  const hasPoc = Boolean(env.PoC_URLs && env.PoC_URLs.length > 0);
+  const isKev = Boolean(env.KEV_Status) || ((topItem.score_breakdown || {}).cisa_kev_points || 0) > 0;
+  const hasPoc = Boolean(env.PoC_URLs && env.PoC_URLs.length > 0) || ((topItem.score_breakdown || {}).poc_points || 0) > 0;
   const pubDateFmt = topItem.published_date_formatted || recencyLabel(env.Published_Date);
   const catPill = getCategoryPill(topItem.standard_category || ai.offensive_impact);
 
@@ -614,8 +616,8 @@ function renderDeskGrid(containerId, items, desk) {
     const ai = item.ai_assessment || {};
     const disc = item.discrepancy || {};
     const indepth = item.in_depth || {};
-    const isKev = Boolean(env.KEV_Status);
-    const hasPoc = Boolean(env.PoC_URLs && env.PoC_URLs.length > 0);
+    const isKev = Boolean(env.KEV_Status) || ((item.score_breakdown || {}).cisa_kev_points || 0) > 0;
+    const hasPoc = Boolean(env.PoC_URLs && env.PoC_URLs.length > 0) || ((item.score_breakdown || {}).poc_points || 0) > 0;
     const pubDateFmt = item.published_date_formatted || recencyLabel(env.Published_Date);
     const catPill = getCategoryPill(item.standard_category || ai.offensive_impact);
 
@@ -624,7 +626,7 @@ function renderDeskGrid(containerId, items, desk) {
     const briefText = indepth.brief_summary || ai.reasoning || env.Title || 'Triaged candidate for pentesting analysis.';
 
     return `
-      <div class="news-card p-4 rounded-xl flex flex-col justify-between cursor-pointer space-y-3" onclick="openDetailModal('${env.Item_ID}')">
+      <div class="news-card p-4 rounded-xl flex flex-col justify-between cursor-pointer space-y-3 ${(ai.severity_score || 0) === 0 ? 'opacity-60' : ''}" title="${(ai.severity_score || 0) === 0 ? 'Research or release note, not a specific vulnerability' : ''}" onclick="openDetailModal('${env.Item_ID}')">
         <div class="space-y-2">
           
           <!-- Top Row: CVE ID & Category & Score -->
@@ -677,6 +679,9 @@ function openDetailModal(itemId) {
   if (!item) return;
 
   activeCandidate = item;
+  // Open on the summary and sources; scoring and checks stay folded under More details
+  const more = document.getElementById('mMoreDetails');
+  if (more) more.open = false;
   const env = item.envelope || {};
   const pf = item.pre_filter || {};
   const ai = item.ai_assessment || {};
@@ -788,22 +793,22 @@ function openDetailModal(itemId) {
     `Evaluated practical rating: ${(ai.severity_score || 0).toFixed(1)} / 10. Formula: (${(ai.severity_score || 0).toFixed(1)} / 10) * 40.`;
 
   document.getElementById('mPocReason').innerText = pocPts > 0
-    ? 'Verified public GitHub exploit code / PoC repository available.'
+    ? 'Public GitHub PoC repository found for this CVE (not run or verified).'
     : 'No public exploit repository cataloged.';
 
   // AI Evaluation Breakdown: Why is this rated this high / low?
   document.getElementById('mAiRatingScore').innerText = totalScore;
   document.getElementById('mAiVerdict').innerText = aiEval.ai_verdict ||
-    `Priority score ${totalScore}/100 calculated from CISA KEV weaponization (+${kevPts} pts), AI practical severity (+${aiPts} pts), and public PoC code (+${pocPts} pts).`;
+    `Priority score ${totalScore}/100 calculated from CISA KEV listing (+${kevPts} pts), AI practical severity (+${aiPts} pts), and public PoC code (+${pocPts} pts).`;
 
   document.getElementById('mAiKevEval').innerText = aiEval.cisa_kev_evaluation ||
-    (kevPts > 0 ? 'Awarded +40.0 pts: Actively weaponized zero-day / N-day in CISA KEV.' : '0.0 pts: No active exploitation reported in CISA KEV.');
+    (kevPts > 0 ? '+40 pts: listed in CISA KEV, so attackers have been seen using it.' : '0 pts: not in CISA KEV; no exploitation confirmed.');
 
   document.getElementById('mAiSevEval').innerText = aiEval.ai_severity_evaluation ||
-    `Awarded +${aiPts.toFixed(1)} pts: Qwen 2.5 assessed practical severity at ${(ai.severity_score || 0).toFixed(1)}/10 based on network attack surface.`;
+    `Awarded +${aiPts.toFixed(1)} pts: Qwen 2.5 assessed practical severity at ${(ai.severity_score || 0).toFixed(1)}/10 from the advisory text.`;
 
   document.getElementById('mAiPocEval').innerText = aiEval.poc_evaluation ||
-    (pocPts > 0 ? 'Awarded +20.0 pts: Public GitHub exploit script readily available.' : '0.0 pts: No public PoC repository discovered.');
+    (pocPts > 0 ? '+20 pts: a public GitHub repository names this CVE as a PoC (not run or verified).' : '0.0 pts: No public PoC repository discovered.');
 
   // In-Depth Vulnerability Explanation
   document.getElementById('mAiModel').innerText = ai.evaluated_by || 'Qwen 2.5 72B';
@@ -813,7 +818,7 @@ function openDetailModal(itemId) {
 
   document.getElementById('mImpact').innerText = item.standard_category || ai.offensive_impact || 'Security Vulnerability';
   document.getElementById('mProduct').innerText = `${env.Vendor_Product || 'Generic Target'} (Scope: ${pf.category || 'PENTEST'})`;
-  document.getElementById('mScopeReason').innerText = pf.reason || 'Isolated via Task 1.2 scope classifier.';
+  document.getElementById('mScopeReason').innerText = pf.reason || 'Placed by the web/mobile scope filter.';
 
   // Mitigation & Required Action
   const actionBox = document.getElementById('mActionBox');

@@ -180,7 +180,8 @@ class TestDashboardAPI(unittest.TestCase):
         msg = telegram_svc.format_alert_message(sample_candidate)
         self.assertIn("CVE-2026-1234", msg)
         self.assertIn("78.0/100.0", msg)
-        self.assertIn("Primary Channel", msg)
+        self.assertIn('🔗 PoC: <a href="https://github.com/test/poc">https://github.com/test/poc</a>', msg)
+        self.assertNotIn("/incident/", msg)  # no dashboard links in Telegram
 
     def test_09_date_range_and_sorting_query(self):
         """Verify 1-week date range preset filtering and date-based sorting."""
@@ -241,6 +242,30 @@ class TestDashboardAPI(unittest.TestCase):
         self.assertIn("ai_severity_evaluation", ai_eval)
         self.assertIn("poc_evaluation", ai_eval)
         self.assertIn("ai_verdict", ai_eval)
+
+
+
+class TestScoreExplanation(unittest.TestCase):
+    """The verdict follows the factors, so a severe item outside KEV is never called low risk."""
+
+    def test_critical_item_without_kev_or_poc(self):
+        from Backend.api.data_service import explain_score
+        _, _, _, verdict = explain_score(True, 0.0, 38.0, 0.0, 38.0, 9.5, "Unauthenticated RCE", None)
+        self.assertIn("NO KNOWN EXPLOITATION", verdict)
+        self.assertIn("9.5/10 (critical)", verdict)
+        self.assertNotIn("LOW RISK", verdict)
+
+    def test_kev_item(self):
+        from Backend.api.data_service import explain_score
+        kev, poc, _, verdict = explain_score(True, 40.0, 30.0, 20.0, 90.0, 7.5, "x", None)
+        self.assertIn("EXPLOITED IN THE WILD", verdict)
+        self.assertIn("+40", kev)
+        self.assertIn("not run or verified", poc)
+
+    def test_out_of_scope(self):
+        from Backend.api.data_service import explain_score
+        verdict = explain_score(False, 0, 0, 0, 0, 0, None, "Matched printer")[3]
+        self.assertTrue(verdict.startswith("OUT OF SCOPE"))
 
 
 if __name__ == "__main__":

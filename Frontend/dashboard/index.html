@@ -7,10 +7,11 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
 
   <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind, prebuilt so the page works offline (rebuild: see HANDOVER.md) -->
+  <link rel="stylesheet" href="tailwind.css">
 
   <!-- Preloaded Fallback Staging Envelopes -->
-  <script src="../data.js"></script>
+  <script src="/static-raw/data.js"></script>
 
   <!-- Custom Styles -->
   <link rel="stylesheet" href="styles.css">
@@ -19,7 +20,7 @@
 
   <!-- Modern Clean Header -->
   <header class="border-b border-slate-800 bg-[#0f172a]/90 backdrop-blur sticky top-0 z-40">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-0 sm:h-16 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
       
       <!-- Brand Title (Clean & Direct) -->
       <div class="flex items-center space-x-3 cursor-pointer" onclick="filterDesk('ALL')">
@@ -27,7 +28,7 @@
           GT
         </div>
         <div>
-          <span class="font-bold text-lg text-white tracking-tight">Grounded Threat News</span>
+          <span class="font-bold text-base sm:text-lg text-white tracking-tight whitespace-nowrap">Grounded Threat News</span>
           <p class="text-[11px] text-slate-400 hidden sm:block">Curated Web & Mobile Vulnerability Digest</p>
         </div>
       </div>
@@ -48,8 +49,8 @@
       </div>
 
       <!-- Actions: Link Health, Scoring Manual, Settings, Export -->
-      <div class="flex items-center space-x-2">
-        <button onclick="openLinkHealthModal()" title="Fast Concurrent Link Health Engine" class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-600 text-emerald-400 hover:text-emerald-300 text-xs font-semibold shadow-sm transition flex items-center space-x-1.5">
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="openLinkHealthModal()" title="Share of checked links that are live. Links a site blocks (403) are left out of the percentage." class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-600 text-emerald-400 hover:text-emerald-300 text-xs font-semibold shadow-sm transition flex items-center space-x-1.5">
           <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span class="hidden sm:inline">Link Health</span>
           <span id="badgeLinkHealth" class="text-[10px] font-mono px-1.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">100%</span>
@@ -129,8 +130,8 @@
         <div class="flex items-center space-x-1.5 shrink-0">
           <span class="text-[11px] font-mono text-slate-400 hidden sm:inline">Sort:</span>
           <select id="sortSelect" onchange="handleSortChange(this.value)" class="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-cyan-500 cursor-pointer">
+            <option value="score_desc" selected>🔥 Priority (High → Low)</option>
             <option value="timeline">Newest first</option>
-            <option value="score_desc">🔥 Threat Score (High → Low)</option>
             <option value="date_asc">Oldest first</option>
             <option value="ai_desc">🧠 AI Severity (High → Low)</option>
             <option value="score_asc">📉 Threat Score (Low → High)</option>
@@ -271,10 +272,42 @@
           <strong class="text-white">🔒 Not updated.</strong> <span id="mFreezeText"></span>
         </div>
 
+        <!-- In-Depth Technical Vulnerability Breakdown -->
+        <div class="bg-slate-950 border border-slate-800 rounded-lg p-4 space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="text-slate-200 uppercase font-mono text-xs font-bold">Summary</span>
+          </div>
+
+          <!-- What is the vulnerability -->
+          <div class="space-y-1">
+            <span class="text-slate-400 font-mono text-[11px] uppercase font-bold block">What is the Vulnerability?</span>
+            <p id="mFullDescription" class="text-slate-200 bg-slate-900 p-3 rounded border border-slate-800 leading-relaxed font-sans"></p>
+          </div>
+
+          <!-- Exploit mechanism & Offensive assessment -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div class="bg-slate-900 p-3 rounded border border-slate-800 space-y-1">
+              <span class="text-slate-400 font-mono text-[10px] uppercase font-bold block">Offensive Impact Primitive</span>
+              <p id="mImpact" class="text-white font-bold text-xs"></p>
+            </div>
+
+            <div class="bg-slate-900 p-3 rounded border border-slate-800 space-y-1">
+              <span class="text-slate-400 font-mono text-[10px] uppercase font-bold block">Target Product & Ecosystem</span>
+              <p id="mProduct" class="text-white font-bold text-xs"></p>
+            </div>
+          </div>
+
+          <!-- Required Action / Remediation (if available) -->
+          <div id="mActionBox" class="hidden bg-slate-900 p-3 rounded border border-slate-800 space-y-1">
+            <span class="text-amber-400 font-mono text-[10px] uppercase font-bold block">Required Mitigation & Remediation Action</span>
+            <p id="mRequiredAction" class="text-slate-300 text-xs leading-relaxed font-sans"></p>
+          </div>
+        </div>
+
         <!-- Direct Authoritative CVE & Bulletin Links -->
         <div class="bg-slate-950 border border-slate-800 rounded-lg p-3.5 space-y-2">
           <div class="text-[11px] font-mono text-slate-400 uppercase font-bold flex items-center justify-between">
-            <span>Direct Authoritative Disclosures & Links</span>
+            <span>Sources</span>
             <span class="text-emerald-400 font-sans">Strict Source Grounding</span>
           </div>
           
@@ -304,171 +337,153 @@
             <div id="mVendorBulletinsList" class="space-y-1"></div>
           </div>
 
-          <!-- Change tracking: what differs from the previous ingestion run -->
-          <div id="mChangeBox" class="hidden pt-2 border-t border-slate-800/80 space-y-1 font-mono text-[11px]">
-            <span id="mChangeTitle" class="text-slate-400 block font-bold"></span>
-            <ul id="mChangeList" class="space-y-1 text-slate-300"></ul>
-          </div>
         </div>
 
-        <!-- 100-Point Score Formula Breakdown -->
-        <div class="bg-slate-950 border border-slate-800 rounded-lg p-4">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3 font-mono">
-            <div>
-              <span class="text-slate-200 uppercase text-xs font-bold block">100-Point Priority Formula Breakdown</span>
-              <span class="text-[10px] text-slate-500 font-sans">Task 2.4 Multi-Factor Scoring Architecture</span>
+        <!-- More details: scoring explanation, checks and every reference (collapsed until clicked) -->
+        <details id="mMoreDetails" class="group bg-slate-950/40 border border-slate-800 rounded-lg">
+          <summary class="cursor-pointer select-none px-4 py-3 font-mono text-xs font-bold text-cyan-400 hover:text-cyan-300 flex items-center justify-between">
+            <span>More details: why this score, checks & all references</span>
+            <span class="text-slate-500 group-open:rotate-180 transition">▾</span>
+          </summary>
+          <div class="px-4 pb-4 space-y-5">
+          <!-- 100-Point Score Formula Breakdown -->
+          <div class="bg-slate-950 border border-slate-800 rounded-lg p-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3 font-mono">
+              <div>
+                <span class="text-slate-200 uppercase text-xs font-bold block">100-Point Priority Formula Breakdown</span>
+                <span class="text-[10px] text-slate-500 font-sans">KEV 40 + AI severity 40 + public PoC 20</span>
+              </div>
+              <div class="text-right">
+                <span id="mTotalScore" class="text-2xl font-black text-emerald-400">0.0</span>
+                <span class="text-slate-500 text-xs"> / 100</span>
+              </div>
             </div>
-            <div class="text-right">
-              <span id="mTotalScore" class="text-2xl font-black text-emerald-400">0.0</span>
-              <span class="text-slate-500 text-xs"> / 100</span>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs">
+              <!-- 1. KEV (40 pts) -->
+              <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
+                <div class="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>1. CISA KEV Exploitation</span>
+                  <span class="text-slate-500">Max 40</span>
+                </div>
+                <p id="mScoreKev" class="text-base font-bold text-white mt-1">0.0 pts</p>
+                <div class="w-full bg-slate-950 h-1.5 rounded-full mt-2 overflow-hidden">
+                  <div id="mBarKev" class="bg-rose-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <p id="mKevReason" class="text-[10px] text-slate-400 font-sans mt-2 leading-tight"></p>
+              </div>
+
+              <!-- 2. AI Severity (40 pts) -->
+              <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
+                <div class="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>2. AI Practical Severity</span>
+                  <span class="text-slate-500">Max 40</span>
+                </div>
+                <p id="mScoreAi" class="text-base font-bold text-cyan-400 mt-1">0.0 pts</p>
+                <div class="w-full bg-slate-950 h-1.5 rounded-full mt-2 overflow-hidden">
+                  <div id="mBarAi" class="bg-cyan-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <p id="mAiReason" class="text-[10px] text-slate-400 font-sans mt-2 leading-tight"></p>
+              </div>
+
+              <!-- 3. Public PoC (20 pts) -->
+              <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
+                <div class="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>3. Public GitHub PoC</span>
+                  <span class="text-slate-500">Max 20</span>
+                </div>
+                <p id="mScorePoc" class="text-base font-bold text-amber-400 mt-1">0.0 pts</p>
+                <div class="w-full bg-slate-950 h-1.5 rounded-full mt-2 overflow-hidden">
+                  <div id="mBarPoc" class="bg-amber-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <p id="mPocReason" class="text-[10px] text-slate-400 font-sans mt-2 leading-tight"></p>
+              </div>
             </div>
+
+            <!-- AI Evaluation: Why is this rated this high / low? -->
+            <div class="mt-3.5 bg-slate-900 border border-cyan-800/60 rounded-lg p-3.5 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                  <span class="text-base">🧠</span>
+                  <span class="text-xs font-bold text-cyan-300 font-mono uppercase tracking-wide">
+                    AI Evaluation: Why is this rated <span id="mAiRatingScore" class="text-white">0.0</span>/100?
+                  </span>
+                </div>
+                <button onclick="openManualModal()" class="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 hover:underline flex items-center space-x-1">
+                  <span>📘 Scoring Manual</span>
+                  <span>↗</span>
+                </button>
+              </div>
+
+              <p id="mAiVerdict" class="text-xs font-semibold text-white bg-slate-950/80 p-2.5 rounded border border-slate-800 leading-snug"></p>
+
+              <div class="space-y-1.5 text-[11px] font-sans text-slate-300 pt-1">
+                <div class="flex items-start space-x-2">
+                  <span class="font-mono text-rose-400 font-bold shrink-0">1. KEV Impact:</span>
+                  <span id="mAiKevEval" class="leading-relaxed"></span>
+                </div>
+                <div class="flex items-start space-x-2">
+                  <span class="font-mono text-cyan-400 font-bold shrink-0">2. AI Exploitability:</span>
+                  <span id="mAiSevEval" class="leading-relaxed"></span>
+                </div>
+                <div class="flex items-start space-x-2">
+                  <span class="font-mono text-amber-400 font-bold shrink-0">3. PoC Availability:</span>
+                  <span id="mAiPocEval" class="leading-relaxed"></span>
+                </div>
+              </div>
+            </div>
+
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs">
-            <!-- 1. KEV (40 pts) -->
-            <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
-              <div class="flex items-center justify-between text-[11px] text-slate-400">
-                <span>1. CISA KEV Exploitation</span>
-                <span class="text-slate-500">Max 40</span>
-              </div>
-              <p id="mScoreKev" class="text-base font-bold text-white mt-1">0.0 pts</p>
-              <div class="w-full bg-slate-950 h-1.5 rounded-full mt-2 overflow-hidden">
-                <div id="mBarKev" class="bg-rose-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
-              </div>
-              <p id="mKevReason" class="text-[10px] text-slate-400 font-sans mt-2 leading-tight"></p>
+          <!-- CVSS Discrepancy Gate (Revealed ONLY if discrepancy delta >= 4.0) -->
+          <div id="mAnomalyBox" class="hidden bg-rose-950/40 border border-rose-800 rounded-lg p-4 space-y-2">
+            <div class="flex items-center justify-between font-mono text-xs text-rose-300 font-bold">
+              <span>⚠️ CVSS Anomaly Discrepancy Gate Alert (|Δ| ≥ 4.0)</span>
+              <span id="mAnomalyDelta" class="px-2 py-0.5 rounded bg-rose-900 text-white"></span>
             </div>
-
-            <!-- 2. AI Severity (40 pts) -->
-            <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
-              <div class="flex items-center justify-between text-[11px] text-slate-400">
-                <span>2. AI Practical Severity</span>
-                <span class="text-slate-500">Max 40</span>
-              </div>
-              <p id="mScoreAi" class="text-base font-bold text-cyan-400 mt-1">0.0 pts</p>
-              <div class="w-full bg-slate-950 h-1.5 rounded-full mt-2 overflow-hidden">
-                <div id="mBarAi" class="bg-cyan-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
-              </div>
-              <p id="mAiReason" class="text-[10px] text-slate-400 font-sans mt-2 leading-tight"></p>
+            <div class="flex items-center space-x-4 font-mono text-xs text-slate-300">
+              <span>Vendor CVSS: <strong id="mAnomalyCvss" class="text-amber-400">N/A</strong></span>
+              <span>AI Practical Severity: <strong id="mAnomalyAi" class="text-rose-400">0.0 / 10</strong></span>
             </div>
-
-            <!-- 3. Public PoC (20 pts) -->
-            <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
-              <div class="flex items-center justify-between text-[11px] text-slate-400">
-                <span>3. Public GitHub PoC</span>
-                <span class="text-slate-500">Max 20</span>
-              </div>
-              <p id="mScorePoc" class="text-base font-bold text-amber-400 mt-1">0.0 pts</p>
-              <div class="w-full bg-slate-950 h-1.5 rounded-full mt-2 overflow-hidden">
-                <div id="mBarPoc" class="bg-amber-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
-              </div>
-              <p id="mPocReason" class="text-[10px] text-slate-400 font-sans mt-2 leading-tight"></p>
-            </div>
+            <p id="mAnomalyNote" class="text-rose-200 text-xs leading-relaxed font-sans bg-rose-950/60 p-2.5 rounded border border-rose-900/60"></p>
           </div>
 
-          <!-- AI Evaluation: Why is this rated this high / low? -->
-          <div class="mt-3.5 bg-slate-900 border border-cyan-800/60 rounded-lg p-3.5 space-y-2.5">
-            <div class="flex items-center justify-between">
+  <!-- Change tracking: what differs from the previous ingestion run -->
+            <div id="mChangeBox" class="hidden bg-slate-950 border border-slate-800 rounded-lg p-3 space-y-1 font-mono text-[11px]">
+              <span id="mChangeTitle" class="text-slate-400 block font-bold"></span>
+              <ul id="mChangeList" class="space-y-1 text-slate-300"></ul>
+            </div>
+
+          <!-- How it was assessed -->
+          <div class="bg-slate-950 border border-slate-800 rounded-lg p-3 space-y-1 font-mono text-[11px]">
+            <span class="text-slate-400 block font-bold uppercase">How it was assessed</span>
+            <div><span id="mAiModel" class="text-[10px] font-mono text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/80"></span></div>
+            <p id="mScopeReason" class="text-[11px] text-slate-400 font-sans pt-1"></p>
+          </div>
+          <!-- Verified External References & Community Links (NVD References, PoCs, Forums, Bulletins) -->
+          <div id="mRefsContainer" class="bg-slate-950 border border-slate-800 rounded-lg p-4 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
               <div class="flex items-center space-x-2">
-                <span class="text-base">🧠</span>
-                <span class="text-xs font-bold text-cyan-300 font-mono uppercase tracking-wide">
-                  AI Evaluation: Why is this rated <span id="mAiRatingScore" class="text-white">0.0</span>/100?
+                <span class="text-cyan-400 text-sm">🔗</span>
+                <span class="text-slate-200 uppercase font-mono text-xs font-bold">
+                  Verified References, NVD Links & Community Forums
                 </span>
               </div>
-              <button onclick="openManualModal()" class="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 hover:underline flex items-center space-x-1">
-                <span>📘 Scoring Manual</span>
-                <span>↗</span>
-              </button>
-            </div>
-
-            <p id="mAiVerdict" class="text-xs font-semibold text-white bg-slate-950/80 p-2.5 rounded border border-slate-800 leading-snug"></p>
-
-            <div class="space-y-1.5 text-[11px] font-sans text-slate-300 pt-1">
-              <div class="flex items-start space-x-2">
-                <span class="font-mono text-rose-400 font-bold shrink-0">1. KEV Impact:</span>
-                <span id="mAiKevEval" class="leading-relaxed"></span>
-              </div>
-              <div class="flex items-start space-x-2">
-                <span class="font-mono text-cyan-400 font-bold shrink-0">2. AI Exploitability:</span>
-                <span id="mAiSevEval" class="leading-relaxed"></span>
-              </div>
-              <div class="flex items-start space-x-2">
-                <span class="font-mono text-amber-400 font-bold shrink-0">3. PoC Availability:</span>
-                <span id="mAiPocEval" class="leading-relaxed"></span>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- In-Depth Technical Vulnerability Breakdown -->
-        <div class="bg-slate-950 border border-slate-800 rounded-lg p-4 space-y-3">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-            <span class="text-slate-200 uppercase font-mono text-xs font-bold">Vulnerability Details & Technical Impact</span>
-            <span id="mAiModel" class="text-[10px] font-mono text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/80"></span>
-          </div>
-
-          <!-- What is the vulnerability -->
-          <div class="space-y-1">
-            <span class="text-slate-400 font-mono text-[11px] uppercase font-bold block">What is the Vulnerability?</span>
-            <p id="mFullDescription" class="text-slate-200 bg-slate-900 p-3 rounded border border-slate-800 leading-relaxed font-sans"></p>
-          </div>
-
-          <!-- Exploit mechanism & Offensive assessment -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            <div class="bg-slate-900 p-3 rounded border border-slate-800 space-y-1">
-              <span class="text-slate-400 font-mono text-[10px] uppercase font-bold block">Offensive Impact Primitive</span>
-              <p id="mImpact" class="text-white font-bold text-xs"></p>
-              <p class="text-[11px] text-slate-400 font-sans pt-1">Evaluated real-world attack utility against application boundaries.</p>
-            </div>
-
-            <div class="bg-slate-900 p-3 rounded border border-slate-800 space-y-1">
-              <span class="text-slate-400 font-mono text-[10px] uppercase font-bold block">Target Product & Ecosystem</span>
-              <p id="mProduct" class="text-white font-bold text-xs"></p>
-              <p id="mScopeReason" class="text-[11px] text-slate-400 font-sans pt-1"></p>
-            </div>
-          </div>
-
-          <!-- Required Action / Remediation (if available) -->
-          <div id="mActionBox" class="hidden bg-slate-900 p-3 rounded border border-slate-800 space-y-1">
-            <span class="text-amber-400 font-mono text-[10px] uppercase font-bold block">Required Mitigation & Remediation Action</span>
-            <p id="mRequiredAction" class="text-slate-300 text-xs leading-relaxed font-sans"></p>
-          </div>
-        </div>
-
-        <!-- CVSS Discrepancy Gate (Revealed ONLY if discrepancy delta >= 4.0) -->
-        <div id="mAnomalyBox" class="hidden bg-rose-950/40 border border-rose-800 rounded-lg p-4 space-y-2">
-          <div class="flex items-center justify-between font-mono text-xs text-rose-300 font-bold">
-            <span>⚠️ CVSS Anomaly Discrepancy Gate Alert (|Δ| ≥ 4.0)</span>
-            <span id="mAnomalyDelta" class="px-2 py-0.5 rounded bg-rose-900 text-white"></span>
-          </div>
-          <div class="flex items-center space-x-4 font-mono text-xs text-slate-300">
-            <span>Vendor CVSS: <strong id="mAnomalyCvss" class="text-amber-400">N/A</strong></span>
-            <span>AI Practical Severity: <strong id="mAnomalyAi" class="text-rose-400">0.0 / 10</strong></span>
-          </div>
-          <p id="mAnomalyNote" class="text-rose-200 text-xs leading-relaxed font-sans bg-rose-950/60 p-2.5 rounded border border-rose-900/60"></p>
-        </div>
-
-        <!-- Verified External References & Community Links (NVD References, PoCs, Forums, Bulletins) -->
-        <div id="mRefsContainer" class="bg-slate-950 border border-slate-800 rounded-lg p-4 space-y-3">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-            <div class="flex items-center space-x-2">
-              <span class="text-cyan-400 text-sm">🔗</span>
-              <span class="text-slate-200 uppercase font-mono text-xs font-bold">
-                Verified References, NVD Links & Community Forums
+              <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/70 border border-emerald-800/80 px-2 py-0.5 rounded flex items-center space-x-1">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Fast Concurrent Health Check</span>
               </span>
             </div>
-            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/70 border border-emerald-800/80 px-2 py-0.5 rounded flex items-center space-x-1">
-              <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>Fast Concurrent Health Check</span>
-            </span>
+
+            <p class="text-[11px] text-slate-400 leading-relaxed font-sans">
+              Every reference provided in NVD, CVE authorities, research forums, and exploit repositories is retained below with verified HTTP health status, origin context, and response latency.
+            </p>
+
+            <div id="mVerifiedRefsList" class="space-y-2 font-mono text-xs"></div>
           </div>
 
-          <p class="text-[11px] text-slate-400 leading-relaxed font-sans">
-            Every reference provided in NVD, CVE authorities, research forums, and exploit repositories is retained below with verified HTTP health status, origin context, and response latency.
-          </p>
-
-          <div id="mVerifiedRefsList" class="space-y-2 font-mono text-xs"></div>
-        </div>
+          </div>
+        </details>
 
       </div>
 
@@ -476,7 +491,7 @@
       <div class="px-5 py-3 border-t border-slate-800 bg-slate-950 flex flex-wrap items-center justify-between gap-2">
         <button onclick="dispatchToTelegram()" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-medium border border-slate-700 transition flex items-center space-x-1.5">
           <span>📡</span>
-          <span>Push to Telegram Secondary Wire</span>
+          <span>Send to Telegram</span>
         </button>
 
         <a id="btnReaderPage" href="#" target="_blank" rel="noopener" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-medium border border-slate-700 transition flex items-center space-x-1.5">
@@ -543,8 +558,8 @@
         <div class="flex items-center space-x-2.5">
           <span class="text-xl">📘</span>
           <div>
-            <h3 class="text-sm sm:text-base font-bold text-white leading-tight">Threat Prioritization Manual & Scoring Guide</h3>
-            <p class="text-[11px] text-slate-400 font-mono">GroundedCVE Multi-Factor Scoring Architecture (Task 2.4)</p>
+            <h3 class="text-sm sm:text-base font-bold text-white leading-tight">How items are ranked</h3>
+            <p class="text-[11px] text-slate-400 font-mono">The 100-point priority score, explained</p>
           </div>
         </div>
         <button onclick="closeManualModal()" class="text-slate-400 hover:text-white text-2xl font-bold px-2">&times;</button>
@@ -552,162 +567,76 @@
 
       <!-- Modal Body -->
       <div class="p-5 sm:p-6 overflow-y-auto space-y-6 text-xs font-sans">
-        
-        <!-- Formula Callout -->
+
+        <!-- Formula -->
         <div class="bg-slate-950 border border-cyan-800/80 rounded-lg p-4 font-mono space-y-2">
-          <span class="text-[11px] font-bold text-cyan-400 uppercase block">100-Point Mathematical Formula</span>
+          <span class="text-[11px] font-bold text-cyan-400 uppercase block">The formula</span>
           <div class="text-xs sm:text-sm text-slate-100 bg-slate-900 p-3 rounded border border-slate-800 flex flex-wrap items-center justify-between gap-2">
-            <span>Score (0-100) = <strong class="text-rose-400">KEV (40)</strong> + <strong class="text-cyan-400">AI Severity (40)</strong> + <strong class="text-amber-400">Public PoC (20)</strong></span>
-            <span class="text-[11px] text-emerald-400 font-sans font-semibold">Max: 100.0 pts</span>
+            <span>Score = <strong class="text-rose-400">In CISA KEV: 40</strong> + <strong class="text-cyan-400">AI severity (0-10) &times; 4</strong> + <strong class="text-amber-400">Public PoC: 20</strong></span>
+            <span class="text-[11px] text-emerald-400 font-sans font-semibold">Max 100</span>
           </div>
           <p class="text-[11px] text-slate-400 font-sans pt-1">
-            Standard CVSS scores often over-inflate theoretical internal flaws while under-rating actionable exploit primitives. GroundedCVE calculates priority from verified empirical threat intelligence.
+            Items that share a CVE ID (the NVD record, its KEV entry, a GitHub advisory, a PoC) are scored as one story, so each gets the KEV and PoC points if any of them has them. Out-of-scope items score 0 and are not sent to the AI.
           </p>
         </div>
 
-        <!-- Section 1: What Gets a HIGH Score -->
+        <!-- Why these weights -->
+        <div class="space-y-2">
+          <h4 class="text-sm font-bold text-cyan-400 font-mono uppercase border-b border-slate-800 pb-2">Why 40 / 40 / 20</h4>
+          <p class="text-slate-300 leading-relaxed text-[11px]">
+            The weights follow the three exploitation states used by SSVC: none, public proof of concept, and active. Active exploitation carries the most weight because a CISA KEV listing is confirmed evidence that attackers use the flaw. A public PoC carries half as much: it lowers the barrier to attack but does not prove anyone is using it. Practical severity carries the remaining 40, so within each exploitation state items are ordered by what an attacker gains.
+          </p>
+          <p class="text-slate-300 leading-relaxed text-[11px]">
+            Official CVSS is not in the score. New records often have no CVSS yet, or a worst-case default, and CVSS describes technical severity rather than what matters for a test this week. It is still shown, and compared with the AI rating below.
+          </p>
+        </div>
+
+        <!-- What the score bands mean -->
         <div class="space-y-3">
-          <div class="flex items-center space-x-2 border-b border-emerald-900/60 pb-2">
-            <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
-            <h4 class="text-sm font-bold text-emerald-400 font-mono uppercase">What Gets a HIGH / CRITICAL Score (70 - 100 Points)?</h4>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            
-            <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-1.5">
-              <div class="flex items-center justify-between font-mono text-[11px]">
-                <strong class="text-rose-400">🔥 CISA KEV Weaponization</strong>
-                <span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 font-bold border border-rose-800">+40.0 pts</span>
-              </div>
-              <p class="text-slate-300 leading-relaxed text-[11px]">
-                Confirmed active exploitation in the wild cataloged in CISA's Known Exploited Vulnerabilities catalog. Threat actors are actively targeting exposed network endpoints.
-              </p>
+          <h4 class="text-sm font-bold text-emerald-400 font-mono uppercase border-b border-slate-800 pb-2">What a score means</h4>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="bg-slate-950 p-3.5 rounded-lg border border-rose-900/70 space-y-1.5">
+              <strong class="text-rose-400 font-mono text-[11px] block">40 to 100: exploited in the wild</strong>
+              <p class="text-slate-300 leading-relaxed text-[11px]">Every CISA KEV item. A KEV item with severity above 5 outranks every item that is not in KEV. This is deliberate: exploited issues come first.</p>
             </div>
-
-            <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-1.5">
-              <div class="flex items-center justify-between font-mono text-[11px]">
-                <strong class="text-cyan-400">⚡ Unauthenticated Network RCE</strong>
-                <span class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 font-bold border border-cyan-800">+36 to +40 pts</span>
-              </div>
-              <p class="text-slate-300 leading-relaxed text-[11px]">
-                AI evaluated practical severity between <strong>9.0 and 10.0/10</strong>. Attacker can execute arbitrary operating system commands, webshells, or payloads without providing any credentials.
-              </p>
+            <div class="bg-slate-950 p-3.5 rounded-lg border border-amber-900/70 space-y-1.5">
+              <strong class="text-amber-400 font-mono text-[11px] block">20 to 60: public PoC, not in KEV</strong>
+              <p class="text-slate-300 leading-relaxed text-[11px]">Exploit code is public but no exploitation has been confirmed. Ordered by severity.</p>
             </div>
-
             <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-1.5">
-              <div class="flex items-center justify-between font-mono text-[11px]">
-                <strong class="text-sky-400">🔑 Perimeter Auth & Session Bypass</strong>
-                <span class="px-2 py-0.5 rounded bg-sky-950 text-sky-300 font-bold border border-sky-800">+34 to +38 pts</span>
-              </div>
-              <p class="text-slate-300 leading-relaxed text-[11px]">
-                AI evaluated severity between <strong>8.5 and 9.5/10</strong>. Flaws in SAML, OAuth, JWT, or admin routing gateways allowing remote unauthenticated actors to forge sessions and seize admin privileges.
-              </p>
+              <strong class="text-slate-200 font-mono text-[11px] block">0 to 40: no known exploitation</strong>
+              <p class="text-slate-300 leading-relaxed text-[11px]">Ranked on severity alone. A critical bug here can score 38: it is serious, but nobody has been seen using it yet.</p>
             </div>
-
-            <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-1.5">
-              <div class="flex items-center justify-between font-mono text-[11px]">
-                <strong class="text-amber-400">💻 Public Weaponized PoC</strong>
-                <span class="px-2 py-0.5 rounded bg-amber-950 text-amber-300 font-bold border border-amber-800">+20.0 pts</span>
-              </div>
-              <p class="text-slate-300 leading-relaxed text-[11px]">
-                Verified exploit scripts or automated scanners published on GitHub or Exploit-DB. Drastically lowers the technical barrier to entry for opportunistic attackers.
-              </p>
-            </div>
-
-            <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-1.5">
-              <div class="flex items-center justify-between font-mono text-[11px]">
-                <strong class="text-purple-400">📡 Cloud SSRF / Metadata Exfiltration</strong>
-                <span class="px-2 py-0.5 rounded bg-purple-950 text-purple-300 font-bold border border-purple-800">+32 to +36 pts</span>
-              </div>
-              <p class="text-slate-300 leading-relaxed text-[11px]">
-                Server-Side Request Forgery capable of querying cloud instance metadata (AWS IMDSv1/v2, GCP metadata) or internal microservices, resulting in IAM credential theft.
-              </p>
-            </div>
-
-            <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-1.5">
-              <div class="flex items-center justify-between font-mono text-[11px]">
-                <strong class="text-emerald-400">📱 Mobile Exported Intent Hijacking</strong>
-                <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-bold border border-emerald-800">+32 to +36 pts</span>
-              </div>
-              <p class="text-slate-300 leading-relaxed text-[11px]">
-                Exported Android Activities, Broadcast Receivers, or Content Providers that process untrusted intents without signature permissions, allowing malicious local apps to hijack app state or steal databases.
-              </p>
-            </div>
-
           </div>
         </div>
 
-        <!-- Section 2: What Gets a LOW Score -->
-        <div class="space-y-3">
-          <div class="flex items-center space-x-2 border-b border-rose-900/60 pb-2">
-            <span class="h-2.5 w-2.5 rounded-full bg-rose-400"></span>
-            <h4 class="text-sm font-bold text-rose-400 font-mono uppercase">What Gets a LOW / NEGLIGIBLE Score (0 - 39 Points)?</h4>
+        <!-- AI severity guide -->
+        <div class="space-y-2">
+          <h4 class="text-sm font-bold text-cyan-400 font-mono uppercase border-b border-slate-800 pb-2">How the AI rates severity (0 to 10)</h4>
+          <p class="text-slate-400 leading-relaxed text-[11px]">Qwen 2.5 72B reads the title, product, CVE ID and the first 3,000 characters of the cleaned advisory, and rates practical attack impact with these bands:</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono text-[11px]">
+            <div class="bg-slate-950 p-2.5 rounded border border-slate-800"><strong class="text-rose-400">9 to 10, critical:</strong> <span class="text-slate-300 font-sans">unauthenticated RCE, authentication bypass, account takeover, root or kernel privilege escalation.</span></div>
+            <div class="bg-slate-950 p-2.5 rounded border border-slate-800"><strong class="text-orange-400">7 to 8.9, high:</strong> <span class="text-slate-300 font-sans">SSRF, SQL injection with data exfiltration, intent hijacking, memory buffer overflow.</span></div>
+            <div class="bg-slate-950 p-2.5 rounded border border-slate-800"><strong class="text-amber-400">4 to 6.9, medium:</strong> <span class="text-slate-300 font-sans">stored or reflected XSS, CSRF, constrained path traversal, information disclosure.</span></div>
+            <div class="bg-slate-950 p-2.5 rounded border border-slate-800"><strong class="text-slate-300">0 to 3.9, low:</strong> <span class="text-slate-300 font-sans">local denial of service, memory leaks, flaws needing physical or restricted access.</span></div>
           </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-
-            <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-1.5">
-              <div class="flex items-center justify-between font-mono text-[11px]">
-                <strong class="text-slate-300">🚫 Out-of-Scope Pre-Filter</strong>
-                <span class="px-2 py-0.5 rounded bg-slate-900 text-slate-400 font-bold border border-slate-800">0.0 pts</span>
-              </div>
-              <p class="text-slate-400 leading-relaxed text-[11px]">
-                Advisories affecting desktop operating systems, industrial IoT, hardware firmware, automotive CAN buses, or printer firmware. Automatically rejected by Task 1.2 classifier before scoring.
-              </p>
-            </div>
-
-            <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-1.5">
-              <div class="flex items-center justify-between font-mono text-[11px]">
-                <strong class="text-slate-300">🔌 Pure Denial of Service (DoS)</strong>
-                <span class="px-2 py-0.5 rounded bg-slate-900 text-slate-400 font-bold border border-slate-800">+4 to +14 pts</span>
-              </div>
-              <p class="text-slate-400 leading-relaxed text-[11px]">
-                AI evaluated severity between <strong>1.0 and 3.5/10</strong>. Flaws that only cause transient daemon restarts or memory leaks without arbitrary code execution, privilege escalation, or data exfiltration.
-              </p>
-            </div>
-
-            <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-1.5">
-              <div class="flex items-center justify-between font-mono text-[11px]">
-                <strong class="text-slate-300">🔒 High Credentials Required</strong>
-                <span class="px-2 py-0.5 rounded bg-slate-900 text-slate-400 font-bold border border-slate-800">+8 to +16 pts</span>
-              </div>
-              <p class="text-slate-400 leading-relaxed text-[11px]">
-                Vulnerabilities requiring an attacker to already possess high-privilege credentials (e.g. cluster superadmin) or deep internal network access to exploit.
-              </p>
-            </div>
-
-            <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-1.5">
-              <div class="flex items-center justify-between font-mono text-[11px]">
-                <strong class="text-slate-300">📱 Local / Physical Access Required</strong>
-                <span class="px-2 py-0.5 rounded bg-slate-900 text-slate-400 font-bold border border-slate-800">+6 to +16 pts</span>
-              </div>
-              <p class="text-slate-400 leading-relaxed text-[11px]">
-                Mobile flaws requiring physical USB debugging (ADB), unlocked device possession, or complex multi-step social engineering with direct user consent.
-              </p>
-            </div>
-
-          </div>
+          <p class="text-slate-500 leading-relaxed text-[11px]">If the model is unreachable, a keyword fallback gives coarse ratings (9.5, 8, 6 or 3.5). Those are marked "heuristic_engine" and re-scored by the model on the next run.</p>
         </div>
 
-        <!-- Section 3: CVSS Discrepancy Gate -->
+        <!-- Scope -->
+        <div class="space-y-2">
+          <h4 class="text-sm font-bold text-slate-200 font-mono uppercase border-b border-slate-800 pb-2">What is in scope</h4>
+          <p class="text-slate-300 leading-relaxed text-[11px]">
+            Web and mobile testing targets only. Rules run in order: the source (PortSwigger and GitHub advisories are web; Android, Apple and Frida are mobile), out-of-scope words (printer, SCADA, PLC, UEFI, router firmware and so on), web and mobile CWE lists, then web and mobile keywords. Each item shows which rule placed it. Known limitation: some infrastructure and desktop advisories still pass the keyword rule, so check the scope reason when an item looks out of place.
+          </p>
+        </div>
+
+        <!-- CVSS discrepancy -->
         <div class="bg-slate-950 border border-slate-800 rounded-lg p-4 space-y-2">
-          <div class="flex items-center justify-between font-mono text-xs">
-            <strong class="text-amber-400 uppercase">⚠️ CVSS Anomaly Discrepancy Gate (|Δ| ≥ 4.0)</strong>
-            <span class="text-slate-500 font-sans">Quality Assurance Safeguard</span>
-          </div>
+          <strong class="text-amber-400 uppercase font-mono text-xs block">CVSS discrepancy flag (difference of 4.0 or more)</strong>
           <p class="text-slate-300 text-[11px] leading-relaxed">
-            Whenever the discrepancy between vendor-assigned CVSS and Qwen 2.5's practical offensive rating exceeds <strong>4.0 points</strong>, the advisory is flagged with a subtle discrepancy tag on the front page and a detailed troubleshooting note in the detail modal.
+            When the official CVSS and the AI rating differ by 4.0 or more, the item is flagged for a person to review. The flag does not change the score. Possible reasons: a worst-case default CVSS on a new record, an official score that understates practical impact, or an AI rating that is wrong. Items without an official CVSS (including all CISA KEV entries) are not checked.
           </p>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-mono text-[11px]">
-            <div class="bg-slate-900 p-2.5 rounded border border-slate-800">
-              <span class="text-rose-400 font-bold block mb-1">CVSS Inflation Alert</span>
-              <p class="text-slate-400 font-sans text-[10px]">Vendor rates CVSS 9.8 based on worst-case theoretical math, but flaw exists on an internal unreachable component.</p>
-            </div>
-            <div class="bg-slate-900 p-2.5 rounded border border-slate-800">
-              <span class="text-emerald-400 font-bold block mb-1">CVSS Deflation Alert</span>
-              <p class="text-slate-400 font-sans text-[10px]">Vendor rates CVSS 5.3 as "moderate", but real-world chaining allows complete unauthenticated tenant compromise.</p>
-            </div>
-          </div>
         </div>
 
       </div>

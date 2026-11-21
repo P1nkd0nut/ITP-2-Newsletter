@@ -41,15 +41,23 @@ All settings live in `.env` (template: `.env.example`). Secrets never go in the 
 | `OPENROUTER_API_KEY` | (none) | Needed for AI triage and card writing. Without it, triage falls back to Ollama/heuristics and no cards are written |
 | `OPENROUTER_MODEL` | `qwen/qwen-2.5-72b-instruct` | Model for triage and summaries |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | (none) | Weekly digest. Channel IDs start with `-100` |
-| `BASE_URL` | `http://127.0.0.1:5000` | Where "Full details" links point. With 127.0.0.1/localhost, Telegram cards carry only public NVD/source/PoC links |
+| `BASE_URL` | `http://127.0.0.1:5000` | Address the dashboard is served on (single-item alerts link to it). Telegram digest cards carry only public NVD/source/PoC links |
 | `NVD_API_KEY`, `GITHUB_TOKEN` | (none) | Higher API rate limits |
 | `INGEST_LIMIT` | 5 | Items per source per run |
+| `NVD_LIMIT` | `INGEST_LIMIT` | Newest NVD CVEs per run, if more than `INGEST_LIMIT` (`.env.example` sets 20) |
 | `SUMMARY_TOP` | 10 | Cards written per run |
 | `PIPELINE_RUN_TIME`, `PIPELINE_TIMEZONE` | 08:00, Asia/Singapore | Daily run time |
 | `DIGEST_INTERVAL_DAYS` | 7 | Days between digests |
 | `NOVELTY_SIMILARITY` | blank | Override the tuned near-duplicate threshold (section 5) |
 
-**Ranking weights** are in `Backend/triage/priority_scorer.py`, `_calculate_100pt_score`: CISA KEV 40, AI severity 40, public PoC 20. Items sharing a CVE ID are scored as one story (`group_by_cve`).
+**Ranking weights** are in `Backend/triage/priority_scorer.py`, `_calculate_100pt_score`: CISA KEV 40, AI severity 40, public PoC 20. Items sharing a CVE ID are scored as one story (`group_by_cve`). The reasoning is in the README (section 4, "Why 40 / 40 / 20") and in the dashboard's "How items are ranked" popup. If you change the weights, update both, and `explain_score()` in `Backend/api/data_service.py`, which writes the per-item explanation.
+
+**Dashboard styling** is a prebuilt Tailwind file, `Frontend/dashboard/tailwind.css`, so the dashboard and reader pages look right without internet. After adding new Tailwind classes to `index.html`, `app.js` or the reader pages, rebuild it:
+
+```bash
+npx tailwindcss@3.4.17 -i tailwind.input.css -o Frontend/dashboard/tailwind.css --minify \
+  --content "Frontend/dashboard/index.html,Frontend/dashboard/app.js,Frontend/reader/*.html"
+```
 
 **Other thresholds:**
 - CVSS vs AI anomaly: `DISCREPANCY_THRESHOLD = 4.0` in `priority_scorer.py`.
