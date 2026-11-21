@@ -34,7 +34,7 @@
       </div>
 
       <!-- Quick Desk Navigation Pills -->
-      <div class="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-lg text-xs font-medium">
+      <div class="desk-nav flex items-center bg-slate-900 border border-slate-800 p-1 rounded-lg text-xs font-medium">
         <button onclick="filterDesk('ALL')" id="tabBtn-ALL" class="desk-btn px-3 py-1.5 rounded-md bg-cyan-600 text-white font-semibold transition">
           All
         </button>
@@ -48,8 +48,13 @@
         </button>
       </div>
 
-      <!-- Actions: Link Health, Scoring Manual, Settings, Export -->
+      <!-- Actions: Reader mode, Link Health, Scoring Manual, Settings, Export -->
       <div class="flex flex-wrap items-center gap-2">
+        <button onclick="toggleReaderMode()" title="Read the verified cards as a newsletter edition" class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-amber-500 text-amber-300 hover:text-amber-200 text-xs font-semibold shadow-sm transition flex items-center space-x-1.5">
+          <span id="readerToggleIcon">📰</span>
+          <span id="readerToggleLabel">Reader mode</span>
+        </button>
+
         <button onclick="openLinkHealthModal()" title="Share of checked links that are live. Links a site blocks (403) are left out of the percentage." class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-600 text-emerald-400 hover:text-emerald-300 text-xs font-semibold shadow-sm transition flex items-center space-x-1.5">
           <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span class="hidden sm:inline">Link Health</span>
@@ -74,7 +79,7 @@
   </header>
 
   <!-- Main Content -->
-  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 space-y-8">
+  <main id="dashboardMain" class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 space-y-8">
 
     <!-- Short & Sweet Summary Bar -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
@@ -243,6 +248,11 @@
     </section>
 
   </main>
+
+  <!-- Reader mode: the verified cards as a newsletter edition (reader.js) -->
+  <section id="readerView" class="hidden">
+    <div id="readerContent" class="reader-paper"></div>
+  </section>
 
   <!-- Detail Modal (Deep-Dive Technical Breakdown & Direct CVE Links) -->
   <div id="detailModal" class="fixed inset-0 modal-backdrop hidden z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
@@ -851,5 +861,6 @@
 
   <!-- Scripts -->
   <script src="app.js"></script>
+  <script src="reader.js"></script>
 </body>
 </html>
