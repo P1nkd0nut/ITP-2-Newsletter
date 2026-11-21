@@ -52,6 +52,13 @@ All settings live in `.env` (template: `.env.example`). Secrets never go in the 
 
 **Ranking weights** are in `Backend/triage/priority_scorer.py`, `_calculate_100pt_score`: CISA KEV 40, AI severity 40, public PoC 20. Items sharing a CVE ID are scored as one story (`group_by_cve`). The reasoning is in the README (section 4, "Why 40 / 40 / 20") and in the dashboard's "How items are ranked" popup. If you change the weights, update both, and `explain_score()` in `Backend/api/data_service.py`, which writes the per-item explanation.
 
+**Dashboard styling** is a prebuilt Tailwind file, `Frontend/dashboard/tailwind.css`, so the dashboard and reader pages look right without internet. After adding new Tailwind classes to `index.html`, `app.js` or the reader pages, rebuild it:
+
+```bash
+npx tailwindcss@3.4.17 -i tailwind.input.css -o Frontend/dashboard/tailwind.css --minify \
+  --content "Frontend/dashboard/index.html,Frontend/dashboard/app.js,Frontend/reader/*.html"
+```
+
 **Other thresholds:**
 - CVSS vs AI anomaly: `DISCREPANCY_THRESHOLD = 4.0` in `priority_scorer.py`.
 - Scope taxonomy (CWE list, Web/Mobile keywords): `Backend/triage/pre_filter.py`.
