@@ -22,13 +22,15 @@ Open **http://localhost:5000**. That's it. Docker starts:
 | Container | What it does |
 |---|---|
 | `app` | Dashboard + API on port 5000 |
-| `scheduler` | Runs the full pipeline at start and then every day at 08:00 Singapore time (`PIPELINE_RUN_TIME` / `PIPELINE_TIMEZONE` in `.env`): ingest → triage → chunk → embed into Qdrant → write grounded summaries → verification gate → weekly Telegram digest |
+| `scheduler` | Runs the full pipeline at start and then every day at 08:00 Singapore time (`PIPELINE_RUN_TIME` / `PIPELINE_TIMEZONE` in `.env`): ingest → triage → chunk → embed into Qdrant → write grounded summaries → verification gate → link check → weekly Telegram digest |
 | `qdrant` | Vector database (port 6333) |
 | `ollama` | Embeddings (`nomic-embed-text`, downloaded automatically by `ollama-pull` on first start). Internal only, so it doesn't clash with an Ollama you already run on port 11434 |
 
 Watch the first run with `docker compose logs -f scheduler` (the first start downloads the ~270 MB embedding model). The dashboard shows a green **✓ Verified** badge on items whose summary passed the gate, and only those go into the digest. If `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are set, the digest is sent on the first run and then once every 7 days.
 
 Stop everything with `docker compose down`. Data stays in `Backend/data`, `qdrant_storage` and `ollama_data`.
+
+The pipeline only runs while Docker Desktop is running. Turn on **Start Docker Desktop when you sign in** in Docker Desktop's settings so the daily run is not missed; if it was stopped, the scheduler runs straight away when it starts again. To update to the latest code: `git pull` then `docker compose up -d --build`. Day-to-day operation, configuration and troubleshooting are in [HANDOVER.md](HANDOVER.md).
 
 ---
 
@@ -175,7 +177,7 @@ docker compose up -d
 ```
 This provisions:
 - **Qdrant** (`localhost:6333`) — persisted to `./qdrant_storage`
-- **Ollama** (`localhost:11434`) — persisted to `./ollama_data`, used to serve `nomic-embed-text` for local embeddings
+- **Ollama** — persisted to `./ollama_data`, serves `nomic-embed-text` for local embeddings. It is internal to Docker (no port on the host), so the scripts below either run inside the app container (`docker compose exec app python Backend/<script>.py`, recommended) or need your own Ollama on `localhost:11434` with `ollama pull nomic-embed-text`.
 
 Then initialise the two Qdrant collections (`groundedcve_items`, `groundedcve_published`):
 ```bash
@@ -282,13 +284,15 @@ python Frontend/run_dashboard.py
 | `/api/newsletters` | GET | Query candidates with scope filtering (`WEB`, `MOBILE`), search, and sorting |
 | `/api/newsletters/<id>` | GET | Deep-dive detail for a specific disclosure |
 | `/api/newsletter/digest` | GET | Curated weekly threat intelligence edition |
-| `/api/newsletter/export` | GET | Export issue in Markdown (`?format=markdown`) or HTML (`?format=html`) |
+| `/api/newsletter/export` | GET | Export the top 6 verified items in Markdown (`?format=markdown`), HTML (`?format=html`) or JSON (`?format=json`) |
+| `/api/search` | GET | Hybrid keyword + meaning search (`?q=...`, `mode` = hybrid, keyword or semantic, `limit` up to 50) |
 | `/api/refresh` | POST | Live reload of staged threat candidate dataset |
 | `/api/links/stats` | GET | Cached link health, active ratio, and average latency statistics |
 | `/api/links/verify` | GET/POST | Fast concurrent verification of all cataloged reference links |
 | `/api/channels` | GET | Channel hierarchy status (Primary vs Secondary) |
 | `/api/channels/telegram` | PUT | Configure Telegram secondary notification settings |
 | `/api/channels/telegram/test`| POST | Verify secondary Telegram bot integration (live or simulated) |
+| `/api/channels/telegram/dispatch` | POST | Send one item to Telegram (the dashboard's "Send to Telegram" button) |
 
 #### Keeping older CVEs up to date
 Ingestion re-checks CVEs that dropped out of the feeds, less often as they age (`Backend/ingestion/recheck_policy.py`):

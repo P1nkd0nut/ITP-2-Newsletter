@@ -7,21 +7,26 @@ architecture; this covers running it, changing it, and what to do when it breaks
 
 ## 1. Setup and deployment
 
-**Requirements:** Docker Desktop, an OpenRouter API key. Optional: a Telegram bot token, NVD and GitHub API keys (higher rate limits).
+**Requirements:** Docker Desktop, an OpenRouter API key. Optional: a Telegram bot token, NVD and GitHub API keys (higher rate limits). Every setting is explained in `.env.example`.
 
 ```bash
 git clone https://github.com/P1nkd0nut/ITP-2-Newsletter.git
 cd ITP-2-Newsletter
-cp .env.example .env      # fill in the keys (see section 2)
+cp .env.example .env      # fill in the keys (see section 2); Windows: copy .env.example .env
 docker compose up -d --build
 ```
+
+Open http://localhost:5000. The first start downloads the embedding model (about 270 MB) and runs the whole pipeline once, so the dashboard fills in over the next few minutes. Watch it with `docker compose logs -f scheduler`.
 
 | Container | Role |
 |---|---|
 | `app` | Dashboard and REST API on port 5000 |
 | `scheduler` | Full pipeline at start, then daily at `PIPELINE_RUN_TIME`; Telegram digest every `DIGEST_INTERVAL_DAYS` |
 | `qdrant` | Vector database, data in `qdrant_storage/` |
-| `ollama` | `nomic-embed-text` embeddings, data in `ollama_data/` |
+| `ollama` | `nomic-embed-text` embeddings, data in `ollama_data/`. Internal only (no host port) |
+| `ollama-pull` | One-off helper that downloads `nomic-embed-text`, then exits. "Exited (0)" in `docker compose ps` is normal |
+
+Pipeline data (staged items, cards, ledgers, logs) is in `Backend/data`, mounted into the containers, so it survives rebuilds. Back up that folder if you move machines.
 
 CISA KEV entries are a sentence or two, so each KEV item gets the same CVE's NVD record attached (up to 10 NVD lookups per run). Its text is given to the card writer and the verification gate as one more source excerpt, and its affected versions are shown on the dashboard. To add it to existing items at once: `docker compose exec app python Backend/run_nvd_versions.py`; the cards are rewritten on the next daily run, or straight away with `docker compose exec app python Backend/run_summarise.py`.
 
@@ -31,6 +36,15 @@ Outside Docker: `pip install -r requirements.txt`, start Qdrant and Ollama yours
 **Only one machine should run the scheduler with the Telegram token.** If several do, the pinned-edition guard (section 6) stops duplicate weekly digests, but each machine keeps its own record of sent items, so a later week can repeat items another machine already sent.
 
 **Security.** The dashboard has no login and listens on all interfaces (`run_server.py`, `0.0.0.0:5000`). Anyone who can reach port 5000 can change the Telegram settings and make the bot post. Run it on a trusted network only, or put it behind a reverse proxy with authentication before exposing it.
+
+
+**Daily operation.** Nothing needs to be pressed. Each day at `PIPELINE_RUN_TIME` (and whenever the scheduler starts) it runs: ingestion (with the GitHub PoC search, re-checks of older items and NVD records for KEV items), triage, chunking, Qdrant indexing, card writing and the verification gate, the link check, and the Telegram digest when it is due. The dashboard reloads new results on its own every 5 minutes. What needs a person:
+- **Keep Docker Desktop running.** Nothing runs while it is stopped. Turn on "Start Docker Desktop when you sign in" in its settings. After a stop, the scheduler runs straight away when it comes back.
+- **Update the code:** `git pull`, then `docker compose up -d --build`.
+- **Look at the log** after a change: `docker compose logs --tail 200 scheduler`. Each stage prints its result, and each run ends with a `Run metrics` block.
+- **Review quarantined cards** now and then (section 3).
+
+Manual extras on the dashboard: **Reader mode** (the current items as a newsletter issue; print or save as PDF), **Export** (the top 6 verified items as Markdown, HTML or JSON; it ignores the on-screen filters), **Send to Telegram** for one item, and **Link Health** with a manual re-check.
 
 ---
 
@@ -42,6 +56,7 @@ All settings live in `.env` (template: `.env.example`). Secrets never go in the 
 |---|---|---|
 | `OPENROUTER_API_KEY` | (none) | Needed for AI triage and card writing. Without it, triage falls back to Ollama/heuristics and no cards are written |
 | `OPENROUTER_MODEL` | `qwen/qwen-2.5-72b-instruct` | Model for triage and summaries |
+| `SUMMARY_OLLAMA_MODEL` | blank | Local Ollama model for cards when there is no OpenRouter key (pull it first) |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | (none) | Weekly digest. Channel IDs start with `-100` |
 | `BASE_URL` | `http://127.0.0.1:5000` | Address the dashboard is served on, shown in `/api/channels`. Telegram messages (digest and single-item alerts) never link to it; they carry only public NVD/source/PoC links |
 | `NVD_API_KEY`, `GITHUB_TOKEN` | (none) | Higher API rate limits |
@@ -51,6 +66,9 @@ All settings live in `.env` (template: `.env.example`). Secrets never go in the 
 | `PIPELINE_RUN_TIME`, `PIPELINE_TIMEZONE` | 08:00, Asia/Singapore | Daily run time |
 | `DIGEST_INTERVAL_DAYS` | 7 | Days between digests |
 | `NOVELTY_SIMILARITY` | blank | Override the tuned near-duplicate threshold (section 5) |
+| `OLLAMA_HOST`, `QDRANT_HOST`, `QDRANT_PORT` | localhost | Only for running scripts outside Docker; docker-compose.yml sets them for the containers |
+
+After editing `.env`, run `docker compose up -d` so the containers pick up the change.
 
 **Ranking weights** are in `Backend/triage/priority_scorer.py`, `_calculate_100pt_score`: CISA KEV 40, AI severity 40, public PoC 20. Items sharing a CVE ID are scored as one story (`group_by_cve`). The reasoning is in the README (section 4, "Why 40 / 40 / 20") and in the dashboard's "How items are ranked" popup. If you change the weights, update both, and `explain_score()` in `Backend/api/data_service.py`, which writes the per-item explanation.
 
@@ -130,6 +148,9 @@ python Backend/run_gate_report.py score Backend/data/manual_checks/card_review_Y
 - **NVD changes after publication** are picked up by the age-based re-check policy, not by polling `lastModStartDate`.
 - **Research write-ups without a CVE ID use one card format** (the CVE card), not a separate Technique card.
 - **No authentication on the dashboard/API** (section 1).
+- **Affected versions come from NVD's CPE data**, which can be narrower than the advisory text (for example, a version covered by an earlier CVE for the same flaw is not listed). The card's own text, which the gate checks, is the authority.
+- **The scope filter's web keywords include `http`/`https`**, so any advisory with a link can match the web scope. Out-of-scope items can reach the list this way (report section 6.4).
+- **The pipeline runs on one team PC.** If that PC or Docker is off, nothing updates until it is back.
 
 ---
 
@@ -144,4 +165,8 @@ python Backend/run_gate_report.py score Backend/data/manual_checks/card_review_Y
 | "Qdrant not reachable … reading chunks from latest_chunks.json" | Qdrant container is down: `docker compose up -d qdrant`. Summaries still work from the file |
 | Search has no meaning results | Ollama or `nomic-embed-text` missing: `docker compose up -d ollama ollama-pull` |
 | Live ingestion tests fail | They need internet. CI allows them to fail; the other tests must pass |
+| Dashboard won't load, or nothing new for days | Docker Desktop has stopped. Start it; `docker compose ps` should show app, scheduler, qdrant and ollama running |
+| KEV items show no affected versions | NVD lookups are limited to 10 per run (6 s apart without `NVD_API_KEY`). Fill them all at once: `docker compose exec app python Backend/run_nvd_versions.py`, then `docker compose exec app python Backend/run_summarise.py` to rewrite their cards |
+| Changed `.env` but nothing changed | Containers read `.env` only when they start: `docker compose up -d` |
+| Dashboard layout looks unstyled after adding classes | Rebuild `tailwind.css` (section 2) |
 | Windows console shows `?` instead of emoji | Use Windows Terminal, or set `PYTHONIOENCODING=utf-8` |
