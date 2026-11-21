@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import urllib.error
+import urllib.request
 
 from Backend.ingestion.models import StagingEnvelope, SourceType, PoCReference
 from Backend.ingestion.utils import compute_content_hash, normalize_to_iso, get_utc_now_iso
@@ -15,6 +17,20 @@ from Backend.ingestion.collectors.cisa_kev import CisaKevCollector
 from Backend.ingestion.collectors.rss_feeds import create_portswigger_collector, create_project_zero_collector
 from Backend.ingestion.collectors.github_advisory import GitHubAdvisoryCollector
 from Backend.ingestion.pipeline import IngestionPipeline
+
+
+def _feeds_reachable() -> bool:
+    """True when the live feeds can be reached, so the live tests skip cleanly offline."""
+    try:
+        urllib.request.urlopen("https://www.cisa.gov/", timeout=5)
+        return True
+    except urllib.error.HTTPError:
+        return True  # the server answered, so the network works
+    except Exception:
+        return False
+
+
+ONLINE = _feeds_reachable()
 
 
 class TestStagingEnvelopeModel(unittest.TestCase):
@@ -68,6 +84,7 @@ class TestStagingEnvelopeModel(unittest.TestCase):
         self.assertEqual(len(h1), 64)  # SHA-256 hex length
 
 
+@unittest.skipUnless(ONLINE, "live feeds not reachable (offline)")
 class TestCollectorsLive(unittest.TestCase):
     """Smoke tests verifying collectors can fetch and format real feeds."""
 
@@ -124,6 +141,7 @@ class TestCollectorsLive(unittest.TestCase):
 
 
 
+@unittest.skipUnless(ONLINE, "live feeds not reachable (offline)")
 class TestIngestionPipeline(unittest.TestCase):
     """Tests the orchestrator pipeline run and JSON export."""
 

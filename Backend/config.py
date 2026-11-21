@@ -48,6 +48,9 @@ WEB_ECOSYSTEMS = ["npm", "pip", "go", "maven"]
 # Default Collection Limits (can be overridden via CLI)
 DEFAULT_ITEM_LIMIT = 5
 DEFAULT_DAYS_BACK = 7
+# NVD publishes hundreds of CVEs a week, far more than the other feeds, so it may
+# take more per run than the shared per-source limit (0 = use that limit).
+NVD_LIMIT = int(os.getenv("NVD_LIMIT", "0") or 0)
 
 # Qdrant Vector Database (Task 2.1 - self-hosted via docker-compose.yml)
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")

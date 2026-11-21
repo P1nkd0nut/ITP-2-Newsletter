@@ -50,32 +50,43 @@ class NvdCollector(BaseCollector):
         query_by_date: bool = True,
     ) -> List[StagingEnvelope]:
         """
-        Fetches CVEs from NVD 2.0.
+        Fetches the newest CVEs from NVD 2.0.
         Retrieves CVEs published in the last `days_back` days (default 7 days)
-        per Task 1.3 specification. Falls back to unconstrained query if needed.
-        """
-        results_per_page = min(limit or 10, 50)
-        params = {"resultsPerPage": results_per_page, "startIndex": 0}
+        per Task 1.3 specification, newest first.
 
+        NVD returns a date window oldest first, so taking the first page would
+        give the CVEs published about `days_back` days ago. Instead a one-record
+        request reads `totalResults`, then the last page of the window is fetched
+        and reversed. Rejected records are skipped.
+        """
+        page_size = min(limit or 10, 50)
+        base_params: Dict[str, Any] = {}
         if query_by_date:
             start_date, end_date = self._get_date_window(days_back)
-            params["pubStartDate"] = start_date
-            params["pubEndDate"] = end_date
+            base_params["pubStartDate"] = start_date
+            base_params["pubEndDate"] = end_date
 
-        query_str = urllib.parse.urlencode(params)
-        req_url = f"{self.base_url}?{query_str}"
-
-        logger.info(f"Fetching CVEs from NVD 2.0: {req_url}")
         envelopes: List[StagingEnvelope] = []
         ingested_at = get_utc_now_iso()
 
         try:
-            raw_response = fetch_url(req_url, headers=self._get_headers(), timeout=20)
-            data = json.loads(raw_response)
+            total = self._total_results(base_params)
+            # Fetch a little more than needed so skipped (rejected) records don't leave the page short
+            fetch_size = min(page_size * 2, 100)
+            start_index = max(0, total - fetch_size)
+            # NVD asks clients without an API key to wait about 6 s between requests
+            time.sleep(1 if NVD_API_KEY else 6)
+            data = self._fetch_page(base_params, start_index, fetch_size)
             vulnerabilities = data.get("vulnerabilities", [])
 
-            for entry in vulnerabilities:
-                envelope = self._envelope_from_cve(entry.get("cve", {}), ingested_at)
+            def published(entry: Dict[str, Any]) -> str:
+                return (entry.get("cve") or {}).get("published", "")
+
+            for entry in sorted(vulnerabilities, key=published, reverse=True):
+                cve = entry.get("cve", {})
+                if str(cve.get("vulnStatus", "")).lower() == "rejected":
+                    continue
+                envelope = self._envelope_from_cve(cve, ingested_at)
                 if envelope is None:
                     continue
                 envelopes.append(envelope)
@@ -88,6 +99,16 @@ class NvdCollector(BaseCollector):
 
         logger.info(f"Successfully collected {len(envelopes)} items from NVD 2.0")
         return envelopes
+
+    def _fetch_page(self, base_params: Dict[str, Any], start_index: int, results_per_page: int) -> Dict[str, Any]:
+        params = dict(base_params, resultsPerPage=results_per_page, startIndex=start_index)
+        req_url = f"{self.base_url}?{urllib.parse.urlencode(params)}"
+        logger.info(f"Fetching CVEs from NVD 2.0: {req_url}")
+        return json.loads(fetch_url(req_url, headers=self._get_headers(), timeout=20))
+
+    def _total_results(self, base_params: Dict[str, Any]) -> int:
+        """Number of CVEs in the window, read from a one-record request."""
+        return int(self._fetch_page(base_params, 0, 1).get("totalResults", 0))
 
     def fetch_by_cve_id(self, cve_id: str) -> Optional[StagingEnvelope]:
         """Re-fetches one CVE record, used to check older items for updates."""
