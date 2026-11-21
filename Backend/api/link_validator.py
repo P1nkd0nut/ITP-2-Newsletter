@@ -179,6 +179,12 @@ class LinkValidator:
         except Exception as e:
             logger.warning(f"Could not save link health cache: {e}")
 
+    def cached_record(self, url: str) -> Optional[Dict[str, Any]]:
+        """The last health result for a URL, or None if it has never been checked."""
+        with self._cache_lock:
+            record = self._cache.get(url)
+            return dict(record) if record else None
+
     def is_cache_valid(self, url: str, ttl_seconds: Optional[int] = None) -> bool:
         """Checks if a URL has an unexpired cached health result."""
         cached = self._cache.get(url)

@@ -286,5 +286,40 @@ class TestSending(unittest.TestCase):
         self.assertIn("TELEGRAM_BOT_TOKEN", result["error"])
 
 
+
+class TestDigestSkipsDeadLinks(unittest.TestCase):
+    """Links the link checker found dead are swapped for an archived copy or left out."""
+
+    def setUp(self):
+        from Backend.api.link_validator import link_validator
+        self.records = {
+            "https://github.com/gone/poc": {"state": "dead", "archive_url": None},
+            "https://github.com/alive/poc": {"state": "live"},
+            "https://vendor.example/advisory": {"state": "moved", "archive_url": "https://web.archive.org/web/2026/https://vendor.example/advisory"},
+        }
+        patcher = mock.patch.object(link_validator, "cached_record", side_effect=lambda url: self.records.get(url))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def candidate(self):
+        return {"envelope": {
+            "CVE_ID": "CVE-2026-1234",
+            "Source_URL": "https://vendor.example/advisory",
+            "PoC_URLs": ["https://github.com/gone/poc", "https://github.com/alive/poc"],
+        }}
+
+    def test_dead_poc_is_skipped_for_the_next_one(self):
+        links = dict((label, url) for label, url in tg.source_links(self.candidate()))
+        self.assertEqual(links["PoC"], "https://github.com/alive/poc")
+
+    def test_moved_source_uses_archive_copy(self):
+        links = dict((label, url) for label, url in tg.source_links(self.candidate()))
+        self.assertTrue(links["Source"].startswith("https://web.archive.org/"))
+
+    def test_nvd_link_kept(self):
+        labels = [label for label, _ in tg.source_links(self.candidate())]
+        self.assertEqual(labels[0], "NVD")
+
+
 if __name__ == "__main__":
     unittest.main()
