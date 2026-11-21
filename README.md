@@ -128,20 +128,21 @@ ITP2/
 │   └── run_dashboard.py                       # 1-command local dashboard server
 ├── Testing/
 │   ├── test_ingestion.py                      # Phase 1 test suite (10 unit & integration tests)
+│   ├── test_nvd_collector.py                  # NVD collector takes the newest CVEs in the window (4 tests)
 │   ├── test_triage.py                         # Phase 2 test suite (9 pre-filter, scoring, & OpenRouter tests)
-│   ├── test_benchmark.py                      # Task 4.1 benchmark test suite (6 validation tests)
-│   ├── test_verification.py                   # Verification gate test suite (21 grounding & retry tests)
-│   ├── test_dashboard_api.py                  # REST API & channel dispatcher tests (10 tests)
+│   ├── test_benchmark.py                      # Task 4.1 benchmark test suite (8 validation tests)
+│   ├── test_verification.py                   # Verification gate test suite (24 grounding & retry tests)
+│   ├── test_dashboard_api.py                  # REST API, channel dispatcher & score explanation tests (13 tests)
 │   ├── test_link_validator.py                 # Link health validator tests (13 tests)
 │   ├── test_chunking.py                       # Content cleaning & chunking tests (27 tests)
 │   ├── test_change_tracking.py                # Change tracking between runs & AI-score reuse (14 tests)
 │   ├── test_recheck_policy.py                 # Age-based re-check tiers, 1-year freeze, recency labels (13 tests)
 │   ├── test_poc_provenance.py                 # CVE-specific PoC links & reference provenance (6 tests)
-│   ├── test_reader_and_telegram.py            # Incident reader page & Telegram weekly digest (29 tests)
+│   ├── test_reader_and_telegram.py            # Incident reader page, Telegram weekly digest & dead-link handling (32 tests)
 │   ├── test_manual_check.py                   # Manual spot-check sampler & scorer (4 tests)
-│   ├── test_grounded_summaries.py             # Qdrant indexing, grounded cards, publish gate & scheduler (23 tests)
+│   ├── test_grounded_summaries.py             # Qdrant indexing, grounded cards, publish gate & scheduler (22 tests)
 │   ├── test_novelty.py                        # Digest novelty check: one item per CVE, no repeats (10 tests)
-│   ├── test_apple_collector.py                # One item per Apple advisory with real dates (6 tests)
+│   ├── test_apple_collector.py                # One item per Apple advisory with real dates (7 tests)
 │   ├── test_gate_report.py                    # Gate stats on real cards, re-check, manual review sheet (5 tests)
 │   ├── test_novelty_eval.py                   # Novelty threshold tuning and labelled pairs (6 tests)
 │   ├── test_run_metrics.py                    # Per-stage latency and LLM cost reporting (4 tests)
@@ -308,11 +309,11 @@ docker compose run --rm scheduler python Backend/run_pipeline.py   # run the pip
 Keys go in a `.env` file (see `.env.example`); `Backend/data` is mounted so data persists. Outside Docker, `python Backend/run_pipeline.py` runs the same stages once.
 
 ### 7. Run Test Suite
-Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (246 automated tests):
+Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (262 automated tests):
 ```bash
 python -m unittest discover -s Testing -p "test_*.py" -v
 ```
-Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access. CI runs the other 239 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
+Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access; they skip automatically when the feeds can't be reached. CI runs the other 255 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
 
 ### 8. Presentation & Demo Guide
 For full presentation instructions, talking points, and cheat-sheet commands for project reviews, see:
