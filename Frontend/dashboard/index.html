@@ -20,21 +20,21 @@
 
   <!-- Modern Clean Header -->
   <header class="border-b border-slate-800 bg-[#0f172a]/90 backdrop-blur sticky top-0 z-40">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:min-h-[4rem] flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:min-h-[4rem] flex flex-wrap lg:flex-nowrap items-center justify-between gap-x-4 gap-y-2">
       
       <!-- Brand Title (Clean & Direct) -->
-      <div class="flex items-center space-x-3 cursor-pointer" onclick="filterDesk('ALL')">
+      <div class="flex items-center space-x-3 cursor-pointer shrink-0" onclick="filterDesk('ALL')">
         <div class="h-9 w-9 rounded-lg bg-cyan-600 flex items-center justify-center font-bold text-white shadow-sm font-mono text-base">
           GT
         </div>
         <div>
           <span class="font-bold text-base sm:text-lg text-white tracking-tight whitespace-nowrap">GroundedCVE</span>
-          <p class="text-[11px] text-slate-400 hidden sm:block">Curated Web & Mobile Vulnerability Digest</p>
+          <p class="text-[11px] text-slate-400 hidden sm:block lg:hidden xl:block whitespace-nowrap">Curated Web & Mobile Vulnerability Digest</p>
         </div>
       </div>
 
       <!-- Quick Desk Navigation Pills -->
-      <div class="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-lg text-xs font-medium">
+      <div class="flex items-center shrink-0 bg-slate-900 border border-slate-800 p-1 rounded-lg text-xs font-medium">
         <button onclick="filterDesk('ALL')" id="tabBtn-ALL" class="desk-btn px-3 py-1.5 rounded-md bg-cyan-600 text-white font-semibold transition">
           All
         </button>
@@ -49,21 +49,21 @@
       </div>
 
       <!-- Actions: Link Health, Scoring Manual, Settings, Export -->
-      <div class="flex flex-wrap items-center gap-2">
+      <div class="flex flex-wrap lg:flex-nowrap items-center gap-2">
         <button id="readerToggleBtn" onclick="toggleReaderMode()" title="Read the current advisories as a newsletter" class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-cyan-600 text-cyan-400 hover:text-cyan-300 text-xs font-semibold shadow-sm transition flex items-center space-x-1.5">
           <span id="readerToggleIcon">📰</span>
-          <span id="readerToggleLabel">Reader mode</span>
+          <span id="readerToggleLabel" class="whitespace-nowrap">Reader mode</span>
         </button>
 
         <button onclick="openLinkHealthModal()" title="Share of checked links that are live. Links a site blocks (403) are left out of the percentage." class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-600 text-emerald-400 hover:text-emerald-300 text-xs font-semibold shadow-sm transition flex items-center space-x-1.5">
           <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span class="hidden sm:inline">Link Health</span>
-          <span id="badgeLinkHealth" class="text-[10px] font-mono px-1.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">100%</span>
+          <span class="hidden sm:inline lg:hidden xl:inline whitespace-nowrap">Link Health</span>
+          <span id="badgeLinkHealth" class="whitespace-nowrap text-[10px] font-mono px-1.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">100%</span>
         </button>
 
         <button onclick="openManualModal()" title="Scoring Guide & Prioritization Manual" class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-cyan-600 text-cyan-400 hover:text-cyan-300 text-xs font-semibold shadow-sm transition flex items-center space-x-1.5">
           <span>📘</span>
-          <span class="hidden sm:inline">Scoring Manual</span>
+          <span class="hidden sm:inline lg:hidden xl:inline whitespace-nowrap">Scoring Manual</span>
         </button>
 
         <button onclick="openSettingsModal()" title="Secondary Telegram Settings" class="p-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white text-xs transition">
