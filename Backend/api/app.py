@@ -32,7 +32,7 @@ def create_app():
         # Fallback to Frontend/index.html if dashboard folder not found
         return send_file(str(FRONTEND_DIR / "index.html"))
 
-    # Reader page for one incident; Telegram messages link here
+    # Reader page for one incident (opened from the dashboard)
     @app.route("/incident/<path:item_id>")
     def incident_page(item_id):
         if not data_service.get_candidate_by_id(item_id):

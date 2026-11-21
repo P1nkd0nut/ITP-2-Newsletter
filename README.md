@@ -123,12 +123,14 @@ ITP2/
 │       ├── embedder.py                        # Ollama nomic-embed-text client
 │       └── indexer.py                         # Chunk upsert & per-item retrieval (Qdrant, file fallback)
 ├── Frontend/
-│   ├── index.html                             # Cyber-themed interactive dashboard
+│   ├── dashboard/                             # Dashboard served at / (index.html, app.js, styles.css, prebuilt tailwind.css)
+│   ├── reader/                                # Reader page for one item (/incident/<id>)
+│   ├── index.html                             # Fallback page, served only if dashboard/ is missing
 │   ├── data.js                                # Auto-synced envelopes data for instant loading
 │   └── run_dashboard.py                       # 1-command local dashboard server
 ├── Testing/
 │   ├── test_ingestion.py                      # Phase 1 test suite (10 unit & integration tests)
-│   ├── test_nvd_collector.py                  # NVD collector takes the newest CVEs in the window (4 tests)
+│   ├── test_nvd_collector.py                  # NVD collector: newest CVEs first, CVSS choice (8 tests)
 │   ├── test_triage.py                         # Phase 2 test suite (9 pre-filter, scoring, & OpenRouter tests)
 │   ├── test_benchmark.py                      # Task 4.1 benchmark test suite (8 validation tests)
 │   ├── test_verification.py                   # Verification gate test suite (24 grounding & retry tests)
@@ -210,7 +212,7 @@ python Backend/run_triage.py
 ```
 This runs:
 1. **Scope Pre-Filter Gate**: Isolates `[WEB]` and `[MOBILE]` threats via feed origin, Task 1.2 CWE taxonomy, and technical keywords. Non-web/mobile items (print spoolers, firmwares) bypass the weekly scoring queue.
-2. **AI Practical Severity Assessment (Qwen 2.5)**: Evaluates real-world offensive impact (RCE vs DoS) using local Ollama.
+2. **AI Practical Severity Assessment (Qwen 2.5)**: Evaluates real-world offensive impact (RCE vs DoS) with Qwen 2.5 72B on OpenRouter, falling back to a local Ollama model and then to keyword rules.
 3. **100-Point Scoring Engine**:
    - Active exploitation (in CISA KEV): **40 pts**
    - AI practical severity (0-10 × 4): **up to 40 pts**
@@ -268,7 +270,7 @@ python Frontend/run_dashboard.py
 ```
 
 #### Channel Architecture
-- **Primary Delivery Channel (Web Dashboard)**: The authoritative home for weekly newsletter digests, 100-point priority rankings, interactive Chart.js analytics, and raw envelope verification.
+- **Primary Delivery Channel (Web Dashboard)**: The authoritative home for weekly newsletter digests, 100-point priority rankings with a per-item score explanation, gate-verified cards, hybrid search, and raw envelope verification.
 - **Secondary Delivery Channel (Telegram Bot)**: The weekly digest: a pinned header ("Edition 2026-Wnn") and one message per verified incident with its summary, the first testing command in a code block, and links to the NVD record, the source advisory and a public PoC. Each link is written out in full on its own line, so it shows and opens on any device, including phones. Telegram cards never link to the dashboard, because it runs on a team PC most readers can't reach. The bot needs the "Pin Messages" admin right so other PCs can see the week was already posted.
 
 #### REST API Endpoints Reference
@@ -309,11 +311,11 @@ docker compose run --rm scheduler python Backend/run_pipeline.py   # run the pip
 Keys go in a `.env` file (see `.env.example`); `Backend/data` is mounted so data persists. Outside Docker, `python Backend/run_pipeline.py` runs the same stages once.
 
 ### 7. Run Test Suite
-Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (262 automated tests):
+Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (266 automated tests in 21 modules):
 ```bash
 python -m unittest discover -s Testing -p "test_*.py" -v
 ```
-Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access; they skip automatically when the feeds can't be reached. CI runs the other 255 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
+Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access; they skip automatically when the feeds can't be reached. CI runs the other 259 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
 
 ### 8. Presentation & Demo Guide
 For full presentation instructions, talking points, and cheat-sheet commands for project reviews, see:
