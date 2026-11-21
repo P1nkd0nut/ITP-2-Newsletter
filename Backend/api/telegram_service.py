@@ -118,6 +118,16 @@ def source_links(c: Dict[str, Any]) -> List[tuple]:
     return links
 
 
+def link_lines(c: Dict[str, Any]) -> List[str]:
+    """
+    One line per public link with the full URL written out ("🔗 NVD: https://..."),
+    so the link is visible and tappable on every Telegram client, including mobile,
+    instead of being hidden behind a short label. No dashboard links: the dashboard
+    runs on a team PC that most readers can't reach.
+    """
+    return [f'🔗 {esc(label)}: <a href="{esc(url)}">{esc(url)}</a>' for label, url in source_links(c)]
+
+
 def dashboard_link_is_public() -> bool:
     """False when BASE_URL points at this PC only (127.0.0.1/localhost), where other readers can't open it."""
     return urlparse(base_url()).hostname not in LOOPBACK_HOSTS
@@ -283,7 +293,6 @@ def _summary(c: Dict[str, Any]) -> str:
 def format_digest_item(c: Dict[str, Any], rank: int) -> str:
     """One short message per incident: title, tag, score, 1-2 line summary, link to its page."""
     env = c.get("envelope") or {}
-    item_id = env.get("Item_ID", "")
     category = (c.get("pre_filter") or {}).get("category", "")
     tag = {"WEB": "🌐 Web", "MOBILE": "📱 Mobile"}.get(category, category.title())
     score = float(c.get("priority_score", 0.0))
@@ -312,11 +321,9 @@ def format_digest_item(c: Dict[str, Any], rank: int) -> str:
         command = next((x for x in (c.get("grounded_card") or {}).get("testing_syntax") or [] if x), None)
         if command and summary_limit > 0:
             lines += ["", "Test:", f"<pre>{esc(_truncate(command, 300))}</pre>"]
-        links = [f'<a href="{esc(url)}">{esc(label)}</a>' for label, url in source_links(c)]
-        if dashboard_link_is_public():
-            links.append(f'<a href="{esc(incident_url(item_id))}">Full details</a>')
+        links = link_lines(c)
         if links:
-            lines += ["", "🔗 " + " · ".join(links)]
+            lines += [""] + links
         return "\n".join(lines)
 
     limit = SUMMARY_CHARS
@@ -340,10 +347,9 @@ def format_digest_header(items: List[Dict[str, Any]], days: int = 7, edition: Op
             f"{len(items)} top incident{'s' if len(items) != 1 else ''} {period}: "
             f"{web} Web, {mobile} Mobile."
         )
-        lines.append("Tap <i>Read full details</i> under each one for the full write-up.")
+        lines.append("Each card lists its NVD, source and PoC links.")
     else:
         lines.append(f"No new Web or Mobile incidents {period}.")
-    lines += ["", f'<a href="{esc(base_url())}/">Open the dashboard</a>']
     return "\n".join(lines)
 
 
@@ -466,14 +472,9 @@ class TelegramService:
         if ai.get("reasoning"):
             msg += f"\n<b>AI Assessment:</b>\n<i>{esc(_truncate(ai['reasoning'], 200))}</i>\n"
 
-        links = [f'<a href="{esc(url)}">{esc(label)}</a>' for label, url in source_links(candidate)]
+        links = link_lines(candidate)
         if links:
-            msg += "\n🔗 <b>Sources:</b> " + " · ".join(links)
-        if dashboard_link_is_public():
-            msg += (
-                f"\n📄 <a href=\"{esc(incident_url(env.get('Item_ID', '')))}\">Read full details</a>\n"
-                f"🌐 <b>Primary Channel:</b> <a href=\"{esc(base_url())}/\">Open GroundedCVE Dashboard</a>"
-            )
+            msg += "\n" + "\n".join(links)
         return msg
 
     def send_test_message(self, chat_id: Optional[str] = None) -> Dict[str, Any]:

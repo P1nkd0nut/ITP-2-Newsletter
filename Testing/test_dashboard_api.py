@@ -180,7 +180,8 @@ class TestDashboardAPI(unittest.TestCase):
         msg = telegram_svc.format_alert_message(sample_candidate)
         self.assertIn("CVE-2026-1234", msg)
         self.assertIn("78.0/100.0", msg)
-        self.assertIn("Primary Channel", msg)
+        self.assertIn('🔗 PoC: <a href="https://github.com/test/poc">https://github.com/test/poc</a>', msg)
+        self.assertNotIn("/incident/", msg)  # no dashboard links in Telegram
 
     def test_09_date_range_and_sorting_query(self):
         """Verify 1-week date range preset filtering and date-based sorting."""

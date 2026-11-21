@@ -90,9 +90,10 @@ class TestTokenStaysInEnv(unittest.TestCase):
 
 class TestDigestFormatting(unittest.TestCase):
     @mock.patch.dict(os.environ, {"BASE_URL": "http://192.168.1.20:5000/"})
-    def test_item_links_to_its_reader_page(self):
+    def test_item_has_no_dashboard_link_even_with_a_reachable_base_url(self):
         msg = tg.format_digest_item(make_candidate("nvd-cve-2026-1", 80.0, CVE_ID="CVE-2026-1"), 1)
-        self.assertIn('href="http://192.168.1.20:5000/incident/nvd-cve-2026-1"', msg)
+        self.assertNotIn("/incident/", msg)
+        self.assertNotIn("192.168.1.20", msg)
         self.assertIn("CVE-2026-1", msg)
         self.assertIn("Priority 80/100", msg)
 
@@ -132,8 +133,9 @@ class TestDigestFormatting(unittest.TestCase):
         self.assertEqual(len(messages), 3)  # header + high + low
         self.assertIn("Weekly Brief", messages[0])
         self.assertIn("1 Web, 1 Mobile", messages[0])
-        self.assertIn("/incident/high", messages[1])
-        self.assertIn("/incident/low", messages[2])
+        self.assertIn("Title high", messages[1])
+        self.assertIn("Title low", messages[2])
+        self.assertNotIn("192.168.1.20", "".join(messages))  # no dashboard links in the digest
 
     @mock.patch.dict(os.environ, {"BASE_URL": "http://192.168.1.20:5000"})
     def test_digest_leaves_out_items_without_a_verified_card(self):
@@ -141,7 +143,7 @@ class TestDigestFormatting(unittest.TestCase):
         unverified["grounded_card"] = None
         messages = tg.build_weekly_digest([unverified, make_candidate("ok", 10.0)], days=7)
         self.assertEqual(len(messages), 2)
-        self.assertIn("/incident/ok", messages[1])
+        self.assertIn("Title ok", messages[1])
         self.assertNotIn("unverified", "".join(messages))
 
     def test_digest_summary_comes_from_the_verified_card(self):
@@ -160,6 +162,10 @@ class TestDigestFormatting(unittest.TestCase):
         self.assertIn('href="https://github.com/someone/poc"', msg)
         self.assertNotIn("other/poc", msg)  # only the first PoC
         self.assertNotIn("127.0.0.1", msg)  # the dashboard on this PC is useless to other readers
+        # Full URLs are written out so they show on mobile, not hidden behind a label
+        self.assertIn('🔗 NVD: <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-1234">'
+                      'https://nvd.nist.gov/vuln/detail/CVE-2026-1234</a>', msg)
+        self.assertIn('🔗 PoC: <a href="https://github.com/someone/poc">https://github.com/someone/poc</a>', msg)
 
     def test_source_links_skip_local_and_non_http_urls(self):
         c = make_candidate("x-4", 50.0, Source_URL="http://localhost:5000/x", PoC_URLs=["javascript:alert(1)"])

@@ -352,7 +352,7 @@ class TestPublishingUsesOnlyVerifiedCards(unittest.TestCase):
     def test_telegram_digest_contains_only_verified_items(self):
         messages = tg.build_weekly_digest(self.service.get_all_candidates(), days=7, top_n=10)
         self.assertEqual(len(messages), 2)
-        self.assertIn("/incident/verified", messages[1])
+        self.assertNotIn("/incident/", "".join(messages))  # no dashboard links in Telegram
         self.assertIn("Grounded write-up.", messages[1])
 
     def test_dashboard_picks_up_new_cards_without_a_restart(self):
