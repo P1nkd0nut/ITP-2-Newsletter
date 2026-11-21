@@ -276,12 +276,24 @@
         <div class="bg-slate-950 border border-slate-800 rounded-lg p-4 space-y-3">
           <div class="flex items-center justify-between border-b border-slate-800 pb-2">
             <span class="text-slate-200 uppercase font-mono text-xs font-bold">Summary</span>
+            <span id="mSummaryBadge" class="text-[10px] font-mono"></span>
           </div>
+          <p id="mCardNote" class="text-[10px] text-slate-500 font-sans leading-relaxed"></p>
 
           <!-- What is the vulnerability -->
           <div class="space-y-1">
             <span class="text-slate-400 font-mono text-[11px] uppercase font-bold block">What is the Vulnerability?</span>
             <p id="mFullDescription" class="text-slate-200 bg-slate-900 p-3 rounded border border-slate-800 leading-relaxed font-sans"></p>
+          </div>
+
+          <!-- Grounded card: impact and testing syntax (only for items with a gate-verified card) -->
+          <div id="mCardImpactBox" class="hidden space-y-1">
+            <span class="text-slate-400 font-mono text-[11px] uppercase font-bold block">Impact</span>
+            <p id="mCardImpact" class="text-slate-200 bg-slate-900 p-3 rounded border border-slate-800 leading-relaxed font-sans"></p>
+          </div>
+          <div id="mCardTestBox" class="hidden space-y-1">
+            <span class="text-slate-400 font-mono text-[11px] uppercase font-bold block">How to test (copied from the source)</span>
+            <div id="mCardTest" class="space-y-1.5"></div>
           </div>
 
           <!-- Exploit mechanism & Offensive assessment -->
@@ -301,6 +313,11 @@
           <div id="mActionBox" class="hidden bg-slate-900 p-3 rounded border border-slate-800 space-y-1">
             <span class="text-amber-400 font-mono text-[10px] uppercase font-bold block">Required Mitigation & Remediation Action</span>
             <p id="mRequiredAction" class="text-slate-300 text-xs leading-relaxed font-sans"></p>
+          </div>
+
+          <div id="mCardRefsBox" class="hidden bg-slate-900 p-3 rounded border border-slate-800 space-y-1">
+            <span class="text-slate-400 font-mono text-[10px] uppercase font-bold block">References in the card</span>
+            <ul id="mCardRefs" class="space-y-1 font-mono text-[11px] break-all"></ul>
           </div>
         </div>
 
@@ -728,40 +745,40 @@
             <div class="bg-slate-900/80 p-3 rounded border border-slate-800 space-y-1">
               <strong class="text-white font-mono flex items-center space-x-1">
                 <span>1.</span>
-                <span>Concurrent ThreadPoolExecutor</span>
+                <span>Checked in parallel</span>
               </strong>
               <p class="text-slate-400 leading-relaxed">
-                Sequential checking waits for each network round-trip ($O(N \times \text{latency})$). With 30 parallel workers, 50 links are validated concurrently in <strong>1.5 seconds</strong> instead of 35+ seconds.
+                Checking links one at a time means waiting for every round-trip in turn. The checker runs up to <strong>30 requests at once</strong>, with at most 6 to any one site so it doesn't trip rate limits, and it respects <code>Retry-After</code>.
               </p>
             </div>
 
             <div class="bg-slate-900/80 p-3 rounded border border-slate-800 space-y-1">
               <strong class="text-white font-mono flex items-center space-x-1">
                 <span>2.</span>
-                <span>HTTP HEAD Lightweight Probing</span>
+                <span>Lightweight requests</span>
               </strong>
               <p class="text-slate-400 leading-relaxed">
-                Rather than downloading full HTML bodies, images, and JavaScript via GET, the engine sends fast <code>HEAD</code> requests to verify HTTP 200 headers in <strong>50–90 ms</strong>.
+                Each link is first checked with a <code>HEAD</code> request, which fetches only the headers. Many servers mishandle <code>HEAD</code>, so a failure is confirmed with a small <code>GET</code> before the link is marked broken.
               </p>
             </div>
 
             <div class="bg-slate-900/80 p-3 rounded border border-slate-800 space-y-1">
               <strong class="text-white font-mono flex items-center space-x-1">
                 <span>3.</span>
-                <span>Persistent Cache with 12h TTL</span>
+                <span>Cached by result</span>
               </strong>
               <p class="text-slate-400 leading-relaxed">
-                Validated results are stored in <code>link_health_cache.json</code>. Subsequent lookups are instantaneous dictionary hits (<strong>0.001 ms</strong>), generating zero outbound network traffic.
+                Results are stored in <code>link_health_cache.json</code>. Working and blocked links are re-checked after 12 hours, broken or moved links after 6 hours, and temporary errors after 30 minutes. A link that hits a temporary error on two runs in a row is marked broken, and an archive.org copy is looked up for broken or moved links.
               </p>
             </div>
 
             <div class="bg-slate-900/80 p-3 rounded border border-slate-800 space-y-1">
               <strong class="text-white font-mono flex items-center space-x-1">
                 <span>4.</span>
-                <span>Async Ingestion Pipeline</span>
+                <span>Checked before every digest</span>
               </strong>
               <p class="text-slate-400 leading-relaxed">
-                Link checking executes in the background when advisories are scraped or ingested, so user page loads and API requests are never blocked by external network lag.
+                The daily pipeline checks every reference before the Telegram digest, so page loads never wait on the network. The digest swaps a broken or moved link for its archived copy, or leaves it out.
               </p>
             </div>
           </div>
