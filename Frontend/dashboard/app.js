@@ -91,17 +91,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadData() {
   try {
-    const res = await fetch('/api/newsletters?page_size=100&sort_by=priority_score&sort_order=desc');
-    if (res.ok) {
+    // The API returns at most 100 items per page, so read every page
+    const items = [];
+    let ok = false;
+    for (let page = 1, pages = 1; page <= pages && page <= 50; page++) {
+      const res = await fetch(`/api/newsletters?page_size=100&page=${page}&sort_by=priority_score&sort_order=desc`);
+      if (!res.ok) break;
       const data = await res.json();
-      candidatesData = data.items || [];
+      items.push(...(data.items || []));
+      pages = data.total_pages || 1;
+      ok = true;
     }
+    if (ok) candidatesData = items;
   } catch (err) {
     console.warn("API unavailable, fallback to local data.js envelopes:", err);
     fallbackData();
   }
 
   updateMetrics();
+  updateCategoryPills();
   // A fresh install starts with older seed data until the scheduler's first run
   // finishes; show All Dates rather than an empty week.
   if (!fallbackApplied && currentDateFilter === 'RECENT' && candidatesData.length > 0 &&
@@ -202,16 +210,52 @@ function filterDateWindow(windowType) {
   renderContent();
 }
 
+const CATEGORY_KEYS = ['ALL', 'RCE', 'AUTH', 'SSRF', 'INJECTION', 'COMPONENT', 'MEMORY', 'DESYNC', 'MOBILE_SEC'];
+
+// Category pill predicate, shared by the filter and the pill counts
+function matchesCategory(x, key) {
+  const cat = (x.standard_category || (x.ai_assessment && x.ai_assessment.offensive_impact) || '').toLowerCase();
+  const title = (x.envelope && x.envelope.Title || '').toLowerCase();
+  if (key === 'RCE') return cat.includes('remote code execution') || cat.includes('rce') || title.includes('rce');
+  if (key === 'AUTH') return cat.includes('auth') || cat.includes('session') || cat.includes('bypass');
+  if (key === 'SSRF') return cat.includes('ssrf') || cat.includes('server-side request forgery');
+  if (key === 'INJECTION') return cat.includes('sql') || cat.includes('command injection') || cat.includes('injection');
+  if (key === 'COMPONENT') return cat.includes('ipc') || cat.includes('intent') || cat.includes('component');
+  if (key === 'MEMORY') return cat.includes('memory') || cat.includes('buffer overflow') || cat.includes('corruption');
+  if (key === 'DESYNC') return cat.includes('desync') || cat.includes('smuggling');
+  if (key === 'MOBILE_SEC') return cat.includes('frida') || cat.includes('crypto') || cat.includes('hooking');
+  return true;
+}
+
+// Dims category pills that match no in-scope item, so a click never lands on an empty list
+function updateCategoryPills() {
+  const inScope = candidatesData.filter(x => x.pre_filter && x.pre_filter.is_in_scope);
+  CATEGORY_KEYS.forEach(k => {
+    if (k === 'ALL') return;
+    const btn = document.getElementById(`catBtn-${k}`);
+    if (!btn) return;
+    const count = inScope.filter(x => matchesCategory(x, k)).length;
+    btn.disabled = count === 0;
+    btn.classList.toggle('opacity-40', count === 0);
+    btn.classList.toggle('cursor-not-allowed', count === 0);
+    btn.title = count === 0 ? 'No items in this category right now' : `${count} item${count === 1 ? '' : 's'}`;
+  });
+  if (currentCategory !== 'ALL') {
+    const active = document.getElementById(`catBtn-${currentCategory}`);
+    if (active && active.disabled) filterCategory('ALL');
+  }
+}
+
 function filterCategory(catKey) {
   currentCategory = catKey;
 
-  const catKeys = ['ALL', 'RCE', 'AUTH', 'SSRF', 'INJECTION', 'COMPONENT', 'MEMORY', 'DESYNC', 'MOBILE_SEC'];
-  catKeys.forEach(k => {
+  CATEGORY_KEYS.forEach(k => {
     const btn = document.getElementById(`catBtn-${k}`);
     if (btn) {
-      btn.className = k === catKey
+      const dim = btn.disabled ? ' opacity-40 cursor-not-allowed' : '';
+      btn.className = (k === catKey
         ? 'cat-pill px-2.5 py-1 rounded-md bg-cyan-600 text-white font-semibold border border-cyan-500 transition text-[11px]'
-        : 'cat-pill px-2.5 py-1 rounded-md bg-slate-950 text-slate-400 hover:text-white border border-slate-800 transition text-[11px]';
+        : 'cat-pill px-2.5 py-1 rounded-md bg-slate-950 text-slate-400 hover:text-white border border-slate-800 transition text-[11px]') + dim;
     }
   });
 
@@ -381,19 +425,7 @@ function getFilteredCandidates() {
 
   // 3. Category filter
   if (currentCategory !== 'ALL') {
-    items = items.filter(x => {
-      const cat = (x.standard_category || (x.ai_assessment && x.ai_assessment.offensive_impact) || '').toLowerCase();
-      const title = (x.envelope && x.envelope.Title || '').toLowerCase();
-      if (currentCategory === 'RCE') return cat.includes('remote code execution') || cat.includes('rce') || title.includes('rce');
-      if (currentCategory === 'AUTH') return cat.includes('auth') || cat.includes('session') || cat.includes('bypass');
-      if (currentCategory === 'SSRF') return cat.includes('ssrf') || cat.includes('server-side request forgery');
-      if (currentCategory === 'INJECTION') return cat.includes('sql') || cat.includes('command injection') || cat.includes('injection');
-      if (currentCategory === 'COMPONENT') return cat.includes('ipc') || cat.includes('intent') || cat.includes('component');
-      if (currentCategory === 'MEMORY') return cat.includes('memory') || cat.includes('buffer overflow') || cat.includes('corruption');
-      if (currentCategory === 'DESYNC') return cat.includes('desync') || cat.includes('smuggling');
-      if (currentCategory === 'MOBILE_SEC') return cat.includes('frida') || cat.includes('crypto') || cat.includes('hooking');
-      return true;
-    });
+    items = items.filter(x => matchesCategory(x, currentCategory));
   }
 
   // 4. Search query: hybrid search results when available, otherwise plain text match
@@ -813,8 +845,11 @@ function openDetailModal(itemId) {
   // In-Depth Vulnerability Explanation
   document.getElementById('mAiModel').innerText = ai.evaluated_by || 'Qwen 2.5 72B';
   
-  const fullDesc = indepth.full_description || ai.reasoning || env.Title || 'Improper boundary check or input validation.';
+  // Items with a gate-verified grounded card show the card itself; others show the AI triage reasoning
+  const card = item.grounded_card;
+  const fullDesc = (card && card.mechanism) || indepth.full_description || ai.reasoning || env.Title || 'No description available.';
   document.getElementById('mFullDescription').innerText = fullDesc;
+  renderCardSections(card);
 
   document.getElementById('mImpact').innerText = item.standard_category || ai.offensive_impact || 'Security Vulnerability';
   document.getElementById('mProduct').innerText = `${env.Vendor_Product || 'Generic Target'} (Scope: ${pf.category || 'PENTEST'})`;
@@ -823,9 +858,10 @@ function openDetailModal(itemId) {
   // Mitigation & Required Action
   const actionBox = document.getElementById('mActionBox');
   const actionText = document.getElementById('mRequiredAction');
-  if (indepth.required_action) {
+  const remediation = (card && card.remediation) || indepth.required_action;
+  if (remediation) {
     actionBox.classList.remove('hidden');
-    actionText.innerText = indepth.required_action;
+    actionText.innerText = remediation;
   } else {
     actionBox.classList.add('hidden');
   }
@@ -905,6 +941,37 @@ function openDetailModal(itemId) {
   }
 
   document.getElementById('detailModal').classList.remove('hidden');
+}
+
+function renderCardSections(card) {
+  const badge = document.getElementById('mSummaryBadge');
+  const note = document.getElementById('mCardNote');
+  const show = (id, on) => document.getElementById(id).classList.toggle('hidden', !on);
+
+  if (!card) {
+    badge.innerHTML = '<span class="text-slate-500">No verified card</span>';
+    note.innerText = 'This item has no gate-verified card (it was not among the top items summarised, or its card did not pass the checks), so the text below is the AI triage reasoning.';
+    ['mCardImpactBox', 'mCardTestBox', 'mCardRefsBox'].forEach(id => show(id, false));
+    return;
+  }
+
+  badge.innerHTML = verifiedBadge({ grounded_card: card });
+  note.innerText = `Written from the source text${card.model ? ` by ${card.model}` : ''}. Its CVE IDs, scores, CWEs, versions, known product names, commands, impact claims and links passed ${card.checks_run || 0} verification checks against the source.`;
+
+  document.getElementById('mCardImpact').innerText = card.impact || '';
+  show('mCardImpactBox', !!card.impact);
+
+  const commands = (card.testing_syntax || []).filter(Boolean);
+  document.getElementById('mCardTest').innerHTML = commands
+    .map(cmd => `<pre class="bg-slate-900 p-2.5 rounded border border-slate-800 text-[11px] text-emerald-300 font-mono whitespace-pre-wrap break-all">${escapeHtml(cmd)}</pre>`)
+    .join('');
+  show('mCardTestBox', commands.length > 0);
+
+  const refs = (card.references || []).filter(Boolean);
+  document.getElementById('mCardRefs').innerHTML = refs
+    .map(url => `<li><a href="${escapeAttr(url)}" target="_blank" rel="noopener" class="text-cyan-400 hover:underline">${escapeHtml(url)}</a></li>`)
+    .join('');
+  show('mCardRefsBox', refs.length > 0);
 }
 
 function closeDetailModal() {
