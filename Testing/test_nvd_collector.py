@@ -1,6 +1,7 @@
 """
 Offline tests for the NVD collector: it must return the newest CVEs in the
-7-day window, not the oldest, and skip rejected records.
+7-day window, not the oldest, skip rejected records, and pick a CVSS score
+that is comparable with the AI severity.
 """
 import json
 import unittest
@@ -62,6 +63,36 @@ class TestNvdNewestFirst(unittest.TestCase):
         items = NvdCollector().collect(limit=50)
         self.assertEqual(len(items), 30)
         self.assertEqual(items[0].CVE_ID, "CVE-2026-1029")
+
+
+def _metric(score: float, source: str = "cna@vuldb.com", kind: str = "Secondary") -> dict:
+    return {"source": source, "type": kind, "cvssData": {"baseScore": score}}
+
+
+class TestCvssChoice(unittest.TestCase):
+    """The official score should be NVD's own, else the CNA's v3.x base score, else v4.0."""
+
+    def setUp(self):
+        self.collector = NvdCollector()
+
+    def test_cna_v31_preferred_over_cna_v40_with_threat_metrics(self):
+        metrics = {"cvssMetricV40": [_metric(2.1)], "cvssMetricV31": [_metric(6.3)]}
+        self.assertEqual(self.collector._extract_cvss(metrics), (6.3, "3.1"))
+
+    def test_nvd_primary_score_wins(self):
+        metrics = {
+            "cvssMetricV40": [_metric(2.1)],
+            "cvssMetricV31": [_metric(6.3), _metric(7.8, "nvd@nist.gov", "Primary")],
+        }
+        self.assertEqual(self.collector._extract_cvss(metrics), (7.8, "3.1"))
+
+    def test_v40_used_when_it_is_the_only_score(self):
+        self.assertEqual(self.collector._extract_cvss({"cvssMetricV40": [_metric(8.7)]}), (8.7, "4.0"))
+
+    def test_entries_without_scores_are_ignored(self):
+        metrics = {"cvssMetricV31": [{"source": "x", "type": "Secondary"}], "cvssMetricV40": [_metric(5.3)]}
+        self.assertEqual(self.collector._extract_cvss(metrics), (5.3, "4.0"))
+        self.assertEqual(self.collector._extract_cvss({}), (None, None))
 
 
 if __name__ == "__main__":
