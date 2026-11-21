@@ -1,6 +1,5 @@
 # GroundedCVE: AI-Powered CVE Newsletter & Threat Intelligence Engine
 [![CI](https://github.com/P1nkd0nut/ITP-2-Newsletter/actions/workflows/ci.yml/badge.svg)](https://github.com/P1nkd0nut/ITP-2-Newsletter/actions/workflows/ci.yml)
-> **ICT 2114 Integrative Team Project — IS 24 | Team 4 (Singapore Institute of Technology)**
 
 GroundedCVE is an automated threat intelligence retrieval and curation platform designed to bridge the discovery gap for Web and Mobile application security engineers and penetration testers. The platform systematically collects, structures, ranks, verifies, and synthesises actionable vulnerability disclosures with strict source grounding.
 
