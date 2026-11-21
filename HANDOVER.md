@@ -41,7 +41,7 @@ All settings live in `.env` (template: `.env.example`). Secrets never go in the 
 | `OPENROUTER_API_KEY` | (none) | Needed for AI triage and card writing. Without it, triage falls back to Ollama/heuristics and no cards are written |
 | `OPENROUTER_MODEL` | `qwen/qwen-2.5-72b-instruct` | Model for triage and summaries |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | (none) | Weekly digest. Channel IDs start with `-100` |
-| `BASE_URL` | `http://127.0.0.1:5000` | Address the dashboard is served on (single-item alerts link to it). Telegram digest cards carry only public NVD/source/PoC links |
+| `BASE_URL` | `http://127.0.0.1:5000` | Address the dashboard is served on, shown in `/api/channels`. Telegram messages (digest and single-item alerts) never link to it; they carry only public NVD/source/PoC links |
 | `NVD_API_KEY`, `GITHUB_TOKEN` | (none) | Higher API rate limits |
 | `INGEST_LIMIT` | 5 | Items per source per run |
 | `NVD_LIMIT` | `INGEST_LIMIT` | Newest NVD CVEs per run, if more than `INGEST_LIMIT` (`.env.example` sets 20) |
@@ -138,7 +138,6 @@ python Backend/run_gate_report.py score Backend/data/manual_checks/card_review_Y
 | Digest is empty | No cards passed the gate: check `OPENROUTER_API_KEY`, then `run_gate_report.py summary`. Or nothing in scope was published in the last `DIGEST_INTERVAL_DAYS` |
 | "Edition … is already pinned … No update" | This week's digest was already posted (maybe by another PC). `--force` sends anyway |
 | "Could not pin the header" | Give the bot the "Pin Messages" admin right in the channel |
-| Telegram links not clickable | `BASE_URL` uses `localhost`; Telegram drops those. Use `127.0.0.1` or a real address |
 | `OpenRouter returned 429` in the quarantine log | Rate limit. Re-run `run_summarise.py` later; it only retries items without a passed card |
 | "Qdrant not reachable … reading chunks from latest_chunks.json" | Qdrant container is down: `docker compose up -d qdrant`. Summaries still work from the file |
 | Search has no meaning results | Ollama or `nomic-embed-text` missing: `docker compose up -d ollama ollama-pull` |
