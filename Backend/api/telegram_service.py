@@ -90,21 +90,40 @@ def _public_url(url: Any) -> Optional[str]:
     return url.strip()
 
 
+def live_or_archived(url: str) -> Optional[str]:
+    """
+    The URL to post. If the link checker found it dead or redirected to a
+    homepage, its archive.org copy is used instead, or the link is dropped.
+    Links never checked are posted as they are.
+    """
+    from Backend.api.link_validator import DEAD, MOVED, link_validator
+
+    record = link_validator.cached_record(url)
+    if record and record.get("state") in (DEAD, MOVED):
+        return record.get("archive_url") or None
+    return url
+
+
 def source_links(c: Dict[str, Any]) -> List[tuple]:
     """
     (label, url) pairs for a digest card, all public: the NVD record, the item's
     own source, other sources reporting the same CVE, and the first public PoC.
-    Only URLs from the staging envelope are used, never model-written ones.
+    Only URLs from the staging envelope are used, never model-written ones, and
+    links the link checker found dead are swapped for an archived copy or left out.
     """
     env = c.get("envelope") or {}
     links: List[tuple] = []
     seen = set()
 
-    def add(label: str, url: Any) -> None:
+    def add(label: str, url: Any) -> bool:
         url = _public_url(url)
+        if url:
+            url = live_or_archived(url)
         if url and url not in seen and len(links) < MAX_SOURCE_LINKS:
             seen.add(url)
             links.append((label, url))
+            return True
+        return False
 
     cve = (env.get("CVE_ID") or "").upper()
     if re.fullmatch(r"CVE-\d{4}-\d{4,}", cve):
@@ -113,8 +132,8 @@ def source_links(c: Dict[str, Any]) -> List[tuple]:
     for url in c.get("also_source_urls") or []:
         add("Source", url)
     for url in env.get("PoC_URLs") or []:
-        add("PoC", url)
-        break
+        if add("PoC", url):
+            break  # the first PoC that is not known to be dead
     return links
 
 
