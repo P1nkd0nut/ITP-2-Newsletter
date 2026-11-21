@@ -846,12 +846,6 @@ class DataService:
                 "is_discrepancy": disc.get("is_discrepancy", False),
                 "troubleshoot_note": disc.get("troubleshoot_note"),
                 "grounded_card": card,
-                # Used by the dashboard's reader mode
-                "item_id": env.get("Item_ID"),
-                "vendor_product": env.get("Vendor_Product"),
-                "recency_label": item.get("recency_label"),
-                "source_facts": item.get("source_facts") or {},
-                "also_reported_by": item.get("also_reported_by") or [],
             })
 
             md_lines.extend([

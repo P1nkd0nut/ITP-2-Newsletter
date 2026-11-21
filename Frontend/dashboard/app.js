@@ -70,6 +70,10 @@ function verifiedBadge(item) {
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // The dashboard is the home page; /#reader opens reader mode directly
+  setReaderMode(location.hash === '#reader', false);
+  window.addEventListener('hashchange', () => setReaderMode(location.hash === '#reader'));
+
   // Listen for Escape key to close modals
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -484,6 +488,7 @@ function getFilteredCandidates() {
 
 function renderContent() {
   const filtered = getFilteredCandidates();
+  if (readerMode) renderReader(filtered);
 
   // Partition into Recent, Past month and Older
   const todayItems = filtered.filter(x => recencyBucket(x) === 'RECENT');
@@ -1310,4 +1315,202 @@ async function runLiveLinkVerification() {
       btn.innerHTML = '<span>⚡</span><span>Run Parallel Re-Check</span>';
     }
   }
+}
+
+// ============================================================================
+// Reader mode: the current advisories laid out as a newsletter
+// ============================================================================
+// The dashboard stays the home page. Reader mode reads the same filtered items
+// (desk, recency window, category, search) and lays them out as an issue: a lead
+// story, a contents list, Web and Mobile sections with the verified cards, and a
+// short "briefly noted" list for items without a verified card.
+
+let readerMode = false;
+const READER_STORY_LIMIT = 12; // full stories per issue; the rest go to "Briefly noted"
+const READER_BRIEF_LIMIT = 15;
+
+function toggleReaderMode() {
+  setReaderMode(!readerMode);
+}
+
+function setReaderMode(on, updateUrl = true) {
+  readerMode = Boolean(on);
+  document.body.classList.toggle('reader-on', readerMode);
+  document.getElementById('readerView').classList.toggle('hidden', !readerMode);
+  document.getElementById('readerToggleIcon').innerText = readerMode ? '📊' : '📰';
+  document.getElementById('readerToggleLabel').innerText = readerMode ? 'Dashboard' : 'Reader mode';
+  if (updateUrl) {
+    const url = location.pathname + location.search + (readerMode ? '#reader' : '');
+    if (url !== location.pathname + location.search + location.hash) history.replaceState(null, '', url);
+  }
+  if (readerMode) {
+    renderReader(getFilteredCandidates());
+    window.scrollTo(0, 0);
+  }
+}
+
+function readerEdition() {
+  if (currentDateFilter === 'RECENT') return { name: 'Weekly edition', span: 'this week' };
+  if (currentDateFilter === 'MONTH') return { name: 'Monthly edition', span: 'this month' };
+  return { name: 'Full archive', span: 'across everything we track' };
+}
+
+function readerDesk(item) {
+  return (item.pre_filter || {}).category === 'MOBILE' ? 'Mobile' : 'Web';
+}
+
+function readerKicker(item) {
+  const env = item.envelope || {};
+  const ai = item.ai_assessment || {};
+  const isKev = Boolean(env.KEV_Status) || ((item.score_breakdown || {}).cisa_kev_points || 0) > 0;
+  const hasPoc = Boolean(env.PoC_URLs && env.PoC_URLs.length) || ((item.score_breakdown || {}).poc_points || 0) > 0;
+  const cat = getCategoryPill(item.standard_category || ai.offensive_impact).label.replace(/^[^\w\s]+\s/u, '');
+  return `
+    <div class="kicker">
+      <span>${escapeHtml(readerDesk(item))} · ${escapeHtml(cat)}</span>
+      ${isKev ? '<span class="kev">Actively exploited</span>' : ''}
+      ${hasPoc ? '<span class="poc">Public PoC</span>' : ''}
+      <span class="quiet">${escapeHtml(item.published_date_formatted || recencyLabel(env.Published_Date))}</span>
+    </div>`;
+}
+
+function readerFacts(item) {
+  const facts = item.source_facts || {};
+  const versions = (facts.affected_versions || []).filter(Boolean);
+  const pocs = (facts.pocs || []).filter(p => p && p.url);
+  if (!versions.length && !pocs.length) return '';
+  const shown = versions.slice(0, 3).map(v => `<code>${escapeHtml(v)}</code>`).join(' ');
+  const more = versions.length > 3 ? ` <span class="label">+${versions.length - 3} more</span>` : '';
+  const pocLinks = pocs
+    .map(p => `<a href="${escapeAttr(p.url)}" target="_blank" rel="noopener">${escapeHtml(p.url.replace(/^https?:\/\//, ''))}</a>`)
+    .join(', ');
+  return `
+    <div class="facts">
+      ${versions.length ? `<div><span class="label">Affected:</span> ${shown}${more}</div>` : ''}
+      ${pocs.length ? `<div><span class="label">Proof of concept:</span> ${pocLinks}</div>` : ''}
+    </div>`;
+}
+
+function readerStory(item, isLead) {
+  const env = item.envelope || {};
+  const card = item.grounded_card || {};
+  const id = escapeAttr(env.Item_ID);
+  const score = (item.priority_score || 0).toFixed(0);
+  return `
+    <article id="story-${id}" class="${isLead ? 'lead' : ''}">
+      ${readerKicker(item)}
+      <h3><a href="javascript:void(0)" onclick="openDetailModal('${id}')">${escapeHtml(env.Title)}</a></h3>
+      ${card.impact ? `<p class="dek">${escapeHtml(card.impact)}</p>` : ''}
+      ${card.mechanism ? `<p class="body">${escapeHtml(card.mechanism)}</p>` : ''}
+      ${card.remediation ? `<div class="action"><b>What to do</b>${escapeHtml(card.remediation)}</div>` : ''}
+      ${readerFacts(item)}
+      <div class="byline">
+        <span>${escapeHtml(env.CVE_ID || env.Item_ID)}</span>
+        <span>Priority ${score}/100</span>
+        <span class="verified" title="Written from the source and passed ${card.checks_run || 0} verification checks">✓ Verified against the source</span>
+        <a href="javascript:void(0)" onclick="openDetailModal('${id}')">Full details</a>
+        ${env.Source_URL ? `<a href="${escapeAttr(env.Source_URL)}" target="_blank" rel="noopener">Source</a>` : ''}
+      </div>
+    </article>`;
+}
+
+function readerBrief(x) {
+  const env = x.envelope || {};
+  const text = (x.in_depth || {}).brief_summary || (x.ai_assessment || {}).reasoning || '';
+  const short = text.length > 220 ? text.slice(0, 217) + '…' : text;
+  return `<li><b><a href="javascript:void(0)" onclick="openDetailModal('${escapeAttr(env.Item_ID)}')">${escapeHtml(env.Title)}</a></b>` +
+    `<span class="meta">${readerDesk(x)} · ${(x.priority_score || 0).toFixed(0)}/100</span>` +
+    (short ? `<br><span>${escapeHtml(short)}</span>` : '') + '</li>';
+}
+
+function scrollToStory(itemId) {
+  const el = document.getElementById('story-' + itemId);
+  if (el) el.scrollIntoView({ behavior: 'smooth' });
+}
+
+function renderReader(filtered) {
+  const box = document.getElementById('readerView');
+  if (!box) return;
+
+  // A newsletter leads with what matters most, whatever the dashboard's sort order
+  const items = [...filtered].sort((a, b) => (b.priority_score || 0) - (a.priority_score || 0));
+  const withCard = items.filter(x => x.grounded_card && (x.grounded_card.mechanism || x.grounded_card.impact));
+  const stories = withCard.slice(0, READER_STORY_LIMIT);
+  const storyIds = new Set(stories.map(x => x.envelope.Item_ID));
+  const briefs = items.filter(x => !storyIds.has(x.envelope.Item_ID) && ((x.ai_assessment || {}).severity_score || 0) > 0);
+
+  const edition = readerEdition();
+  const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const kev = items.filter(x => (x.envelope || {}).KEV_Status).length;
+  const poc = items.filter(x => ((x.envelope || {}).PoC_URLs || []).length).length;
+  const web = items.filter(x => readerDesk(x) === 'Web').length;
+  const mobile = items.length - web;
+  const deskNote = currentDesk === 'WEB' ? 'Web desk only. ' : currentDesk === 'MOBILE' ? 'Mobile desk only. ' : '';
+  const filterNote = currentSearch
+    ? `Matching “${escapeHtml(currentSearch)}”. `
+    : currentCategory !== 'ALL' ? `Category: ${escapeHtml(currentCategory)}. ` : '';
+
+  const switcher = [['RECENT', 'Week'], ['MONTH', 'Month'], ['ALL', 'All']]
+    .map(([k, label]) => `<button class="${currentDateFilter === k ? 'active' : ''}" onclick="filterDateWindow('${k}')">${label}</button>`)
+    .join('');
+
+  let html = `
+    <div class="masthead">
+      <div class="eyebrow">Web &amp; Mobile Pentest Briefing</div>
+      <h1>GroundedCVE</h1>
+      <div class="tagline">The vulnerabilities worth a pentester's time, checked against their sources</div>
+    </div>
+    <div class="issue-line">
+      <span><b>${edition.name}</b> · ${today}</span>
+      <span class="edition-switch no-print">${switcher}</span>
+    </div>`;
+
+  if (!items.length) {
+    box.innerHTML = html + `<p class="empty">No advisories ${edition.span}. Try the Month or All edition.</p>`;
+    return;
+  }
+
+  const lead = stories[0];
+  const leadTitle = lead ? escapeHtml(lead.envelope.Title.replace(/^CVE-\d+-\d+\s+-\s+/, '')) : '';
+  html += `
+    <p class="intro">${deskNote}${filterNote}We tracked <b>${items.length}</b> in-scope advisories ${edition.span}${kev ? `, <b>${kev}</b> of them already exploited in the wild` : ''}.
+      ${lead ? `Top of the list: <i>${leadTitle}</i>.` : ''}</p>
+    <div class="glance">
+      <div><strong>${items.length}</strong><span>Advisories</span></div>
+      <div><strong>${kev}</strong><span>Exploited (KEV)</span></div>
+      <div><strong>${poc}</strong><span>Public PoC</span></div>
+      <div><strong>${web} / ${mobile}</strong><span>Web / Mobile</span></div>
+    </div>`;
+
+  if (lead) {
+    html += `<h2 class="section">Lead story</h2>${readerStory(lead, true)}`;
+    const rest = stories.slice(1);
+    if (rest.length) {
+      html += '<h2 class="section">In this issue</h2><ol class="toc">' +
+        rest.map(x => `<li><a href="#story-${escapeAttr(x.envelope.Item_ID)}" onclick="event.preventDefault(); scrollToStory('${escapeAttr(x.envelope.Item_ID)}')">${escapeHtml(x.envelope.Title)}</a><span class="toc-tag">${readerDesk(x)}</span></li>`).join('') +
+        '</ol>';
+      for (const desk of ['Web', 'Mobile']) {
+        const deskStories = rest.filter(x => readerDesk(x) === desk);
+        if (deskStories.length) {
+          html += `<h2 class="section">${desk === 'Web' ? '🌐 Web' : '📱 Mobile'}</h2>` + deskStories.map(x => readerStory(x, false)).join('');
+        }
+      }
+    }
+  }
+
+  if (briefs.length) {
+    html += '<h2 class="section">Briefly noted</h2><ul class="brief-list">' +
+      briefs.slice(0, READER_BRIEF_LIMIT).map(readerBrief).join('') + '</ul>';
+    if (briefs.length > READER_BRIEF_LIMIT) {
+      html += `<p class="sans more-note">…and ${briefs.length - READER_BRIEF_LIMIT} more on the <a href="javascript:void(0)" onclick="setReaderMode(false)">dashboard</a>.</p>`;
+    }
+  }
+
+  html += `
+    <footer>
+      <span>Stories are written from each advisory's own source text and pass GroundedCVE's verification checks before they appear. Briefly noted items are AI triage notes, not verified summaries.</span>
+      <span class="no-print"><button onclick="window.print()">Print / save as PDF</button></span>
+    </footer>`;
+
+  box.innerHTML = html;
 }
