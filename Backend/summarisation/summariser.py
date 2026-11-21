@@ -2,10 +2,12 @@
 Grounded Card Summariser (Task 3.1).
 
 Writes each top-ranked item's newsletter card from that item's own retrieved
-chunks, then runs it through the Deterministic Source-Verification Gate
+chunks (plus the same CVE's NVD record for CISA KEV items, whose own entry is
+a sentence or two), then runs it through the Deterministic Source-Verification Gate
 (Task 3.2). A failing draft is regenerated once with the gate's failure
 reasons; if it still fails, the card is quarantined and never published.
 """
+import hashlib
 import json
 import logging
 import re
@@ -54,6 +56,20 @@ Respond ONLY with a JSON object:
 }"""
 
 
+def nvd_excerpt(envelope: StagingEnvelope) -> str:
+    """
+    Text of the same CVE's NVD record, attached at ingestion to items whose own
+    source is thin (CISA KEV). Empty for other items.
+    """
+    return str((envelope.Extra_Metadata or {}).get("nvd_record") or "")
+
+
+def nvd_excerpt_hash(envelope: StagingEnvelope) -> Optional[str]:
+    """Changes when the attached NVD record changes, so the card is rewritten."""
+    text = nvd_excerpt(envelope)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest() if text else None
+
+
 def build_prompt(envelope: StagingEnvelope, chunks: Sequence[Dict[str, Any]],
                  failures: Optional[List[CheckFailure]] = None) -> str:
     lines = [
@@ -74,6 +90,11 @@ def build_prompt(envelope: StagingEnvelope, chunks: Sequence[Dict[str, Any]],
         heading = " > ".join(c.get("Heading_Path") or [])
         lines += [f"[{i}]{' ' + heading if heading else ''}", text, ""]
         used += len(text)
+
+    # The NVD record is short and is never cut, so its versions and CWE stay usable
+    nvd = nvd_excerpt(envelope)
+    if nvd:
+        lines += [f"[{len(chunks) + 1}] NVD record", nvd, ""]
 
     if failures:
         lines += [
@@ -192,12 +213,14 @@ class GroundedSummariser:
             "Content_Hash": envelope.Content_Hash,
             "chunk_ids": [c.get("Chunk_ID") for c in chunks],
             "retrieval": mode,
+            "nvd_record_hash": nvd_excerpt_hash(envelope),
             "model": getattr(self.llm, "model_name", "custom"),
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "card": None,
             "verification": None,
         }
-        if not chunks:
+        nvd = nvd_excerpt(envelope)
+        if not chunks and not nvd:
             record.update(status="ERROR", error="No chunks found for this item. Run run_chunking.py first.")
             return record
 
@@ -205,7 +228,7 @@ class GroundedSummariser:
             return parse_card(self.llm(SYSTEM_PROMPT, build_prompt(envelope, chunks, failures)))
 
         try:
-            card, result = self.gate.verify_with_retry(generate, envelope, evidence=[c["Text"] for c in chunks])
+            card, result = self.gate.verify_with_retry(generate, envelope, evidence=[c["Text"] for c in chunks] + ([nvd] if nvd else []))
         except Exception as e:
             record.update(status="ERROR", error=f"Card generation failed: {e}")
             return record

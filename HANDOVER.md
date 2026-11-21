@@ -23,7 +23,7 @@ docker compose up -d --build
 | `qdrant` | Vector database, data in `qdrant_storage/` |
 | `ollama` | `nomic-embed-text` embeddings, data in `ollama_data/` |
 
-CISA KEV items get their affected versions from the same CVE's NVD record (up to 10 NVD lookups per run). To fill existing items at once: `docker compose exec app python Backend/run_nvd_versions.py`.
+CISA KEV entries are a sentence or two, so each KEV item gets the same CVE's NVD record attached (up to 10 NVD lookups per run). Its text is given to the card writer and the verification gate as one more source excerpt, and its affected versions are shown on the dashboard. To add it to existing items at once: `docker compose exec app python Backend/run_nvd_versions.py`; the cards are rewritten on the next daily run, or straight away with `docker compose exec app python Backend/run_summarise.py`.
 
 Run the pipeline once now: `docker compose run --rm scheduler python Backend/run_pipeline.py`.
 Outside Docker: `pip install -r requirements.txt`, start Qdrant and Ollama yourself, then `python run_server.py` and `python Backend/run_pipeline.py`.

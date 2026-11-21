@@ -60,6 +60,34 @@ def affected_versions(configurations: List[Dict[str, Any]], limit: int = 12) -> 
     return out
 
 
+def nvd_record_text(cve: Dict[str, Any]) -> str:
+    """
+    The parts of an NVD CVE record a card can use, as plain text: description,
+    CVSS score, CWE, affected versions and reference URLs. It is given to the
+    card writer and to the verification gate as one more source excerpt, so any
+    version, CWE or score on a card must still appear in it.
+    """
+    cve_id = cve.get("id", "")
+    lines = [f"NVD record for {cve_id}"]
+    desc = next((d.get("value", "") for d in cve.get("descriptions", []) if d.get("lang") == "en"), "")
+    if desc:
+        lines.append(f"Description: {desc}")
+    score, version = NvdCollector._extract_cvss(cve.get("metrics", {}))
+    if score is not None:
+        lines.append(f"CVSS v{version} base score: {score}")
+    cwes = NvdCollector._extract_cwes(cve.get("weaknesses", []))
+    if cwes:
+        lines.append(f"Weakness: {', '.join(cwes)}")
+    versions = affected_versions(cve.get("configurations", []))
+    if versions:
+        lines.append(f"Affected versions: {'; '.join(versions)}")
+    refs = [r.get("url") for r in cve.get("references", []) if r.get("url")]
+    if refs:
+        lines.append("References:")
+        lines += [f"- {u}" for u in refs[:15]]
+    return "\n".join(lines)
+
+
 class NvdCollector(BaseCollector):
     """Client for NIST National Vulnerability Database (NVD) 2.0 REST API."""
 
@@ -242,9 +270,21 @@ class NvdCollector(BaseCollector):
         versions = (env.Affected_Versions if env else None) or []
         return [versions] if isinstance(versions, str) else list(versions)
 
-    def _extract_cvss(self, metrics: Dict[str, Any]) -> Tuple[Optional[float], Optional[str]]:
+    def record_for(self, cve_id: str) -> Optional[Dict[str, Any]]:
+        """NVD's raw record for one CVE (None if NVD has none or can't be reached)."""
+        req_url = f"{self.base_url}?{urllib.parse.urlencode({'cveId': cve_id})}"
+        try:
+            data = json.loads(fetch_url(req_url, headers=self._get_headers(), timeout=20))
+            vulnerabilities = data.get("vulnerabilities", [])
+            return vulnerabilities[0].get("cve") if vulnerabilities else None
+        except Exception as e:
+            logger.warning(f"Could not look up {cve_id} on NVD: {e}")
+            return None
+
+    @classmethod
+    def _extract_cvss(cls, metrics: Dict[str, Any]) -> Tuple[Optional[float], Optional[str]]:
         candidates = []
-        for rank, (key, version) in enumerate(self._CVSS_VERSIONS):
+        for rank, (key, version) in enumerate(cls._CVSS_VERSIONS):
             for entry in metrics.get(key) or []:
                 score = (entry.get("cvssData") or {}).get("baseScore")
                 if score is None:
@@ -256,7 +296,8 @@ class NvdCollector(BaseCollector):
         _, _, score, version = min(candidates, key=lambda c: (c[0], c[1]))
         return score, version
 
-    def _extract_cwes(self, weaknesses: List[Dict[str, Any]]) -> List[str]:
+    @staticmethod
+    def _extract_cwes(weaknesses: List[Dict[str, Any]]) -> List[str]:
         cwes = []
         for w in weaknesses:
             for desc in w.get("description", []):

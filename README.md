@@ -115,7 +115,7 @@ ITP2/
 │   │   ├── chunker.py                         # Splits cleaned content into traceable chunks
 │   │   └── models.py                          # Chunk data model
 │   ├── summarisation/
-│   │   ├── summariser.py                      # Writes each card from the item's own retrieved chunks
+│   │   ├── summariser.py                      # Writes each card from the item's own retrieved chunks (+ NVD record for KEV items)
 │   │   └── card_store.py                      # Passed cards (grounded_cards.json) & quarantine log
 │   └── storage/
 │       ├── vector_db.py                       # Qdrant client helper
@@ -130,7 +130,7 @@ ITP2/
 │   └── run_dashboard.py                       # 1-command local dashboard server
 ├── Testing/
 │   ├── test_ingestion.py                      # Phase 1 test suite (10 unit & integration tests)
-│   ├── test_nvd_collector.py                  # NVD collector: newest CVEs first, CVSS choice, affected versions (10 tests)
+│   ├── test_nvd_collector.py                  # NVD collector: newest CVEs first, CVSS choice, affected versions, NVD record text (11 tests)
 │   ├── test_triage.py                         # Phase 2 test suite (9 pre-filter, scoring, & OpenRouter tests)
 │   ├── test_benchmark.py                      # Task 4.1 benchmark test suite (8 validation tests)
 │   ├── test_verification.py                   # Verification gate test suite (24 grounding & retry tests)
@@ -142,7 +142,7 @@ ITP2/
 │   ├── test_poc_provenance.py                 # CVE-specific PoC links & reference provenance (6 tests)
 │   ├── test_reader_and_telegram.py            # Incident reader page, Telegram weekly digest & dead-link handling (32 tests)
 │   ├── test_manual_check.py                   # Manual spot-check sampler & scorer (4 tests)
-│   ├── test_grounded_summaries.py             # Qdrant indexing, grounded cards, publish gate & scheduler (22 tests)
+│   ├── test_grounded_summaries.py             # Qdrant indexing, grounded cards, publish gate & scheduler (23 tests)
 │   ├── test_novelty.py                        # Digest novelty check: one item per CVE, no repeats (10 tests)
 │   ├── test_apple_collector.py                # One item per Apple advisory with real dates (7 tests)
 │   ├── test_gate_report.py                    # Gate stats on real cards, re-check, manual review sheet (5 tests)
@@ -228,7 +228,7 @@ python Backend/run_chunking.py
 python Backend/run_indexing.py      # needs Qdrant + Ollama with nomic-embed-text
 python Backend/run_summarise.py     # top 10 in-scope items from the last 7 days
 ```
-Each card is written by the LLM (OpenRouter Qwen 2.5 72B, or `--ollama-model` for a local model) using only that item's own chunks, then checked by the source-verification gate: every CVE ID, version, CVSS score, CWE, known vendor/product name, command, impact claim and URL must appear in the source. A failing card is regenerated once with the gate's reasons; if it still fails it is quarantined.
+Each card is written by the LLM (OpenRouter Qwen 2.5 72B, or `--ollama-model` for a local model) using only that item's own chunks (for a CISA KEV item, whose entry is a sentence or two, also the same CVE's NVD record, attached at ingestion), then checked by the source-verification gate: every CVE ID, version, CVSS score, CWE, known vendor/product name, command, impact claim and URL must appear in the source. A failing card is regenerated once with the gate's reasons; if it still fails it is quarantined.
 
 Measure the gate on the cards it actually saw with `python Backend/run_gate_report.py summary` (first-try pass, passed after retry, quarantined, failures by check) and `recheck` (today's gate over every published card). `worksheet` / `score` produce and score a manual review sheet of published cards, for errors token checks can't catch. See [HANDOVER.md](HANDOVER.md).
 
@@ -311,11 +311,11 @@ docker compose run --rm scheduler python Backend/run_pipeline.py   # run the pip
 Keys go in a `.env` file (see `.env.example`); `Backend/data` is mounted so data persists. Outside Docker, `python Backend/run_pipeline.py` runs the same stages once.
 
 ### 7. Run Test Suite
-Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (268 automated tests in 21 modules):
+Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (270 automated tests in 21 modules):
 ```bash
 python -m unittest discover -s Testing -p "test_*.py" -v
 ```
-Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access; they skip automatically when the feeds can't be reached. CI runs the other 261 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
+Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access; they skip automatically when the feeds can't be reached. CI runs the other 263 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
 
 ### 8. Presentation & Demo Guide
 For full presentation instructions, talking points, and cheat-sheet commands for project reviews, see:

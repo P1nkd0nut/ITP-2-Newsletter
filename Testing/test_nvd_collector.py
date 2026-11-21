@@ -107,41 +107,66 @@ class TestAffectedVersions(unittest.TestCase):
         self.assertEqual(affected_versions(configs), ["Apache Roller from 5.0.0 before 6.1.5", "Ivanti Connect Secure 22.7"])
         self.assertEqual(affected_versions([]), [])
 
-    def test_kev_items_get_versions_from_the_nvd_record(self):
+    def test_nvd_record_text_has_the_facts_a_card_can_use(self):
+        from Backend.ingestion.collectors.nvd import nvd_record_text
+        text = nvd_record_text(ROLLER_NVD_RECORD)
+        self.assertIn("NVD record for CVE-2026-1", text)
+        self.assertIn("Description: Apache Roller allows stored XSS.", text)
+        self.assertIn("CVSS v3.1 base score: 6.1", text)
+        self.assertIn("Weakness: CWE-79", text)
+        self.assertIn("Affected versions: Apache Roller from 4.0 before 6.1.5", text)
+        self.assertIn("- https://lists.apache.org/roller-advisory", text)
+
+    def test_kev_items_get_the_nvd_record_and_versions(self):
         from Backend.ingestion.models import SourceType, StagingEnvelope
         from Backend.ingestion.pipeline import IngestionPipeline
 
-        def env(item_id, source, versions=None):
+        def env(item_id, source, raw="{}"):
             return StagingEnvelope(
                 Item_ID=item_id, Source_Type=source, Title="t", Source_URL="https://example.com",
                 Published_Date="2026-11-20T00:00:00+00:00", Ingested_At="2026-11-21T00:00:00+00:00",
-                Content_Hash="h" + item_id, Raw_Content="{}", CVE_ID="CVE-2026-1", Affected_Versions=versions,
+                Content_Hash="h" + item_id, Raw_Content=raw, CVE_ID="CVE-2026-1",
             )
 
         pipeline = IngestionPipeline()
         kev = env("kev-1", SourceType.CISA_KEV)
-        with mock.patch.object(pipeline.registry["nvd"], "versions_for", return_value=["Apache Roller before 6.1.5"]) as lookup, \
+        with mock.patch.object(pipeline.registry["nvd"], "record_for", return_value=ROLLER_NVD_RECORD) as lookup, \
                 mock.patch("Backend.ingestion.pipeline.time.sleep"):
             self.assertEqual(pipeline.add_nvd_versions([kev]), 1)
+            # Already attached: no second lookup on the next run
+            pipeline.add_nvd_versions([kev])
         lookup.assert_called_once_with("CVE-2026-1")
-        self.assertEqual(kev.Affected_Versions, ["Apache Roller before 6.1.5"])
+        self.assertEqual(kev.Affected_Versions, ["Apache Roller from 4.0 before 6.1.5"])
         self.assertEqual(kev.Extra_Metadata["affected_versions_from"], "NVD record for CVE-2026-1")
+        self.assertIn("Weakness: CWE-79", kev.Extra_Metadata["nvd_record"])
 
         # An NVD item for the same CVE in the batch is used without a lookup
         kev2 = env("kev-2", SourceType.CISA_KEV)
-        nvd = env("nvd-1", SourceType.NVD, ["Apache Roller up to 6.1.4"])
-        with mock.patch.object(pipeline.registry["nvd"], "versions_for") as lookup:
+        nvd = env("nvd-1", SourceType.NVD, json.dumps(ROLLER_NVD_RECORD))
+        with mock.patch.object(pipeline.registry["nvd"], "record_for") as lookup:
             pipeline.add_nvd_versions([kev2, nvd])
         lookup.assert_not_called()
-        self.assertEqual(kev2.Affected_Versions, ["Apache Roller up to 6.1.4"])
+        self.assertIn("NVD record for CVE-2026-1", kev2.Extra_Metadata["nvd_record"])
 
-        # A fresh copy from the KEV feed keeps the looked-up versions, so it doesn't read as a change
+        # A fresh copy from the KEV feed keeps the NVD data, so it doesn't read as a change
         from Backend.ingestion.change_tracker import apply_change_tracking
         fresh = env("kev-1", SourceType.CISA_KEV)
         merged, counts = apply_change_tracking([fresh], [kev])
-        self.assertEqual(merged[0].Affected_Versions, ["Apache Roller before 6.1.5"])
+        self.assertEqual(merged[0].Affected_Versions, ["Apache Roller from 4.0 before 6.1.5"])
+        self.assertEqual(merged[0].Extra_Metadata["nvd_record"], kev.Extra_Metadata["nvd_record"])
         self.assertEqual(counts["UNCHANGED"], 1)
 
+
+ROLLER_NVD_RECORD = {
+    "id": "CVE-2026-1",
+    "descriptions": [{"lang": "en", "value": "Apache Roller allows stored XSS."}],
+    "metrics": {"cvssMetricV31": [{"type": "Primary", "cvssData": {"baseScore": 6.1}}]},
+    "weaknesses": [{"description": [{"lang": "en", "value": "CWE-79"}]}],
+    "configurations": [{"nodes": [{"cpeMatch": [{
+        "vulnerable": True, "criteria": "cpe:2.3:a:apache:roller:*:*:*:*:*:*:*:*",
+        "versionStartIncluding": "4.0", "versionEndExcluding": "6.1.5"}]}]}],
+    "references": [{"url": "https://lists.apache.org/roller-advisory"}],
+}
 
 if __name__ == "__main__":
     unittest.main()

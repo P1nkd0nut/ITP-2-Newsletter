@@ -272,6 +272,23 @@ class TestGroundedSummariser(unittest.TestCase):
         self.assertIsNone(rec["card"])
 
 
+    def test_kev_card_can_use_the_attached_nvd_record(self):
+        # The KEV entry names no version; the NVD record attached at ingestion does
+        kev = make_envelope()
+        kev.Raw_Content = "CVE-2023-4966 NetScaler buffer over-read. Apply updates per vendor instructions."
+        kev_chunks = StaticRetriever([make_chunk("citrix", kev.Raw_Content)])
+        card = honest_card_json(impact="Affects NetScaler ADC 14.1 before 14.1-8.50.", testing_syntax=[])
+        rec = GroundedSummariser(ScriptedLLM(card, card), kev_chunks).summarise(kev)
+        self.assertEqual(rec["status"], "QUARANTINED")  # nothing names 14.1-8.50
+
+        kev.Extra_Metadata = {"nvd_record": "NVD record for CVE-2023-4966\n"
+                                            "Affected versions: Citrix Netscaler Application Delivery Controller from 14.1 before 14.1-8.50"}
+        llm = ScriptedLLM(card)
+        rec = GroundedSummariser(llm, kev_chunks).summarise(kev)
+        self.assertEqual(rec["status"], "PASSED", rec["verification"])
+        self.assertIn("NVD record", llm.prompts[0])
+        self.assertIsNotNone(rec["nvd_record_hash"])
+
 class TestCardStore(unittest.TestCase):
     def test_only_passed_cards_are_saved_and_rejects_are_logged(self):
         passed = {"Item_ID": "a", "status": "PASSED", "card": {"mechanism": "m"}}

@@ -25,6 +25,7 @@ from Backend.ingestion.collectors import (
 from Backend.ingestion.change_tracker import UNCHANGED, UPDATED, apply_change_tracking, describe_changes, load_previous, merge_recheck
 from Backend.ingestion.recheck_policy import is_due, is_frozen
 from Backend.ingestion.models import SourceType, StagingEnvelope
+from Backend.ingestion.collectors.nvd import affected_versions, nvd_record_text
 
 logger = logging.getLogger(__name__)
 
@@ -96,33 +97,43 @@ class IngestionPipeline:
 
     def add_nvd_versions(self, envelopes: List[StagingEnvelope], max_lookups: int = 10) -> int:
         """
-        CISA KEV entries name no versions, so take the affected versions from the
-        same CVE's NVD record: from an NVD item in this batch when there is one,
-        otherwise by looking the CVE up on NVD (at most `max_lookups` per run, to
-        stay inside NVD's rate limit; the rest are filled on later runs).
-        Returns how many items were filled.
+        CISA KEV entries are a sentence or two and name no versions, so attach the
+        same CVE's NVD record: its text goes in Extra_Metadata["nvd_record"] (the
+        card writer and the verification gate use it as one more source excerpt)
+        and its affected versions fill Affected_Versions. The record comes from an
+        NVD item in this batch when there is one, otherwise from an NVD lookup (at
+        most `max_lookups` per run, to stay inside NVD's rate limit; the rest are
+        filled on later runs). Returns how many items were filled.
         """
-        nvd_versions = {
-            e.CVE_ID: e.Affected_Versions
-            for e in envelopes
-            if e.Source_Type == SourceType.NVD and e.CVE_ID and e.Affected_Versions
-        }
+        nvd_records: Dict[str, Dict[str, Any]] = {}
+        for e in envelopes:
+            if e.Source_Type == SourceType.NVD and e.CVE_ID:
+                try:
+                    nvd_records[e.CVE_ID] = json.loads(e.Raw_Content)
+                except (TypeError, ValueError):
+                    pass
         nvd = self.registry.get("nvd")
         filled = lookups = 0
         for env in envelopes:
-            if env.Source_Type != SourceType.CISA_KEV or not env.CVE_ID or env.Affected_Versions:
+            meta = env.Extra_Metadata or {}
+            if env.Source_Type != SourceType.CISA_KEV or not env.CVE_ID or meta.get("nvd_record"):
                 continue
-            versions = nvd_versions.get(env.CVE_ID)
-            if not versions and nvd is not None and lookups < max_lookups:
+            record = nvd_records.get(env.CVE_ID)
+            if record is None and nvd is not None and lookups < max_lookups:
                 lookups += 1
-                versions = nvd.versions_for(env.CVE_ID)
+                record = nvd.record_for(env.CVE_ID)
                 time.sleep(1 if getattr(nvd, "api_key", None) else 6)
-            if versions:
+            if not record:
+                continue
+            meta = {**meta, "nvd_record": nvd_record_text(record), "nvd_record_from": f"NVD record for {env.CVE_ID}"}
+            versions = affected_versions(record.get("configurations", []))
+            if versions and not env.Affected_Versions:
                 env.Affected_Versions = versions
-                env.Extra_Metadata = {**(env.Extra_Metadata or {}), "affected_versions_from": f"NVD record for {env.CVE_ID}"}
-                filled += 1
+                meta["affected_versions_from"] = f"NVD record for {env.CVE_ID}"
+            env.Extra_Metadata = meta
+            filled += 1
         if filled:
-            logger.info(f"Added affected versions from NVD to {filled} CISA KEV items ({lookups} NVD lookups)")
+            logger.info(f"Added NVD records to {filled} CISA KEV items ({lookups} NVD lookups)")
         return filled
 
     def run(
