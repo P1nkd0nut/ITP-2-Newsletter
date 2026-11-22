@@ -149,6 +149,7 @@ ITP2/
 │   ├── test_novelty_eval.py                   # Novelty threshold tuning and labelled pairs (6 tests)
 │   ├── test_run_metrics.py                    # Per-stage latency and LLM cost reporting (4 tests)
 │   └── MANUAL_CHECKS.md                       # How the team hand-checks the automated results
+│   ├── MANUAL_SPOT_CHECK.md                   # Results of the 10-item hand check against the source
 ├── HANDOVER.md                                # Setup, configuration, quarantine review, adding a source, limitations
 └── docker-compose.yml                         # app, scheduler, Qdrant (vector DB), Ollama (embeddings)
 ```
