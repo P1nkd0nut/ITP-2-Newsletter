@@ -134,7 +134,7 @@ ITP2/
 │   ├── test_triage.py                         # Pre-filter, scoring and OpenRouter client (9 tests)
 │   ├── test_benchmark.py                      # Ground-truth benchmark metrics (8 tests)
 │   ├── test_verification.py                   # Verification gate test suite (24 grounding & retry tests)
-│   ├── test_dashboard_api.py                  # REST API, channel dispatcher & score explanation tests (13 tests)
+│   ├── test_dashboard_api.py                  # REST API, channel dispatcher & score explanation tests (14 tests)
 │   ├── test_link_validator.py                 # Link health validator tests (13 tests)
 │   ├── test_chunking.py                       # Content cleaning & chunking tests (27 tests)
 │   ├── test_change_tracking.py                # Change tracking between runs & AI-score reuse (14 tests)
@@ -315,8 +315,8 @@ docker compose run --rm scheduler python Backend/run_pipeline.py   # run the pip
 Keys go in a `.env` file (see `.env.example`); `Backend/data` is mounted so data persists. Outside Docker, `python Backend/run_pipeline.py` runs the same stages once.
 
 ### 7. Run Test Suite
-Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (275 automated tests in 21 modules):
+Verify all collector parsers, pre-filters, AI scoring, anomaly detection gates, verification gates, REST API endpoints, link validation, chunking, change tracking, grounded summaries, and channel dispatchers (276 automated tests in 21 modules):
 ```bash
 python -m unittest discover -s Testing -p "test_*.py" -v
 ```
-Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access; they skip automatically when the feeds can't be reached. CI runs the other 268 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.
+Seven of these (`TestCollectorsLive` and `TestIngestionPipeline` in `test_ingestion.py`) call real feeds and need internet access; they skip automatically when the feeds can't be reached. CI runs the other 269 on every push to `main` and every pull request, and runs the live ones in a separate step that is allowed to fail. No API keys are needed for the tests.

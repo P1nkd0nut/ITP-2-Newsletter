@@ -267,8 +267,10 @@ class DataService:
         if extra_meta.get("vendor_bulletins"):
             vendor_urls.extend(extra_meta.get("vendor_bulletins"))
 
-        # Fallback to Raw_Content extraction with strict filtering against namespaces and noise
-        if not vendor_urls and raw_content:
+        # Fallback to Raw_Content extraction with strict filtering against namespaces and noise.
+        # An Apple advisory is a full web page whose links are site navigation and locale
+        # copies, so for those the advisory URL itself (the primary source) is enough.
+        if not vendor_urls and raw_content and source_type != "APPLE_SECURITY":
             urls = re.findall(r'https?://[^\s"\'<>]+', raw_content)
             for u in urls:
                 clean_u = u.rstrip(';.,)')

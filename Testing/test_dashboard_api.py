@@ -270,3 +270,17 @@ class TestScoreExplanation(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestAppleReferences(unittest.TestCase):
+    def test_apple_page_links_are_not_listed_as_references(self):
+        html = ('<a href="https://www.apple.com/store">Store</a>'
+                '<a href="https://support.apple.com/en-ca/149721">copy</a>')
+        c = {"envelope": {"Item_ID": "apple-149721", "Source_Type": "APPLE_SECURITY",
+                          "Source_URL": "https://support.apple.com/en-us/149721", "Raw_Content": html},
+             "pre_filter": {"is_in_scope": True, "category": "MOBILE"}}
+        with mock.patch.object(ds.link_validator, "check_single_link",
+                               side_effect=lambda url, **kw: {"url": url}):
+            DataService.__new__(DataService)._enrich_candidate(c)
+        urls = [r["url"] for r in c["external_references"]]
+        self.assertEqual(urls, ["https://support.apple.com/en-us/149721"])
