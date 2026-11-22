@@ -117,6 +117,9 @@
       const cve = env.CVE_ID;
       const title = d.vulnerability_name || env.Title || 'Untitled advisory';
       const pocs = pocEntries(c);
+      // The gate-verified card, when there is one, is what the reader should see
+      const card = d.grounded_card || c.grounded_card || null;
+      const isApple = env.Source_Type === 'APPLE_SECURITY';
       const article = document.getElementById('incident');
 
       document.title = `${cve || title} · GroundedCVE`;
@@ -128,6 +131,7 @@
         badge(c.recency_label || 'Monitored', 'bg-slate-900 text-slate-300 border-slate-700'),
         env.KEV_Status && badge('🔥 Actively exploited', 'bg-rose-950 text-rose-300 border-rose-800'),
         pocs.length > 0 && badge('🧪 Public PoC', 'bg-amber-950 text-amber-300 border-amber-800'),
+        card && badge('✓ Verified against the source', 'bg-green-950 text-green-300 border-green-800'),
       );
       const score = Number(c.priority_score || 0);
       article.append(el('div', 'space-y-3',
@@ -143,21 +147,34 @@
 
       // What's the problem
       article.append(section("What's the problem",
-        el('p', 'prose-text', d.full_description || env.Title || 'No description available.')));
+        el('p', 'prose-text', (card && card.mechanism) || d.full_description || env.Title || 'No description available.')));
 
       // Impact
       const impact = ai.offensive_impact || c.standard_category;
+      const impactText = (card && card.impact) || ai.reasoning;
       article.append(section('Impact',
         impact && el('p', 'text-white font-semibold mb-1', impact),
-        ai.reasoning && el('p', 'prose-text', ai.reasoning),
-        !impact && !ai.reasoning && el('p', 'prose-text', 'Impact has not been assessed yet.')));
+        impactText && el('p', 'prose-text', impactText),
+        !impact && !impactText && el('p', 'prose-text', 'Impact has not been assessed yet.')));
 
       // Affected product
       const versions = Array.isArray(env.Affected_Versions) ? env.Affected_Versions.join(', ') : env.Affected_Versions;
-      if (env.Vendor_Product || versions) {
+      if (isApple && env.Vendor_Product) {
+        // An Apple bulletin is named after the release that fixes its flaws, not an affected version
+        article.append(section('Fixed in',
+          el('p', 'text-slate-200', env.Vendor_Product),
+          el('p', 'text-sm text-slate-400 mt-1', 'Earlier versions are affected; see the bulletin for each flaw.')));
+      } else if (env.Vendor_Product || versions) {
         article.append(section('Affected',
           env.Vendor_Product && el('p', 'text-slate-200', env.Vendor_Product),
           versions && el('p', 'text-sm text-slate-400 mt-1', 'Versions: ', versions)));
+      }
+
+      // Test commands, copied verbatim from the source by the verified card
+      const commands = ((card && card.testing_syntax) || []).filter(Boolean);
+      if (commands.length) {
+        article.append(section('How to test',
+          el('ul', 'space-y-2', commands.map(cmd => el('li', '', el('code', 'block whitespace-pre-wrap break-all rounded bg-slate-900 border border-slate-800 p-2 text-xs text-slate-200', cmd))))));
       }
 
       // Proof of concept
@@ -175,7 +192,7 @@
       // How to fix
       const bulletins = (d.vendor_bulletins || []).filter(safeUrl);
       article.append(section('How to fix',
-        el('p', 'prose-text', d.required_action || 'No fix information in the source yet. Check the vendor links below for updates.'),
+        el('p', 'prose-text', (card && card.remediation) || d.required_action || (isApple && env.Vendor_Product && `Update to ${env.Vendor_Product.replace(/^Apple /, '')} or later.`) || 'No fix information in the source yet. Check the vendor links below for updates.'),
         bulletins.length > 0 && el('ul', 'mt-2 space-y-1 text-sm', bulletins.map(u => el('li', '', link(u))))));
 
       // Sources (PoC and fix links are already shown above)

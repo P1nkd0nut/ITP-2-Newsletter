@@ -53,6 +53,12 @@ class TestReaderPage(unittest.TestCase):
         self.assertIn(b"GroundedCVE", res.data)
         self.assertIn(b"/api/newsletters/", res.data)
 
+    def test_incident_page_prefers_the_verified_card(self):
+        page = (Path(__file__).resolve().parent.parent / "Frontend" / "reader" / "incident.html").read_text(encoding="utf-8")
+        self.assertIn("grounded_card", page)
+        self.assertIn("card.remediation", page)  # fix comes from the card before CISA's required action
+        self.assertIn("'Fixed in'", page)  # Apple bulletins name the fixed release
+
     def test_unknown_incident_returns_404(self):
         res = self.client.get("/incident/does-not-exist-123")
         self.assertEqual(res.status_code, 404)
