@@ -107,6 +107,20 @@ class TestHybridIndexing(unittest.TestCase):
             self.assertIn(DENSE_VECTOR_NAME, p.vector)
             self.assertNotIn(SPARSE_VECTOR_NAME, p.vector)
 
+    def test_dense_only_points_get_sparse_vector_on_next_run(self):
+        index_chunks(CHUNKS, self.client, self.embedder, collection=COLLECTION)
+        stats = index_chunks(CHUNKS, self.client, self.embedder, collection=COLLECTION,
+                             sparse_embedder=self.sparse)
+        self.assertEqual(stats["embedded"], 2)
+        points = self.client.retrieve(
+            COLLECTION, ids=[c["Point_ID"] for c in CHUNKS], with_vectors=True)
+        for p in points:
+            self.assertIn(SPARSE_VECTOR_NAME, p.vector)
+        # once both vectors are stored, unchanged chunks are skipped again
+        stats = index_chunks(CHUNKS, self.client, self.embedder, collection=COLLECTION,
+                             sparse_embedder=self.sparse)
+        self.assertEqual(stats["skipped"], 2)
+
     def test_dense_only_retrieval_still_succeeds(self):
         index_chunks(CHUNKS, self.client, self.embedder, collection=COLLECTION)
         retriever = ChunkRetriever(self.client, self.embedder, collection=COLLECTION)

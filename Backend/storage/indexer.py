@@ -47,8 +47,8 @@ def index_chunks(
     sparse_embedder=None,
 ) -> Dict[str, int]:
     """
-    Embed and upsert chunks. Chunks already stored with the same Chunk_Hash are
-    skipped unless force=True. Points left over from an item's older, longer
+    Embed and upsert chunks. Chunks already stored with the same Chunk_Hash (and,
+    when a sparse embedder is given, a sparse vector) are skipped unless force=True. Points left over from an item's older, longer
     version are deleted so retrieval never returns stale text.
 
     When sparse_embedder is given, each point carries both the dense and the
@@ -61,7 +61,13 @@ def index_chunks(
     ids = [c["Point_ID"] for c in chunks]
     existing: Dict[str, str] = {}
     if ids and not force:
-        for p in client.retrieve(collection, ids=ids, with_payload=["Chunk_Hash"], with_vectors=False):
+        # With a sparse embedder, a point stored dense-only (written before sparse
+        # support, or by a run without it) counts as missing, so it gets its sparse vector
+        want_sparse = sparse_embedder is not None
+        for p in client.retrieve(collection, ids=ids, with_payload=["Chunk_Hash"],
+                                 with_vectors=[SPARSE_VECTOR_NAME] if want_sparse else False):
+            if want_sparse and SPARSE_VECTOR_NAME not in (p.vector or {}):
+                continue
             existing[str(p.id)] = (p.payload or {}).get("Chunk_Hash", "")
 
     todo = [c for c in chunks if existing.get(c["Point_ID"]) != c["Chunk_Hash"]]
